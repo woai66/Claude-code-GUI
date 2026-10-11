@@ -7,6 +7,7 @@ import { rgPath } from '@vscode/ripgrep';
 
 import { stripAnsiSequences } from '@/shared/utils.js';
 import { projectsDb, sessionsDb } from '@/modules/database/index.js';
+import type { LLMProvider } from '@/shared/types.js';
 
 type AnyRecord = Record<string, any>;
 type SearchableProvider = 'claude' | 'codex';
@@ -56,6 +57,7 @@ export type SessionConversationSearchProgressUpdate = {
 };
 
 type SearchSessionConversationsInput = {
+  provider?: LLMProvider;
   query: string;
   limit: number;
   signal?: AbortSignal;
@@ -1149,6 +1151,7 @@ export async function searchConversations(
   onProjectResult: ((update: SessionConversationSearchProgressUpdate) => void) | null = null,
   signal: AbortSignal | null = null,
   onTitleResults: ((results: SessionTitleSearchResult[]) => void) | null = null,
+  provider?: LLMProvider,
 ): Promise<{
   results: ProjectConversationResult[];
   titleResults: SessionTitleSearchResult[];
@@ -1168,7 +1171,7 @@ export async function searchConversations(
     return { results: [], titleResults: [], totalMatches: 0, query: safeQuery };
   }
 
-  const activeSessions = sessionsDb.getAllSessions();
+  const activeSessions = sessionsDb.getAllSessions().filter((session) => !provider || session.provider === provider);
   const titleResults = findSessionTitleResults(activeSessions, safeQuery, safeLimit);
   onTitleResults?.(titleResults);
 
@@ -1313,6 +1316,7 @@ export const sessionConversationsSearchService = {
       input.onProgress ?? null,
       input.signal ?? null,
       input.onTitleResults ?? null,
+      input.provider,
     );
   },
 };

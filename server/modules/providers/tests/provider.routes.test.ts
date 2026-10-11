@@ -175,6 +175,32 @@ test('reasoning effort is persisted and returned with the active session model',
   });
 });
 
+test('active Claude session model includes the permission mode recorded by Claude CLI', async () => {
+  await withProviderServer(async (baseUrl, workspacePath) => {
+    await mkdir(workspacePath, { recursive: true });
+    const sessionId = 'external-claude-mode-session';
+    const transcriptPath = path.join(workspacePath, `${sessionId}.jsonl`);
+    await writeFile(transcriptPath, [
+      JSON.stringify({ type: 'permission-mode', permissionMode: 'default', sessionId }),
+      JSON.stringify({ type: 'permission-mode', permissionMode: 'auto', sessionId }),
+      '',
+    ].join('\n'), 'utf8');
+    sessionsDb.createSession(sessionId, 'claude', workspacePath, 'External Claude session', undefined, undefined, transcriptPath);
+    sessionsDb.setSessionModel(sessionId, 'claude-opus-5-5');
+
+    const response = await fetch(
+      `${baseUrl}/api/providers/claude/sessions/${sessionId}/active-model`,
+    );
+    const payload = await response.json() as {
+      data: { model: string; permissionMode: string | null };
+    };
+
+    assert.equal(response.status, 200);
+    assert.equal(payload.data.model, 'claude-opus-5-5');
+    assert.equal(payload.data.permissionMode, 'auto');
+  });
+});
+
 test('model routes expose immutable defaults and full custom model CRUD', async () => {
   await withProviderServer(async (baseUrl) => {
     const initialResponse = await fetch(`${baseUrl}/api/providers/codex/models`);

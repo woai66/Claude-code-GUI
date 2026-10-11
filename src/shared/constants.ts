@@ -17,6 +17,16 @@ import type { UserPreferenceKey } from '@/shared/userSettings';
 /** The four buckets the git changes view sorts working-tree files into. */
 type GitStatusFileGroup = 'modified' | 'added' | 'deleted' | 'untracked';
 
+//----------------- AGENT DISPLAY NAMES ------------
+/** Names used by sidebar agent filters and session actions to identify the owning CLI. */
+export const PROVIDER_LABELS: Record<LLMProvider, string> = {
+  claude: 'Claude',
+  codex: 'Codex',
+  cursor: 'Cursor',
+  opencode: 'OpenCode',
+};
+
+// ---------------------------
 //----------------- BRANDING ------------
 
 /**

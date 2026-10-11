@@ -23,9 +23,11 @@ import type {
   AnyRecord,
   ApiSuccessShape,
   AppErrorOptions,
+  LLMProvider,
   NormalizedMessage,
   ProviderCurrentActiveModel,
   ProviderModelsDefinition,
+  ProviderModelOption,
   ProviderSkillSource,
   SubagentActivity,
   WorkspacePathValidationResult,
@@ -638,6 +640,33 @@ export const readStringRecord = (value: unknown): Record<string, string> | undef
 
 // ---------------------------
 //----------------- PROVIDER MODEL LOOKUP UTILITIES ------------
+/**
+ * Resolves an exact selector before the CLI's canonical ID. Providers and runtimes
+ * use this to retain effort capabilities in resumed sessions. A named alias wins
+ * over the account-default row; an explicit custom model wins by exact match.
+ */
+export function findProviderModelOption(options: ProviderModelOption[], model: string): ProviderModelOption | null {
+  return options.find((option) => option.value === model)
+    ?? options.find((option) => option.value !== 'default' && option.resolvedModel === model)
+    ?? options.find((option) => option.resolvedModel === model)
+    ?? null;
+}
+
+/**
+ * Parses the optional agent filter shared by project, session, and search routes.
+ * Omitted, empty, and "all" mean no restriction. Arrays and unknown providers
+ * are rejected so pagination and search never silently use a different scope.
+ */
+export function parseOptionalProviderFilter(value: unknown): LLMProvider | undefined {
+  if (value === undefined || value === null || value === '' || value === 'all') {
+    return undefined;
+  }
+  if (value === 'claude' || value === 'codex' || value === 'cursor' || value === 'opencode') {
+    return value;
+  }
+  throw new AppError('Unknown provider filter.', { code: 'INVALID_PROVIDER', statusCode: 400 });
+}
+
 /**
  * Builds the standard "default current model" result used when a provider
  * cannot resolve a session-backed active model.

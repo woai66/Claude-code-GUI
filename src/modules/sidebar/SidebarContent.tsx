@@ -3,7 +3,7 @@ import { Activity, Archive, Folder, MessageSquare, RotateCcw, Search, Trash2 } f
 import type { TFunction } from 'i18next';
 
 import { LLMProviderLogo, ScrollArea } from '@/shared/ui';
-import type { ArchivedProjectListItem, ArchivedSessionListItem, ConversationSearchResults, Project, RecentConversationListItem, ReleaseInfo, SearchProgress, SidebarProjectListProps, SidebarSearchMode } from '@/shared/types';
+import type { ArchivedProjectListItem, ArchivedSessionListItem, ConversationSearchResults, Project, RecentConversationListItem, ReleaseInfo, SearchProgress, SidebarProjectListProps, SidebarSearchMode, SidebarProviderFilter } from '@/shared/types';
 import { formatCompactAge, getAllSessions } from '@/modules/sidebar/utils/sidebarProjectFormatting';
 import SidebarFooter from '@/modules/sidebar/SidebarFooter';
 import SidebarHeader from '@/modules/sidebar/SidebarHeader';
@@ -98,6 +98,9 @@ type SidebarContentProps = {
   isLoadingMoreRecentConversations: boolean;
   recentConversationsError: boolean;
   searchFilter: string;
+  providerFilter: SidebarProviderFilter;
+  onProviderFilterChange: (provider: SidebarProviderFilter) => void;
+  providerProjectsError: boolean;
   onSearchFilterChange: (value: string) => void;
   onClearSearchFilter: () => void;
   searchMode: SidebarSearchMode;
@@ -147,6 +150,9 @@ export default function SidebarContent({
   isLoadingMoreRecentConversations,
   recentConversationsError,
   searchFilter,
+  providerFilter,
+  onProviderFilterChange,
+  providerProjectsError,
   onSearchFilterChange,
   onClearSearchFilter,
   searchMode,
@@ -190,6 +196,8 @@ export default function SidebarContent({
       style={{}}
     >
       <SidebarHeader
+        providerFilter={providerFilter}
+        onProviderFilterChange={onProviderFilterChange}
         isPWA={isPWA}
         isMobile={isMobile}
         isLoading={isLoading}
@@ -209,6 +217,14 @@ export default function SidebarContent({
         t={t}
       />
 
+      {providerProjectsError && (searchMode === 'projects' || searchMode === 'running') && (
+        <div role="alert" className="px-3 py-2 text-sm text-destructive">
+          {t('search.providerFilterError', 'Unable to load filtered projects.')}
+          <button type="button" className="ml-2 underline" onClick={onRefresh}>
+            {t('search.retry', 'Retry')}
+          </button>
+        </div>
+      )}
       <ScrollArea className="flex-1 overflow-y-auto overscroll-contain md:px-1.5 md:py-2">
         {showConversationSearch ? (
           isSearching && !conversationResults ? (

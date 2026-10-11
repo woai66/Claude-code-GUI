@@ -88,6 +88,10 @@ function Sidebar({
     currentTime,
     isRefreshing,
     searchFilter,
+    providerFilter,
+    setProviderFilter,
+    isProviderProjectsLoading,
+    providerProjectsError,
     searchMode,
     setSearchMode,
     conversationResults,
@@ -197,7 +201,7 @@ function Sidebar({
     filteredProjects,
     selectedProject,
     selectedSession,
-    isLoading,
+    isLoading: isLoading || isProviderProjectsLoading,
     loadingProgress,
     isProjectExpanded,
     activeRename,
@@ -288,6 +292,9 @@ function Sidebar({
             isLoadingMoreRecentConversations={isLoadingMoreRecentConversations}
             recentConversationsError={recentConversationsError}
             searchFilter={searchFilter}
+            providerFilter={providerFilter}
+            onProviderFilterChange={setProviderFilter}
+            providerProjectsError={providerProjectsError}
             onSearchFilterChange={setSearchFilter}
             onClearSearchFilter={() => setSearchFilter('')}
             searchMode={searchMode}

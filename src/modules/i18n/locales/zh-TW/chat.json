@@ -100,16 +100,36 @@
       "auto": "自動模式",
       "acceptEdits": "編輯模式",
       "bypassPermissions": "無限制模式",
-      "plan": "計畫模式"
+      "plan": "計畫模式",
+      "dontAsk": "不詢問模式"
     },
     "descriptions": {
       "default": "只有受信任的指令（ls、cat、grep、git status 等）自動執行。其他指令將被略過。可以寫入工作區。",
       "auto": "由模型分類器針對每次工具呼叫決定核准或拒絕。免手動操作，但比 Bypass 安全——仍可能發生拒絕。",
       "acceptEdits": "工作區內的所有指令自動執行。完全自動模式，具有沙箱執行功能。",
       "bypassPermissions": "完全的系統存取，無限制。所有指令自動執行，具有完整的磁碟和網路存取權限。請謹慎使用。",
-      "plan": "計畫模式 - 不執行任何指令"
+      "plan": "計畫模式 - 不執行任何指令",
+      "dontAsk": "不請求權限；未預先允許的工具呼叫會被拒絕。"
     },
     "technicalDetails": "技術細節"
+  },
+  "claude": {
+    "modes": {
+      "default": "預設模式",
+      "auto": "自動模式",
+      "acceptEdits": "接受編輯",
+      "bypassPermissions": "無限制模式",
+      "plan": "計畫模式",
+      "dontAsk": "不詢問模式"
+    },
+    "descriptions": {
+      "default": "工具需要授權時要求確認。",
+      "auto": "由模型分類器逐次判斷工具呼叫是否核准，仍可能拒絕。",
+      "acceptEdits": "自動接受檔案編輯，其他權限檢查仍然生效。",
+      "bypassPermissions": "略過權限提示，工具以完整權限執行，請謹慎使用。",
+      "plan": "計畫模式 - 不執行任何指令",
+      "dontAsk": "從不請求權限；未預先允許的工具呼叫會被拒絕。"
+    }
   },
   "input": {
     "placeholder": "輸入 / 叫用指令，@ 選取檔案，或向 {{provider}} 提問...",

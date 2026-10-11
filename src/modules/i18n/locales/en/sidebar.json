@@ -130,6 +130,9 @@
     "restartRequired": "Update installed — restart the server to apply"
   },
   "search": {
+    "providerFilter": "Filter by agent",
+    "allProviders": "All agents",
+    "providerFilterError": "Unable to load filtered projects.",
     "modeProjects": "Projects",
     "modeConversations": "Conversations",
     "modeMore": "More",

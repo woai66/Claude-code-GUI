@@ -128,6 +128,9 @@
     "restartRequired": "已安裝更新 — 請重新啟動伺服器以套用"
   },
   "search": {
+    "providerFilter": "依 Agent 篩選",
+    "allProviders": "全部 Agent",
+    "providerFilterError": "載入篩選後的專案失敗。",
     "modeProjects": "專案",
     "modeConversations": "對話",
     "modeMore": "更多",

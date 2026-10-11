@@ -4,7 +4,8 @@ import type { TFunction } from 'i18next';
 import { api } from '@/shared/api';
 import { subscribeToUserPreferences } from '@/shared/userSettings';
 import { usePaletteOps } from '@/modules/command-palette';
-import type { ArchivedProjectListItem, ArchivedSessionListItem, ConversationProjectResult, ConversationSearchResults, LLMProvider, Project, ProjectSession, ProjectSortOrder, RecentConversationListItem, SearchProgress, ActiveSidebarRename, PendingSidebarDeletion, SessionTitleSearchResult, SessionWithProvider, SidebarSearchMode, SidebarSessionSelection } from '@/shared/types';
+import { useProviderProjectFilter } from '@/modules/sidebar/hooks/useProviderProjectFilter';
+import type { ArchivedProjectListItem, ArchivedSessionListItem, ConversationProjectResult, ConversationSearchResults, LLMProvider, Project, ProjectSession, ProjectSortOrder, RecentConversationListItem, SearchProgress, ActiveSidebarRename, PendingSidebarDeletion, SessionTitleSearchResult, SessionWithProvider, SidebarSearchMode, SidebarSessionSelection, SidebarProviderFilter } from '@/shared/types';
 import {
   filterProjects,
   getAllSessions,
@@ -94,6 +95,18 @@ export function useSidebarController({
   const [projectSortOrder, setProjectSortOrder] = useState<ProjectSortOrder>('name');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
+  // Remember the navigation scope independently of the agent selected in the chat composer.
+  const [providerFilter, setProviderFilter] = useState<SidebarProviderFilter>(() => {
+    const stored = localStorage.getItem('sidebar-provider-filter');
+    return stored === 'claude' || stored === 'codex' || stored === 'cursor' || stored === 'opencode' ? stored : 'all';
+  });
+  const {
+    projects: providerProjects,
+    isLoading: isProviderProjectsLoading,
+    error: providerProjectsError,
+    loadMore: loadFilteredProjectSessions,
+    reload: reloadProviderProjects,
+  } = useProviderProjectFilter(projects, providerFilter);
   const [deletingProjects, setDeletingProjects] = useState<Set<string>>(new Set());
   // The one delete confirmation the sidebar has open. One value because the
   // project and session dialogs are portalled at the same z-index and would
@@ -125,6 +138,8 @@ export function useSidebarController({
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [optimisticStarByProjectId, setOptimisticStarByProjectId] = useState<Map<string, boolean>>(new Map());
   const [loadingMoreProjects, setLoadingMoreProjects] = useState<Set<string>>(new Set());
+  // Serialize load-more requests immediately, before React commits their loading indicators.
+  const loadingMoreProjectIdsRef = useRef(new Set<string>());
   const searchSeqRef = useRef(0);
   const recentConversationsSeqRef = useRef(0);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -239,7 +254,9 @@ export function useSidebarController({
     setRecentConversationsError(false);
 
     try {
-      const response = await api.recentConversations({ limit: 40, offset });
+      const response = await api.recentConversations({
+        limit: 40, offset, provider: providerFilter === 'all' ? undefined : providerFilter,
+      });
       if (!response.ok) {
         throw new Error(`Failed to load recent conversations: ${response.status}`);
       }
@@ -278,7 +295,7 @@ export function useSidebarController({
         setIsLoadingMoreRecentConversations(false);
       }
     }
-  }, []);
+  }, [providerFilter]);
 
   const reloadRecentConversations = useCallback(() => {
     void fetchRecentConversationsPage(0, false);
@@ -443,7 +460,7 @@ export function useSidebarController({
       return;
     }
 
-    const url = api.searchConversationsUrl(query);
+    const url = api.searchConversationsUrl(query, 50, providerFilter === 'all' ? undefined : providerFilter);
     const es = new EventSource(url);
     eventSourceRef.current = es;
 
@@ -535,7 +552,7 @@ export function useSidebarController({
         eventSourceRef.current = null;
       }
     };
-  }, [debouncedSearchQuery, searchMode]);
+  }, [debouncedSearchQuery, providerFilter, searchMode]);
 
   // All sidebar state keys (expanded, starred, loading, etc.) use the DB
   // `projectId` as their identifier after the migration.
@@ -660,46 +677,45 @@ export function useSidebarController({
   const getProjectSessions = useCallback((project: Project) => getAllSessions(project), []);
 
   const loadMoreSessionsForProject = useCallback(async (projectId: string) => {
-    if (!onLoadMoreSessions) {
+    if (providerFilter === 'all' && !onLoadMoreSessions) {
       return;
     }
 
-    let shouldLoad = false;
+    if (loadingMoreProjectIdsRef.current.has(projectId)) {
+      return;
+    }
+    loadingMoreProjectIdsRef.current.add(projectId);
     setLoadingMoreProjects((previous) => {
-      if (previous.has(projectId)) {
-        return previous;
-      }
-
-      shouldLoad = true;
       const next = new Set(previous);
       next.add(projectId);
       return next;
     });
 
-    if (!shouldLoad) {
-      return;
-    }
-
     try {
-      await onLoadMoreSessions(projectId);
+      if (providerFilter === 'all') {
+        await onLoadMoreSessions?.(projectId);
+      } else {
+        await loadFilteredProjectSessions(projectId);
+      }
     } catch (error) {
       console.error('[Sidebar] Failed to load more sessions:', error);
       alert(t('messages.refreshError'));
     } finally {
+      loadingMoreProjectIdsRef.current.delete(projectId);
       setLoadingMoreProjects((previous) => {
         const next = new Set(previous);
         next.delete(projectId);
         return next;
       });
     }
-  }, [onLoadMoreSessions, t]);
+  }, [loadFilteredProjectSessions, onLoadMoreSessions, providerFilter, t]);
 
   const projectsWithResolvedStarState = useMemo(() => {
     if (optimisticStarByProjectId.size === 0) {
-      return projects;
+      return providerProjects;
     }
 
-    return projects.map((project) => {
+    return providerProjects.map((project) => {
       const optimisticStarState = optimisticStarByProjectId.get(project.projectId);
       if (optimisticStarState === undefined) {
         return project;
@@ -715,7 +731,7 @@ export function useSidebarController({
         isStarred: optimisticStarState,
       };
     });
-  }, [optimisticStarByProjectId, projects]);
+  }, [optimisticStarByProjectId, providerProjects]);
 
   const sortedProjects = useMemo(
     () => sortProjects(projectsWithResolvedStarState, projectSortOrder),
@@ -754,12 +770,13 @@ export function useSidebarController({
   );
 
   const filteredArchivedSessions = useMemo(() => {
+    const visibleSessions = archivedSessions.filter((session) => providerFilter === 'all' || session.provider === providerFilter);
     const normalizedSearch = debouncedSearchQuery.trim().toLowerCase();
     if (!normalizedSearch) {
-      return archivedSessions;
+      return visibleSessions;
     }
 
-    return archivedSessions.filter((session) => {
+    return visibleSessions.filter((session) => {
       const searchableFields = [
         session.sessionTitle,
         session.projectDisplayName,
@@ -769,15 +786,19 @@ export function useSidebarController({
 
       return searchableFields.some((value) => value.toLowerCase().includes(normalizedSearch));
     });
-  }, [archivedSessions, debouncedSearchQuery]);
+  }, [archivedSessions, debouncedSearchQuery, providerFilter]);
 
   const filteredArchivedProjects = useMemo(() => {
+    const visibleProjects = providerFilter === 'all' ? archivedProjects : archivedProjects.map((project) => {
+      const sessions = getAllSessions(project).filter((session) => session.__provider === providerFilter);
+      return { ...project, sessions, sessionMeta: { total: sessions.length, hasMore: false } };
+    }).filter((project) => project.sessions.length > 0);
     const normalizedSearch = debouncedSearchQuery.trim().toLowerCase();
     if (!normalizedSearch) {
-      return archivedProjects;
+      return visibleProjects;
     }
 
-    return archivedProjects.filter((project) => {
+    return visibleProjects.filter((project) => {
       const projectMatches = [
         project.displayName,
         project.fullPath || '',
@@ -801,7 +822,7 @@ export function useSidebarController({
         ].some((value) => value.toLowerCase().includes(normalizedSearch));
       });
     });
-  }, [archivedProjects, debouncedSearchQuery]);
+  }, [archivedProjects, debouncedSearchQuery, providerFilter]);
 
   // Keyed by projectId so the rename survives display-name mutations that arrive
   // while the input is open.
@@ -1023,13 +1044,14 @@ export function useSidebarController({
 
   const requestProjectDelete = useCallback(
     (project: Project) => {
+      const fullProject = projects.find((candidate) => candidate.projectId === project.projectId) ?? project;
       setPendingDeletion({
         kind: 'project',
-        project,
-        sessionCount: getProjectSessions(project).length,
+        project: fullProject,
+        sessionCount: Number(fullProject.sessionMeta?.total ?? getProjectSessions(fullProject).length),
       });
     },
-    [getProjectSessions],
+    [getProjectSessions, projects],
   );
 
   const confirmDeleteProject = useCallback(async (deleteData = false) => {
@@ -1070,10 +1092,11 @@ export function useSidebarController({
 
   const handleProjectSelect = useCallback(
     (project: Project) => {
-      onProjectSelect(project);
-      setCurrentProject(project);
+      const fullProject = projects.find((candidate) => candidate.projectId === project.projectId) ?? project;
+      onProjectSelect(fullProject);
+      setCurrentProject(fullProject);
     },
-    [onProjectSelect, setCurrentProject],
+    [onProjectSelect, projects, setCurrentProject],
   );
 
   const openArchivedSession = useCallback((session: ArchivedSessionListItem) => {
@@ -1149,6 +1172,7 @@ export function useSidebarController({
 
   const refreshProjects = useCallback(async () => {
     setIsRefreshing(true);
+    reloadProviderProjects();
     try {
       await Promise.all([
         Promise.resolve(onRefresh()),
@@ -1160,7 +1184,7 @@ export function useSidebarController({
     } finally {
       setIsRefreshing(false);
     }
-  }, [fetchArchivedSessions, fetchRecentConversationsPage, onRefresh, searchMode]);
+  }, [fetchArchivedSessions, fetchRecentConversationsPage, onRefresh, reloadProviderProjects, searchMode]);
 
   const updateSessionSummary = useCallback(
     // `_projectId` and `_provider` are preserved for compatibility with
@@ -1243,6 +1267,20 @@ export function useSidebarController({
     setSearchMode(mode);
   }, []);
 
+  const changeProviderFilter = useCallback((next: SidebarProviderFilter) => {
+    recentConversationsSeqRef.current += 1;
+    searchSeqRef.current += 1;
+    eventSourceRef.current?.close();
+    setRecentConversations([]);
+    setRecentConversationsTotal(0);
+    setRecentConversationsHasMore(false);
+    setIsLoadingMoreRecentConversations(false);
+    setConversationResults(null);
+    setSessionSelection(null);
+    localStorage.setItem('sidebar-provider-filter', next);
+    setProviderFilter(next);
+  }, []);
+
   return {
     isSidebarCollapsed,
     isProjectExpanded,
@@ -1252,15 +1290,20 @@ export function useSidebarController({
     currentTime,
     isRefreshing,
     searchFilter,
+    providerFilter,
+    setProviderFilter: changeProviderFilter,
+    isProviderProjectsLoading,
+    providerProjectsError,
     deletingProjects,
     loadingMoreProjects,
     pendingDeletion,
     showVersionModal,
     filteredProjects,
-    runningSessionsCount,
+    runningSessionsCount: providerFilter === 'all' ? runningSessionsCount
+      : runningProjects.reduce((total, project) => total + (project.sessions?.length ?? 0), 0),
     archivedProjects: filteredArchivedProjects,
     archivedSessions: filteredArchivedSessions,
-    archivedSessionsCount: archivedProjects.length + archivedSessions.length,
+    archivedSessionsCount: filteredArchivedProjects.length + filteredArchivedSessions.length,
     isArchivedSessionsLoading,
     recentConversations: recentConversationsWithCurrentTitles,
     recentConversationsTotal,

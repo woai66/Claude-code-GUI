@@ -26,6 +26,7 @@ import type {
   ProviderModelsDefinition,CommandModalPayload,CostCommandData,HelpCommandData,ModelCommandData,StatusCommandData
 } from '@/shared/types';
 import ModelLibraryPanel from '@/modules/chat/modals/ModelLibraryPanel';
+import { findProviderModelOption } from '@/shared/utils';
 
 type CommandResultModalProps = {
   payload: CommandModalPayload | null;
@@ -267,6 +268,7 @@ function ModelsContent({
     const availableModels = Array.isArray(data?.availableModels) ? data.availableModels : [];
     return availableModels.map((model) => ({ value: model, label: model }));
   }, [data, liveDefinition]);
+  const selectedModelOption = findProviderModelOption(availableOptions, currentModel);
   const filteredOptions = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) {
@@ -349,7 +351,7 @@ function ModelsContent({
         <div className="scrollbar-thin -mr-1 min-h-0 flex-1 overflow-y-auto pr-1">
           <div className="grid gap-2 md:grid-cols-2">
             {filteredOptions.map((option, index) => {
-              const isCurrent = option.value === currentModel;
+              const isCurrent = option.value === selectedModelOption?.value;
               const isPendingSelection = option.value === pendingSessionModel;
               const isChanging = option.value === changingModel;
               return (

@@ -1,6 +1,11 @@
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+
+import { query } from '@anthropic-ai/claude-agent-sdk';
+import type { ModelInfo } from '@anthropic-ai/claude-agent-sdk';
 
 import { sessionsDb } from '@/modules/database/index.js';
+import { findProviderModelOption, resolveClaudeCodeExecutablePath } from '@/shared/index.js';
 import type { IProviderModels } from '@/shared/interfaces.js';
 import type {
   ProviderCurrentActiveModel,
@@ -23,7 +28,7 @@ export const CLAUDE_ULTRACODE_EFFORT = 'ultracode';
 
 const ULTRACODE_EFFORT_OPTION = {
   value: CLAUDE_ULTRACODE_EFFORT,
-  description: 'Highest effort plus standing workflow orchestration.',
+  description: 'Enable workflow orchestration at xhigh effort.',
 };
 
 export const CLAUDE_PREDEFINED_MODELS: ProviderModelsDefinition = {
@@ -171,6 +176,18 @@ export const findClaudeModelOption = (model: string | undefined | null): Provide
 
   return CLAUDE_PREDEFINED_MODELS.OPTIONS.find((option) => option.value === normalizedModel) ?? null;
 };
+
+/** Used by the Claude runtime to validate effort for both CLI aliases and canonical session model IDs. */
+export function resolveClaudeEffort(
+  model: string | undefined,
+  effort: string | undefined,
+  models: ProviderModelsDefinition = CLAUDE_PREDEFINED_MODELS,
+): string | undefined {
+  const option = findProviderModelOption(models.OPTIONS, model ?? '');
+  return effort && effort !== 'default' && option?.effort?.values.some((level) => level.value === effort)
+    ? effort
+    : undefined;
+}
 type ClaudeInitEvent = {
   sessionId?: string;
   session_id?: string;
@@ -276,20 +293,118 @@ const readClaudeSessionModelFromJsonl = async (
   return null;
 };
 
+type ClaudeModelsDependencies = {
+  query?: typeof query;
+  resolveExecutable?: typeof resolveClaudeCodeExecutablePath;
+  now?: () => number;
+  timeoutMs?: number;
+};
+
+const MODEL_CACHE_TTL_MS = 5 * 60_000;
+const FALLBACK_CACHE_TTL_MS = 15_000;
+
+function buildClaudeModelsDefinition(models: ModelInfo[]): ProviderModelsDefinition {
+  const options = models.map((model): ProviderModelOption => {
+    // Older SDK declarations omit resolvedModel even when the installed CLI returns it.
+    const resolvedModel = (model as ModelInfo & { resolvedModel?: string }).resolvedModel;
+    const levels = model.supportsEffort === false ? [] : model.supportedEffortLevels ?? [];
+    return {
+      value: model.value,
+      label: model.displayName,
+      description: model.description,
+      ...(resolvedModel ? { resolvedModel } : {}),
+      ...(levels.length ? {
+        effort: {
+          values: [
+            ...levels.map((value) => ({ value })),
+            ...(levels.includes('xhigh') ? [ULTRACODE_EFFORT_OPTION] : []),
+          ],
+        },
+      } : {}),
+    };
+  });
+  if (!options.length) {
+    throw new Error('Claude returned an empty model catalogue.');
+  }
+  return { OPTIONS: options, DEFAULT: options.some((option) => option.value === 'default') ? 'default' : options[0].value };
+}
+
+/** Used by the provider registry to discover account and workspace model capabilities without creating chats. */
 export class ClaudeProviderModels implements IProviderModels {
-  async getSupportedModels(): Promise<ProviderModelsDefinition> {
-    // claude creates a new jsonl file as a separate session for this request.
-    // As a result, it lists the workspace where this is invoked when it shouldn't.
-    //
-    // Disabled for now:
-    // const queryInstance = query({
-    //   prompt: 'Get supported models',
-    //   options: buildClaudeQueryOptions(),
-    // });
-    // const supportedModels = await queryInstance.supportedModels();
-    // queryInstance.close();
-    // return buildClaudeModelsDefinition(supportedModels);
-    return CLAUDE_PREDEFINED_MODELS;
+  private readonly cache = new Map<string, { models: ProviderModelsDefinition; expiresAt: number }>();
+  private readonly pending = new Map<string, Promise<ProviderModelsDefinition>>();
+
+  constructor(private readonly dependencies: ClaudeModelsDependencies = {}) {}
+
+  async getSupportedModels(cwd?: string): Promise<ProviderModelsDefinition> {
+    const workspace = path.resolve(cwd || process.cwd());
+    const executable = (this.dependencies.resolveExecutable ?? resolveClaudeCodeExecutablePath)();
+    const key = `${executable ?? 'bundled'}:${workspace}`;
+    const now = this.dependencies.now ?? Date.now;
+    const cached = this.cache.get(key);
+    if (cached && cached.expiresAt > now()) {
+      return cached.models;
+    }
+    const pending = this.pending.get(key);
+    if (pending) {
+      return pending;
+    }
+    const request = this.discoverModels(workspace, executable).then(({ models, ttl }) => {
+      const availableModels = models === CLAUDE_PREDEFINED_MODELS ? cached?.models ?? models : models;
+      this.cache.set(key, { models: availableModels, expiresAt: now() + ttl });
+      return availableModels;
+    }).finally(() => this.pending.delete(key));
+    this.pending.set(key, request);
+    return request;
+  }
+
+  private async discoverModels(cwd: string, executable?: string) {
+    let releaseInput = () => {};
+    const inputFinished = new Promise<void>((resolve) => { releaseInput = resolve; });
+    const noMessages: AsyncIterable<never> = {
+      [Symbol.asyncIterator]() {
+        return {
+          async next() {
+            await inputFinished;
+            return { done: true, value: undefined };
+          },
+        };
+      },
+    };
+    let instance: ReturnType<typeof query> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      instance = (this.dependencies.query ?? query)({
+        prompt: noMessages,
+        options: {
+          cwd,
+          pathToClaudeCodeExecutable: executable,
+          persistSession: false,
+          settingSources: ['project', 'user', 'local'],
+          settings: '{"disableAllHooks":true,"syncClaudeAiPlugins":false}',
+          tools: [],
+          mcpServers: {},
+          strictMcpConfig: true,
+        },
+      });
+      // Keep stdin open for the handshake, but never send a model request or persist a transcript.
+      const models = await Promise.race([
+        instance.supportedModels(),
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error('Claude model discovery timed out.')),
+            this.dependencies.timeoutMs ?? 15_000,
+          );
+        }),
+      ]);
+      return { models: buildClaudeModelsDefinition(models), ttl: MODEL_CACHE_TTL_MS };
+    } catch {
+      return { models: CLAUDE_PREDEFINED_MODELS, ttl: FALLBACK_CACHE_TTL_MS };
+    } finally {
+      clearTimeout(timer);
+      instance?.close();
+      releaseInput();
+    }
   }
 
   async getCurrentActiveModel(sessionId?: string): Promise<ProviderCurrentActiveModel> {

@@ -129,6 +129,9 @@
     "restartRequired": "已安装更新 — 请重启服务器以生效"
   },
   "search": {
+    "providerFilter": "按 Agent 筛选",
+    "allProviders": "全部 Agent",
+    "providerFilterError": "加载筛选后的项目失败。",
     "modeProjects": "项目",
     "modeConversations": "对话",
     "modeMore": "更多",

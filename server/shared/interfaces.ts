@@ -113,7 +113,7 @@ export interface IProviderModels {
   /**
    * Returns the curated predefined catalog owned by this provider adapter.
    */
-  getSupportedModels(): Promise<ProviderModelsDefinition>;
+  getSupportedModels(cwd?: string): Promise<ProviderModelsDefinition>;
 
   /**
    * Reads the model the provider itself believes one session is running with.
@@ -199,6 +199,12 @@ export interface IProviderMcp {
 export interface IProviderSessions {
   normalizeMessage(raw: unknown, sessionId: string | null): NormalizedMessage[];
   fetchHistory(sessionId: string, options?: FetchHistoryOptions): Promise<FetchHistoryResult>;
+
+  /**
+   * Reads the permission mode recorded for a session, when the provider keeps
+   * that choice in its transcript. Returns null when it cannot be determined.
+   */
+  readPermissionMode?(sessionId: string): Promise<string | null>;
 
   /**
    * Resolves where a conversation must resume from so that the turn identified

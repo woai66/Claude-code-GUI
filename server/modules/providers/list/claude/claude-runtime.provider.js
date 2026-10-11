@@ -26,7 +26,8 @@ import {
 } from '@/shared/image-attachments.js';
 import {
   CLAUDE_PREDEFINED_MODELS,
-  CLAUDE_ULTRACODE_EFFORT
+  CLAUDE_ULTRACODE_EFFORT,
+  resolveClaudeEffort
 } from '@/modules/providers/list/claude/claude-models.provider.js';
 import { resolveClaudeCodeExecutablePath } from '@/shared/claude-cli-path.js';
 import {
@@ -82,15 +83,6 @@ const TOOLS_REQUIRING_INTERACTION = new Set(['AskUserQuestion', 'ExitPlanMode'])
 // Workflows are enabled. The catalog offers it as an effort choice for the picker, so the
 // selection is translated back into the two options the SDK actually understands here.
 const ULTRACODE_SDK_EFFORT = 'xhigh';
-
-function resolveClaudeEffort(model, effort, modelsDefinition = CLAUDE_PREDEFINED_MODELS) {
-  const selectedModel = modelsDefinition?.OPTIONS?.find((option) => option.value === model) || null;
-  const allowedEfforts = selectedModel?.effort?.values
-    ?.map((value) => value.value) || [];
-  return typeof effort === 'string' && effort !== 'default' && allowedEfforts.includes(effort)
-    ? effort
-    : undefined;
-}
 
 /**
  * Writes the resolved effort choice onto the SDK options, expanding `ultracode` into the
@@ -252,7 +244,10 @@ function mapCliOptionsToSDK(options = {}) {
     skipPermissions: false
   };
 
-  if (settings.skipPermissions && permissionMode !== 'plan') {
+  // An explicit composer mode is authoritative. The settings toggle remains
+  // the fallback for the default mode, but must not silently turn Claude's
+  // `auto` mode into `bypassPermissions`.
+  if (settings.skipPermissions && (!permissionMode || permissionMode === 'default')) {
     sdkOptions.permissionMode = 'bypassPermissions';
   }
 
@@ -975,7 +970,7 @@ async function queryClaudeSDK(command, options = {}, ws, context) {
     const resolvedModel = await context.resolveResumeModel(sessionId, options.model);
     let effortModels = CLAUDE_PREDEFINED_MODELS;
     try {
-      effortModels = await context.getProviderModels();
+      effortModels = await context.getProviderModels(options.cwd);
     } catch (error) {
       console.warn('[Claude SDK] Unable to load provider models for effort validation:', error);
     }

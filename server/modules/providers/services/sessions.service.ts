@@ -214,8 +214,8 @@ export const sessionsService = {
   /**
    * Returns the active conversation feed in true global activity order.
    */
-  listRecentSessions(limit: number, offset: number): RecentSessionsPage {
-    const page = sessionsDb.getRecentSessionsPage(limit, offset);
+  listRecentSessions(limit: number, offset: number, provider?: LLMProvider): RecentSessionsPage {
+    const page = sessionsDb.getRecentSessionsPage(limit, offset, provider);
     const projectCache = new Map<string, ReturnType<typeof projectsDb.getProjectPath>>();
     const conversations = page.sessions.map((session) => {
       const projectPath = session.project_path?.trim() ? session.project_path : null;
@@ -559,6 +559,20 @@ export const sessionsService = {
         sessionId,
       })),
     };
+  },
+
+  /** Reads the mode a provider recorded for an existing session, if supported. */
+  async readPermissionMode(provider: LLMProvider, sessionId: string): Promise<string | null> {
+    const session = sessionsDb.getSessionById(sessionId)
+      ?? sessionsDb.getSessionByProviderSessionId(sessionId);
+    if (!session || session.provider !== provider) {
+      return null;
+    }
+
+    const providerSessions = providerRegistry.resolveProvider(provider).sessions;
+    return providerSessions.readPermissionMode
+      ? providerSessions.readPermissionMode(session.session_id)
+      : null;
   },
 
   /**

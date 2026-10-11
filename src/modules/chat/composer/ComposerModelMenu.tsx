@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import type { ProviderModelOption } from '@/shared/types';
 import { DEFAULT_EFFORT_VALUE } from '@/shared/constants';
+import { findProviderModelOption } from '@/shared/utils';
 import { useComposerMenuAnchor } from '@/modules/chat/hooks/useComposerMenuAnchor';
 import {
   ComposerMenuHeading,
@@ -62,7 +63,7 @@ function ComposerModelMenu({
   const effortLabel = effort === DEFAULT_EFFORT_VALUE ? defaultEffortLabel : effort;
 
   const selectedModelOption = useMemo(
-    () => modelOptions.find((option) => option.value === model) ?? null,
+    () => findProviderModelOption(modelOptions, model),
     [model, modelOptions],
   );
   const modelLabel = selectedModelOption?.label || model;
@@ -152,7 +153,7 @@ function ComposerModelMenu({
                     <ComposerMenuItem
                       key={option.value}
                       label={option.label || option.value}
-                      isSelected={option.value === model}
+                      isSelected={option.value === selectedModelOption?.value}
                       onSelect={() => {
                         onSelectModel(option.value);
                         setIsOpen(false);

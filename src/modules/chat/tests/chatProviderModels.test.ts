@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, test, vi } from 'vitest';
 
 import { resetUserPreferences, writeUserPreference } from '@/shared/userSettings';
+import type { ProjectSession } from '@/shared/types';
 
 /**
  * The four per-provider default models used to be four useState slots with four
@@ -48,6 +49,15 @@ const renderProviderState = async () => {
   );
 };
 
+const renderProviderStateForSession = async (selectedSession: ProjectSession) => {
+  const { useChatProviderState } = await import(
+    '@/modules/chat/hooks/useChatProviderState'
+  );
+  return renderHook(() =>
+    useChatProviderState({ selectedSession, selectedProject: null }),
+  );
+};
+
 beforeEach(() => {
   localStorage.clear();
   // The preference store is a module-level singleton, so its in-memory copy
@@ -73,6 +83,26 @@ test('each provider gets its own model from its own storage key', async () => {
   assert.equal(result.current.providerModels.cursor, 'cursor-stored');
   assert.equal(result.current.providerModels.codex, 'codex-stored');
   assert.equal(result.current.providerModels.opencode, 'opencode-stored');
+});
+
+test('canonical Claude IDs retain their stored selection and inherit the CLI alias effort capabilities', async () => {
+  const { api } = await import('@/shared/api');
+  vi.spyOn(api.providers, 'models').mockImplementation(async (provider) => ({
+    ok: true,
+    json: async () => ({ success: true, data: { models: {
+      DEFAULT: 'default', OPTIONS: provider === 'claude' ? [
+        { value: 'default', label: 'Default', resolvedModel: 'claude-opus-5-5' },
+        { value: 'opus', label: 'Opus 5.5', resolvedModel: 'claude-opus-5-5', effort: {
+          values: [{ value: 'low' }, { value: 'high' }, { value: 'xhigh' }],
+        } },
+      ] : [{ value: 'default', label: 'Default' }],
+    } } }),
+  }) as Response);
+  localStorage.setItem('claude-model', 'claude-opus-5-5');
+  const { result } = await renderProviderState();
+  await waitFor(() => assert.equal(result.current.currentProviderModelOptions.length, 2));
+  assert.equal(result.current.currentProviderModel, 'claude-opus-5-5');
+  assert.deepEqual(result.current.currentProviderEffortOptions.map((option) => option.value), ['low', 'high', 'xhigh']);
 });
 
 test('a provider with no stored model falls back to its own default, not another provider’s', async () => {
@@ -145,4 +175,67 @@ test('the active provider’s model is what currentProviderModel reports', async
     assert.equal(result.current.provider, 'cursor');
   });
   assert.equal(result.current.currentProviderModel, 'cursor-active');
+});
+
+test('an external Claude session restores the permission mode recorded by Claude CLI', async () => {
+  const { api } = await import('@/shared/api');
+  vi.spyOn(api.providers, 'capabilities').mockImplementation(async () => okJson({
+    success: true,
+    data: {
+      providers: [{
+        provider: 'claude',
+        permissionModes: ['default', 'auto', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk'],
+        defaultPermissionMode: 'default',
+      }],
+    },
+  }) as unknown as Response);
+  vi.spyOn(api.providers, 'sessionActiveModel').mockImplementation(async () => okJson({
+    success: true,
+    data: {
+      provider: 'claude',
+      sessionId: 'external-claude-session',
+      model: 'default',
+      source: 'default',
+      permissionMode: 'auto',
+    },
+  }) as unknown as Response);
+
+  const { result } = await renderProviderStateForSession({
+    id: 'external-claude-session',
+    __provider: 'claude',
+  });
+
+  await waitFor(() => assert.equal(result.current.permissionMode, 'auto'));
+});
+
+test('a local mode choice for a session overrides its external Claude mode', async () => {
+  localStorage.setItem('permissionMode-external-claude-session', 'plan');
+  const { api } = await import('@/shared/api');
+  vi.spyOn(api.providers, 'capabilities').mockImplementation(async () => okJson({
+    success: true,
+    data: {
+      providers: [{
+        provider: 'claude',
+        permissionModes: ['default', 'auto', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk'],
+        defaultPermissionMode: 'default',
+      }],
+    },
+  }) as unknown as Response);
+  vi.spyOn(api.providers, 'sessionActiveModel').mockImplementation(async () => okJson({
+    success: true,
+    data: {
+      provider: 'claude',
+      sessionId: 'external-claude-session',
+      model: 'default',
+      source: 'default',
+      permissionMode: 'auto',
+    },
+  }) as unknown as Response);
+
+  const { result } = await renderProviderStateForSession({
+    id: 'external-claude-session',
+    __provider: 'claude',
+  });
+
+  await waitFor(() => assert.equal(result.current.permissionMode, 'plan'));
 });

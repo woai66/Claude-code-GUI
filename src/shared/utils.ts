@@ -1,7 +1,19 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-import type { Project, ProjectSession, QuickSettingsTab, SlashCommand } from '@/shared/types';
+import type { Project, ProjectSession, ProviderModelOption, QuickSettingsTab, SlashCommand } from '@/shared/types';
+
+//----------------- PROVIDER MODEL LOOKUP ------------
+
+/** Matches a CLI selector or canonical ID; exact and named choices take precedence over Default. */
+export function findProviderModelOption(options: ProviderModelOption[], model: string): ProviderModelOption | null {
+  return options.find((option) => option.value === model)
+    ?? options.find((option) => option.value !== 'default' && option.resolvedModel === model)
+    ?? options.find((option) => option.resolvedModel === model)
+    ?? null;
+}
+
+// ---------------------------
 
 //----------------- DEPLOYMENT MODE ------------
 

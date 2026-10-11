@@ -7,9 +7,14 @@ import type { NavigateFunction } from 'react-router-dom';
 /** Identifies which coding-agent CLI backs a session, project selection or model list. */
 export type LLMProvider = 'claude' | 'cursor' | 'codex' | 'opencode';
 
+/** Agent restriction for sidebar lists and searches; "all" includes every provider. */
+export type SidebarProviderFilter = LLMProvider | 'all';
+
 /** One selectable model in a provider's model menu, including its optional reasoning-effort choices. */
 export type ProviderModelOption = {
   value: string;
+  /** Canonical CLI model ID, used to match resumed sessions against an alias row. */
+  resolvedModel?: string;
   label: string;
   description?: string;
   recordId?: number;
@@ -284,8 +289,8 @@ export type QueueItemStatus = 'completed' | 'in_progress' | 'pending';
 
 //----------------- CHAT MESSAGES AND PERMISSIONS ------------
 
-/** Permission preset a provider runs a turn under ('default', 'acceptEdits', 'auto', 'bypassPermissions' or 'plan'), chosen in the composer and sent with each message; the backend capability matrix decides which values a given provider accepts. */
-export type PermissionMode = 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan';
+/** Permission preset a provider runs a turn under, chosen in the composer and sent with each message; the backend capability matrix decides which values a given provider accepts. */
+export type PermissionMode = 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan' | 'dontAsk';
 
 /** A non-image file attached to a chat message, described by its path in the server-managed attachment store plus display metadata so it can be listed and downloaded. */
 export type ChatAttachment = {

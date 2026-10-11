@@ -2,9 +2,9 @@ import { FolderPlus, Plus, RefreshCw, Search, X, PanelLeftClose } from 'lucide-r
 import type { TFunction } from 'i18next';
 
 import { Button, Input } from '@/shared/ui';
-import { CLOUDCLI_WORDMARK_FONT_FAMILY } from '@/shared/constants';
+import { CLOUDCLI_WORDMARK_FONT_FAMILY, PROVIDER_LABELS } from '@/shared/constants';
 import { IS_PLATFORM } from '@/shared/utils';
-import type { SidebarSearchMode } from '@/shared/types';
+import type { SidebarProviderFilter, SidebarSearchMode } from '@/shared/types';
 import GitHubStarBadge from '@/modules/sidebar/GitHubStarBadge';
 import SidebarModeTabs from '@/modules/sidebar/SidebarModeTabs';
 
@@ -20,6 +20,8 @@ type SidebarHeaderProps = {
   archivedSessionsCount: number;
   isArchivedSessionsLoading: boolean;
   searchFilter: string;
+  providerFilter: SidebarProviderFilter;
+  onProviderFilterChange: (provider: SidebarProviderFilter) => void;
   onSearchFilterChange: (value: string) => void;
   onClearSearchFilter: () => void;
   searchMode: SidebarSearchMode;
@@ -30,6 +32,24 @@ type SidebarHeaderProps = {
   onCollapseSidebar: () => void;
   t: TFunction;
 };
+
+function ProviderFilter({ providerFilter, onProviderFilterChange, t }: Pick<
+  SidebarHeaderProps, 'providerFilter' | 'onProviderFilterChange' | 't'
+>) {
+  return (
+    <select
+      aria-label={t('search.providerFilter', 'Filter by agent')}
+      value={providerFilter}
+      onChange={(event) => onProviderFilterChange(event.target.value as SidebarProviderFilter)}
+      className="h-9 w-full rounded-xl border border-border/60 bg-background px-3 text-sm text-foreground"
+    >
+      <option value="all">{t('search.allProviders', 'All agents')}</option>
+      {Object.entries(PROVIDER_LABELS).map(([provider, label]) => (
+        <option key={provider} value={provider}>{label}</option>
+      ))}
+    </select>
+  );
+}
 
 /** Module-level, not a nested render function, so the wordmark is not remounted on every SidebarHeader render. */
 function LogoBlock({ t }: { t: TFunction }) {
@@ -60,6 +80,8 @@ export default function SidebarHeader({
   archivedSessionsCount,
   isArchivedSessionsLoading,
   searchFilter,
+  providerFilter,
+  onProviderFilterChange,
   onSearchFilterChange,
   onClearSearchFilter,
   searchMode,
@@ -70,7 +92,8 @@ export default function SidebarHeader({
   onCollapseSidebar,
   t,
 }: SidebarHeaderProps) {
-  const showSearchTools = (projectsCount > 0 || runningSessionsCount > 0 || archivedSessionsCount > 0 || isArchivedSessionsLoading) && !isLoading;
+  const showSearchTools = projectsCount > 0 || runningSessionsCount > 0 || archivedSessionsCount > 0
+    || (!isLoading && isArchivedSessionsLoading);
   const searchPlaceholder = searchMode === 'conversations'
     ? t('search.conversationsPlaceholder')
     : searchMode === 'archived'
@@ -147,6 +170,7 @@ export default function SidebarHeader({
               runningSessionsCount={runningSessionsCount}
               t={t}
             />
+            <ProviderFilter providerFilter={providerFilter} onProviderFilterChange={onProviderFilterChange} t={t} />
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
               <Input
@@ -226,6 +250,7 @@ export default function SidebarHeader({
               runningSessionsCount={runningSessionsCount}
               t={t}
             />
+            <ProviderFilter providerFilter={providerFilter} onProviderFilterChange={onProviderFilterChange} t={t} />
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
               <Input
