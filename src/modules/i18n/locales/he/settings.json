@@ -535,7 +535,7 @@
     },
     "managed": {
       "badge": "מנוהל",
-      "hint": "מנוהל על ידי CloudCLI."
+      "hint": "מנוהל על ידי Claude GUI."
     },
     "help": {
       "title": "על Codex MCP",
@@ -567,7 +567,7 @@
     "docs": "תיעוד",
     "sections": {
       "officialTitle": "תוספים רשמיים",
-      "officialDescription": "מתוחזקים על ידי צוות CloudCLI ומוכנים להתקנה ישירה.",
+      "officialDescription": "מתוחזקים על ידי צוות Claude GUI ומוכנים להתקנה ישירה.",
       "unofficialTitle": "תוספים נוספים",
       "unofficialDescription": "תוספים ושילובים לא רשמיים ממשתמשים אחרים. כדאי לבדוק את קוד המקור לפני ההתקנה."
     },
@@ -598,7 +598,7 @@
     "prismCloudCLI": {
       "name": "PRISM CloudCLI",
       "badge": "לא רשמי",
-      "description": "ניתוח סשנים של Claude Code בתוך CloudCLI. אפשר לראות למה הסשנים צורכים טוקנים בלי לצאת מהדפדפן.",
+      "description": "ניתוח סשנים של Claude Code בתוך Claude GUI. אפשר לראות למה הסשנים צורכים טוקנים בלי לצאת מהדפדפן.",
       "install": "התקנה"
     },
     "sessionManagerPlugin": {
@@ -826,7 +826,7 @@
     "tagline": "ממשק קוד פתוח לעוזר תכנות מבוסס AI",
     "starOnGitHub": "כוכב ב-GitHub",
     "docs": "תיעוד",
-    "hostedTitle": "לנסות את CloudCLI Hosted",
+    "hostedTitle": "לנסות את Claude GUI Hosted",
     "hostedDescription": "שיתוף פעולה בצוות, תצורות MCP משותפות, סנכרון הגדרות בין סביבות ותשתית מנוהלת.",
     "learnMore": "מידע נוסף",
     "proFeaturesTitle": "יכולות CloudCLI Pro",

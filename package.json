@@ -1,11 +1,12 @@
 {
   "name": "@cloudcli-ai/cloudcli",
   "version": "1.37.4",
-  "productName": "CloudCLI",
-  "description": "A web-based UI for Claude Code CLI",
+  "productName": "Claude GUI",
+  "description": "A local desktop and web UI for Claude Code, Codex, Cursor and OpenCode",
   "type": "module",
   "main": "dist-server/server/index.js",
   "bin": {
+    "claude-gui": "dist-server/server/modules/cli/cli.js",
     "cloudcli": "dist-server/server/modules/cli/cli.js"
   },
   "files": [
@@ -64,9 +65,9 @@
   },
   "build": {
     "appId": "ai.cloudcli.desktop",
-    "productName": "CloudCLI",
+    "productName": "Claude GUI",
     "asar": false,
-    "artifactName": "cloudcli-desktop-${version}-${os}-${arch}.${ext}",
+    "artifactName": "claude-gui-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "release/desktop"
     },
@@ -85,7 +86,7 @@
     ],
     "protocols": [
       {
-        "name": "CloudCLI",
+        "name": "Claude GUI",
         "schemes": [
           "cloudcli"
         ]
@@ -99,11 +100,11 @@
         "dmg"
       ],
       "extendInfo": {
-        "CFBundleName": "CloudCLI",
-        "CFBundleDisplayName": "CloudCLI",
+        "CFBundleName": "Claude GUI",
+        "CFBundleDisplayName": "Claude GUI",
         "CFBundleURLTypes": [
           {
-            "CFBundleURLName": "CloudCLI",
+            "CFBundleURLName": "Claude GUI",
             "CFBundleURLSchemes": [
               "cloudcli"
             ]

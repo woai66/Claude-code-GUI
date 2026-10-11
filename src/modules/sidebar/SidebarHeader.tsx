@@ -1,24 +1,17 @@
-import { FolderPlus, Plus, RefreshCw, Search, X, PanelLeftClose } from 'lucide-react';
+import { ChevronDown, Folder, FolderPlus, PanelLeftClose, Plus, RefreshCw, Search, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
-import { Button, Input } from '@/shared/ui';
-import { CLOUDCLI_WORDMARK_FONT_FAMILY, PROVIDER_LABELS } from '@/shared/constants';
-import { IS_PLATFORM } from '@/shared/utils';
-import type { SidebarProviderFilter, SidebarSearchMode } from '@/shared/types';
-import GitHubStarBadge from '@/modules/sidebar/GitHubStarBadge';
+import { ActionMenu, Button, Input } from '@/shared/ui';
+import { APP_WORDMARK_FONT_FAMILY, PROVIDER_LABELS } from '@/shared/constants';
+import type { Project, SidebarProviderFilter, SidebarSearchMode } from '@/shared/types';
 import SidebarModeTabs from '@/modules/sidebar/SidebarModeTabs';
-
-const MOD_KEY =
-  typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl';
 
 type SidebarHeaderProps = {
   isPWA: boolean;
   isMobile: boolean;
-  isLoading: boolean;
-  projectsCount: number;
+  projects: Project[];
+  selectedProject: Project | null;
   runningSessionsCount: number;
-  archivedSessionsCount: number;
-  isArchivedSessionsLoading: boolean;
   searchFilter: string;
   providerFilter: SidebarProviderFilter;
   onProviderFilterChange: (provider: SidebarProviderFilter) => void;
@@ -29,56 +22,79 @@ type SidebarHeaderProps = {
   onRefresh: () => void;
   isRefreshing: boolean;
   onCreateProject: () => void;
+  onNewSession: (project: Project) => void;
   onCollapseSidebar: () => void;
   t: TFunction;
 };
 
-function ProviderFilter({ providerFilter, onProviderFilterChange, t }: Pick<
-  SidebarHeaderProps, 'providerFilter' | 'onProviderFilterChange' | 't'
+function NewSessionAction({ projects, selectedProject, onNewSession, onCreateProject, t }: Pick<
+  SidebarHeaderProps, 'projects' | 'selectedProject' | 'onNewSession' | 'onCreateProject' | 't'
 >) {
-  return (
-    <select
-      aria-label={t('search.providerFilter', 'Filter by agent')}
-      value={providerFilter}
-      onChange={(event) => onProviderFilterChange(event.target.value as SidebarProviderFilter)}
-      className="h-9 w-full rounded-xl border border-border/60 bg-background px-3 text-sm text-foreground"
-    >
-      <option value="all">{t('search.allProviders', 'All agents')}</option>
-      {Object.entries(PROVIDER_LABELS).map(([provider, label]) => (
-        <option key={provider} value={provider}>{label}</option>
-      ))}
-    </select>
-  );
-}
+  // 使用实时列表，避免给已移除的项目创建会话。
+  const currentProject = projects.find((project) => project.projectId === selectedProject?.projectId)
+    ?? (projects.length === 1 ? projects[0] : null);
+  const projectChoices = projects.map((project) => ({
+    key: project.projectId,
+    label: project.displayName,
+    description: project.fullPath,
+    icon: Folder,
+    onSelect: () => onNewSession(project),
+  }));
+  const pickerLabel = t('sessions.chooseProject', 'Choose a project for a new session');
+  const newSessionLabel = t('sessions.newSession');
 
-/** Module-level, not a nested render function, so the wordmark is not remounted on every SidebarHeader render. */
-function LogoBlock({ t }: { t: TFunction }) {
+  if (!currentProject && projects.length > 1) {
+    return (
+      <ActionMenu
+        label={newSessionLabel}
+        icon={Plus}
+        items={projectChoices}
+        variant="ghost"
+        align="left"
+        className="min-w-0 flex-1"
+        triggerClassName="h-9 w-full justify-start gap-2 rounded-lg bg-accent/60 px-3 font-normal hover:bg-accent [&>span]:flex-1 [&>span]:text-left"
+        menuClassName="max-h-72 max-w-[calc(100vw-2rem)] overflow-y-auto"
+        header={<p className="px-3 py-2 text-xs text-muted-foreground">{pickerLabel}</p>}
+      />
+    );
+  }
+
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-primary/90 shadow-sm">
-        <svg className="h-3.5 w-3.5 text-primary-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-      </div>
-      <h1
-        className="truncate text-sm font-bold tracking-tight text-foreground"
-        style={{ fontFamily: CLOUDCLI_WORDMARK_FONT_FAMILY }}
+    <div className="flex min-w-0 flex-1 items-center rounded-lg bg-accent/60">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-9 min-w-0 flex-1 justify-start gap-2 rounded-lg px-3 font-normal hover:bg-accent"
+        title={currentProject ? newSessionLabel + ' · ' + currentProject.displayName : newSessionLabel}
+        onClick={() => currentProject ? onNewSession(currentProject) : onCreateProject()}
       >
-        {t('app.title')}
-      </h1>
+        <Plus className="h-4 w-4 flex-shrink-0" />
+        <span className="truncate">{newSessionLabel}</span>
+      </Button>
+      {projects.length > 1 && (
+        <ActionMenu
+          label={pickerLabel}
+          icon={ChevronDown}
+          iconOnly
+          items={projectChoices}
+          variant="ghost"
+          triggerClassName="h-9 w-8 rounded-lg p-0 text-muted-foreground hover:bg-accent"
+          menuClassName="max-h-72 max-w-[calc(100vw-2rem)] overflow-y-auto"
+          header={<p className="px-3 py-2 text-xs text-muted-foreground">{pickerLabel}</p>}
+        />
+      )}
     </div>
   );
 }
 
-/** Rendered by SidebarContent at the top of the panel for the search box, search-mode tabs, refresh and new-project actions. */
+/** SidebarContent 使用此组件提供搜索、新建会话和项目/对话筛选入口。 */
 export default function SidebarHeader({
   isPWA,
   isMobile,
-  isLoading,
-  projectsCount,
+  projects,
+  selectedProject,
   runningSessionsCount,
-  archivedSessionsCount,
-  isArchivedSessionsLoading,
   searchFilter,
   providerFilter,
   onProviderFilterChange,
@@ -89,11 +105,10 @@ export default function SidebarHeader({
   onRefresh,
   isRefreshing,
   onCreateProject,
+  onNewSession,
   onCollapseSidebar,
   t,
 }: SidebarHeaderProps) {
-  const showSearchTools = projectsCount > 0 || runningSessionsCount > 0 || archivedSessionsCount > 0
-    || (!isLoading && isArchivedSessionsLoading);
   const searchPlaceholder = searchMode === 'conversations'
     ? t('search.conversationsPlaceholder')
     : searchMode === 'archived'
@@ -103,179 +118,106 @@ export default function SidebarHeader({
         : t('projects.searchPlaceholder');
 
   return (
-    <div className="flex-shrink-0">
-      {/* Desktop header */}
-      <div
-        className="hidden px-3 pb-2 pt-3 md:block"
-        style={{}}
-      >
-        <div className="flex items-center justify-between gap-2">
-          {IS_PLATFORM ? (
-            <a
-              href="https://cloudcli.ai/dashboard"
-              className="flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-80"
-              title={t('tooltips.viewEnvironments')}
-            >
-              <LogoBlock t={t} />
-            </a>
-          ) : (
-            <LogoBlock t={t} />
-          )}
-
-          <div className="flex flex-shrink-0 items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-              onClick={onRefresh}
-              disabled={isRefreshing}
-              title={t('tooltips.refresh')}
-            >
-              <RefreshCw
-                className={`h-3.5 w-3.5 ${
-                  isRefreshing ? 'animate-spin' : ''
-                }`}
-              />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-              onClick={onCreateProject}
-              title={t('tooltips.createProject')}
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent/80 hover:text-foreground"
-              onClick={onCollapseSidebar}
-              title={t('tooltips.hideSidebar')}
-            >
-              <PanelLeftClose className="h-3.5 w-3.5" />
-            </Button>
-          </div>
+    <div
+      className="flex-shrink-0 space-y-3 px-3 pb-2 pt-3"
+      style={isPWA && isMobile ? { paddingTop: '16px' } : undefined}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <h1
+          className="min-w-0 truncate text-xl font-semibold tracking-tight text-foreground"
+          style={{ fontFamily: APP_WORDMARK_FONT_FAMILY }}
+        >
+          {t('app.title')}
+        </h1>
+        <div className="flex flex-shrink-0 items-center gap-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            title={t('tooltips.refresh')}
+            aria-label={t('tooltips.refresh')}
+          >
+            <RefreshCw className={'h-3.5 w-3.5 ' + (isRefreshing ? 'animate-spin' : '')} />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 w-7 rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
+            onClick={onCollapseSidebar}
+            title={t('tooltips.hideSidebar')}
+            aria-label={t('tooltips.hideSidebar')}
+          >
+            <PanelLeftClose className="h-3.5 w-3.5" />
+          </Button>
         </div>
+      </div>
 
-        <GitHubStarBadge />
-
-        {/* Search bar */}
-        {showSearchTools && (
-          <div className="mt-2.5 space-y-2">
-            {/* Search mode toggle */}
-            <SidebarModeTabs
-              searchMode={searchMode}
-              onSearchModeChange={onSearchModeChange}
-              runningSessionsCount={runningSessionsCount}
-              t={t}
-            />
-            <ProviderFilter providerFilter={providerFilter} onProviderFilterChange={onProviderFilterChange} t={t} />
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/50" />
-              <Input
-                type="text"
-                placeholder={searchPlaceholder}
-                value={searchFilter}
-                onChange={(event) => onSearchFilterChange(event.target.value)}
-                className="nav-search-input h-9 rounded-xl border-0 pl-9 pr-14 text-sm transition-all duration-200 placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-              {searchFilter ? (
-                <button
-                  onClick={onClearSearchFilter}
-                  aria-label={t('tooltips.clearSearch')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 hover:bg-accent"
-                >
-                  <X className="h-3 w-3 text-muted-foreground" />
-                </button>
-              ) : (
-                <kbd
-                  aria-hidden
-                  title={t('tooltips.openCommandPalette')}
-                  className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 items-center gap-0.5 rounded border border-border/60 bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground md:inline-flex"
-                >
-                  {MOD_KEY}
-                  <span>K</span>
-                </kbd>
-              )}
-            </div>
-          </div>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="text"
+          aria-label={searchPlaceholder}
+          placeholder={searchPlaceholder}
+          value={searchFilter}
+          onChange={(event) => onSearchFilterChange(event.target.value)}
+          className="h-9 rounded-lg border-border/60 bg-background pl-9 pr-8 text-sm shadow-sm placeholder:text-muted-foreground/70 focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-offset-0"
+        />
+        {searchFilter && (
+          <button
+            type="button"
+            onClick={onClearSearchFilter}
+            aria-label={t('tooltips.clearSearch')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-accent"
+          >
+            <X className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
         )}
       </div>
 
-      {/* Desktop divider */}
-      <div className="nav-divider hidden md:block" />
-
-      {/* Mobile header */}
-      <div
-        className="p-3 pb-2 md:hidden"
-        style={isPWA && isMobile ? { paddingTop: '16px' } : {}}
-      >
-        <div className="flex items-center justify-between">
-          {IS_PLATFORM ? (
-            <a
-              href="https://cloudcli.ai/dashboard"
-              className="flex min-w-0 items-center gap-2.5 transition-opacity active:opacity-70"
-              title={t('tooltips.viewEnvironments')}
-            >
-              <LogoBlock t={t} />
-            </a>
-          ) : (
-            <LogoBlock t={t} />
-          )}
-
-          <div className="flex flex-shrink-0 gap-1.5">
-            <button
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted/50 transition-all active:scale-95"
-              onClick={onRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={`h-4 w-4 text-muted-foreground ${isRefreshing ? 'animate-spin' : ''}`} />
-            </button>
-            <button
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/90 text-primary-foreground transition-all active:scale-95"
-              onClick={onCreateProject}
-            >
-              <FolderPlus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile search */}
-        {showSearchTools && (
-          <div className="mt-2.5 space-y-2">
-            <SidebarModeTabs
-              searchMode={searchMode}
-              onSearchModeChange={onSearchModeChange}
-              runningSessionsCount={runningSessionsCount}
-              t={t}
-            />
-            <ProviderFilter providerFilter={providerFilter} onProviderFilterChange={onProviderFilterChange} t={t} />
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
-              <Input
-                type="text"
-                placeholder={searchPlaceholder}
-                value={searchFilter}
-                onChange={(event) => onSearchFilterChange(event.target.value)}
-                className="nav-search-input h-10 rounded-xl border-0 pl-10 pr-9 text-sm transition-all duration-200 placeholder:text-muted-foreground/40 focus-visible:ring-0 focus-visible:ring-offset-0"
-              />
-              {searchFilter && (
-                <button
-                  onClick={onClearSearchFilter}
-                  aria-label={t('tooltips.clearSearch')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 hover:bg-accent"
-                >
-                  <X className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+      <div className="flex items-center gap-1">
+        <NewSessionAction
+          projects={projects}
+          selectedProject={selectedProject}
+          onNewSession={onNewSession}
+          onCreateProject={onCreateProject}
+          t={t}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 flex-shrink-0 rounded-lg p-0 text-muted-foreground hover:bg-accent hover:text-foreground"
+          onClick={onCreateProject}
+          title={t('tooltips.createProject')}
+          aria-label={t('tooltips.createProject')}
+        >
+          <FolderPlus className="h-4 w-4" />
+        </Button>
       </div>
 
-      {/* Mobile divider */}
-      <div className="nav-divider md:hidden" />
+      <div className="space-y-2 pt-1">
+        <SidebarModeTabs
+          searchMode={searchMode}
+          onSearchModeChange={onSearchModeChange}
+          runningSessionsCount={runningSessionsCount}
+          t={t}
+        />
+        <select
+          aria-label={t('search.providerFilter', 'Filter by agent')}
+          value={providerFilter}
+          onChange={(event) => onProviderFilterChange(event.target.value as SidebarProviderFilter)}
+          className="h-8 w-full rounded-lg border border-border/50 bg-transparent px-2 text-xs text-muted-foreground focus:text-foreground"
+        >
+          <option value="all">{t('search.allProviders', 'All agents')}</option>
+          {Object.entries(PROVIDER_LABELS).map(([provider, label]) => (
+            <option key={provider} value={provider}>{label}</option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }

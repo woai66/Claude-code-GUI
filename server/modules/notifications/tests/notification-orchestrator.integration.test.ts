@@ -51,5 +51,6 @@ test('notification payload uses the app session id for a provider session id', a
 
     assert.equal(payload.data.sessionId, 'app-session-1');
     assert.match(payload.data.tag, /app-session-1/);
+    assert.equal(payload.title, 'Claude GUI');
   });
 });

@@ -147,17 +147,17 @@ test('an empty provider scope still shows loading until its first response arriv
 
 test('background loading keeps the agent filter and search controls mounted on desktop and mobile', () => {
   const props = {
-    isPWA: false, isMobile: false, isLoading: false, projectsCount: 2,
-    runningSessionsCount: 0, archivedSessionsCount: 0, isArchivedSessionsLoading: false,
+    isPWA: false, isMobile: false, projects: [PROJECT_A, PROJECT_B], selectedProject: PROJECT_A,
+    runningSessionsCount: 0,
     searchFilter: '', providerFilter: 'codex' as const, onProviderFilterChange: noop,
     onSearchFilterChange: noop, onClearSearchFilter: noop, searchMode: 'projects' as const,
     onSearchModeChange: noop, onRefresh: noop, isRefreshing: false, onCreateProject: noop,
-    onCollapseSidebar: noop, t,
+    onNewSession: noop, onCollapseSidebar: noop, t,
   };
   const { getAllByRole, rerender } = render(React.createElement(SidebarHeader, props));
   const filters = getAllByRole('combobox');
   const searches = getAllByRole('textbox');
-  rerender(React.createElement(SidebarHeader, { ...props, isLoading: true }));
+  rerender(React.createElement(SidebarHeader, { ...props, isRefreshing: true }));
   assert.deepEqual(getAllByRole('combobox'), filters);
   assert.deepEqual(getAllByRole('textbox'), searches);
 });
@@ -295,7 +295,6 @@ const sessionsProps = (
   onSessionSelect: noop,
   onDeleteSession: noop,
   onLoadMoreSessions: noop,
-  onNewSession: noop,
   selectedSessionIds,
   onSetSessionSelection: noop,
   onToggleSessionSelected: noop,

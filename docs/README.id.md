@@ -1,15 +1,14 @@
 <div align="center">
- <img src="../public/logo.svg" alt="CloudCLI UI" width="64" height="64">
- <h1>Cloud CLI (alias Claude Code UI)</h1>
+ <img src="../public/logo.svg" alt="Claude GUI" width="64" height="64">
+ <h1>Claude GUI</h1>
  <p>UI desktop dan mobile untuk <a href="https://docs.anthropic.com/en/docs/claude-code">Claude Code</a>, <a href="https://docs.cursor.com/en/cli/overview">Cursor CLI</a>, dan <a href="https://developers.openai.com/codex">Codex</a>.<br>Gunakan secara lokal atau remote untuk melihat project dan session aktif Anda dari mana saja.</p>
 </div>
 
 <p align="center">
- <a href="https://cloudcli.ai">CloudCLI Cloud</a> · <a href="https://cloudcli.ai/docs">Dokumentasi</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/siteboon/claudecodeui/issues">Laporan Bug</a> · <a href="../CONTRIBUTING.md">Kontribusi</a>
+ <a href="https://cloudcli.ai/docs">Dokumentasi</a> · <a href="https://discord.gg/buxwujPNRE">Discord</a> · <a href="https://github.com/siteboon/claudecodeui/issues">Laporan Bug</a> · <a href="../CONTRIBUTING.md">Kontribusi</a>
 </p>
 
 <p align="center">
- <a href="https://cloudcli.ai"><img src="https://img.shields.io/badge/☁️_CloudCLI_Cloud-Try_Now-0066FF?style=for-the-badge" alt="CloudCLI Cloud"></a>
  <a href="https://discord.gg/buxwujPNRE"><img src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join our Discord"></a>
  <br><br>
  <a href="https://trendshift.io/repositories/15586" target="_blank"><img src="https://trendshift.io/api/badge/repositories/15586" alt="siteboon%2Fclaudecodeui | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
@@ -61,7 +60,7 @@
 - **Git Explorer** - Lihat perubahan, lakukan stage dan commit, serta berpindah branch
 - **Penggunaan Browser** - Buka session browser untuk riset web, pengujian, dan tugas browser yang dijalankan agent
 - **Manajemen Session** - Lanjutkan percakapan, kelola beberapa session, dan lacak riwayat
-- **Sistem Plugin** - Perluas CloudCLI dengan plugin kustom — tambahkan tab baru, layanan backend, dan integrasi. [Buat plugin Anda sendiri →](https://github.com/cloudcli-ai/cloudcli-plugin-starter)
+- **Sistem Plugin** - Perluas Claude GUI dengan plugin kustom — tambahkan tab baru, layanan backend, dan integrasi. [Buat plugin Anda sendiri →](https://github.com/cloudcli-ai/cloudcli-plugin-starter)
 - **Integrasi TaskMaster AI** *(Opsional)* - Manajemen project tingkat lanjut dengan perencanaan tugas berbasis AI, parsing PRD, dan otomatisasi workflow
 - **Kompatibilitas Model** - Mendukung keluarga model Claude dan GPT (daftar lengkap model yang didukung tersedia saat runtime melalui `GET /api/providers/:provider/models`)
 
@@ -78,7 +77,7 @@ Cara tercepat untuk memulai — tanpa setup lokal. Dapatkan lingkungan pengemban
 
 #### npm
 
-Coba CloudCLI UI langsung dengan **npx** (memerlukan **Node.js** v22+):
+Coba Claude GUI langsung dengan **npx** (memerlukan **Node.js** v22+):
 
 ```
 npx @cloudcli-ai/cloudcli
@@ -107,20 +106,20 @@ Mendukung Claude Code dan Codex. Lihat [dokumentasi sandbox](../docker/) untuk s
 
 ### Aplikasi Pendamping Desktop
 
-CloudCLI Desktop adalah aplikasi native pendamping opsional untuk CloudCLI Cloud dan Local CloudCLI. Aplikasi ini dirilis melalui GitHub Releases repository ini dan membuat CloudCLI tetap mudah diakses dari menu bar atau tray Anda.
+Claude GUI Desktop adalah aplikasi native pendamping opsional untuk CloudCLI Cloud dan Local Claude GUI. Aplikasi ini dirilis melalui GitHub Releases repository ini dan membuat Claude GUI tetap mudah diakses dari menu bar atau tray Anda.
 
 - **[macOS](https://cloudcli.ai/download/macos)**
 - **[Windows](https://cloudcli.ai/download/windows)**
 - **[Halaman unduhan](https://cloudcli.ai/download)** · **[GitHub Releases dan checksum](https://github.com/siteboon/claudecodeui/releases)**
 
-Gunakan untuk membuka lingkungan CloudCLI Cloud, berpindah antara workspace lokal dan remote, serta menyalin URL mobile/browser. Untuk bekerja secara lokal, pilih **Local CloudCLI** di aplikasi desktop; aplikasi akan menggunakan server lokal yang sedang berjalan atau menjalankannya untuk Anda.
+Gunakan untuk membuka lingkungan CloudCLI Cloud, berpindah antara workspace lokal dan remote, serta menyalin URL mobile/browser. Untuk bekerja secara lokal, pilih **Local Claude GUI** di aplikasi desktop; aplikasi akan menggunakan server lokal yang sedang berjalan atau menjalankannya untuk Anda.
 
 
 ---
 
 ## Opsi mana yang tepat untuk Anda?
 
-CloudCLI UI adalah lapisan UI open source yang menjadi dasar CloudCLI Cloud. Anda dapat menjalankannya secara self-hosted di mesin sendiri, menjalankannya dalam Docker sandbox untuk isolasi, atau menggunakan CloudCLI Cloud untuk lingkungan yang dikelola sepenuhnya.
+Claude GUI adalah lapisan UI open source yang menjadi dasar CloudCLI Cloud. Anda dapat menjalankannya secara self-hosted di mesin sendiri, menjalankannya dalam Docker sandbox untuk isolasi, atau menggunakan CloudCLI Cloud untuk lingkungan yang dikelola sepenuhnya.
 
 | | Self-Hosted (npm) | Self-Hosted (Docker Sandbox) *(Eksperimental)* | CloudCLI Cloud |
 |---|---|---|---|
@@ -130,7 +129,7 @@ CloudCLI UI adalah lapisan UI open source yang menjadi dasar CloudCLI Cloud. And
 | **Isolasi** | Berjalan di host Anda | Sandbox tingkat hypervisor (microVM) | Isolasi cloud penuh |
 | **Mesin harus tetap menyala** | Ya | Ya | Tidak |
 | **Akses mobile** | Browser apa pun di jaringan Anda | Browser apa pun di jaringan Anda | Perangkat apa pun |
-| **Aplikasi pendamping desktop** | Opsional. Pilih Local CloudCLI | Opsional. Pilih Local CloudCLI | Opsional. Membuka lingkungan cloud |
+| **Aplikasi pendamping desktop** | Opsional. Pilih Local Claude GUI | Opsional. Pilih Local Claude GUI | Opsional. Membuka lingkungan cloud |
 | **Agent yang didukung** | Claude Code, Cursor CLI, Codex | Claude Code, Codex | Claude Code, Cursor CLI, Codex |
 | **File explorer dan Git** | Ya | Ya | Ya |
 | **Konfigurasi MCP** | Disinkronkan dengan `~/.claude` | Dikelola melalui UI | Dikelola melalui UI |
@@ -138,7 +137,7 @@ CloudCLI UI adalah lapisan UI open source yang menjadi dasar CloudCLI Cloud. And
 | **Berbagi dengan tim** | Tidak | Tidak | Ya |
 | **Biaya platform** | Gratis, open source | Gratis, open source | Mulai €7/bulan |
 
-> Semua opsi menggunakan langganan AI Anda sendiri (Claude, Cursor, dll.) — CloudCLI menyediakan lingkungan, bukan AI.
+> Semua opsi menggunakan langganan AI Anda sendiri (Claude, Cursor, dll.) — Claude GUI menyediakan lingkungan, bukan AI.
 
 ---
 
@@ -167,7 +166,7 @@ Gunakan Pengaturan Tools untuk membatasi tools yang dapat digunakan. Permintaan 
 
 ## Plugin
 
-CloudCLI memiliki sistem plugin yang memungkinkan Anda menambahkan tab kustom dengan UI frontend sendiri dan backend Node.js opsional. Instal plugin langsung dari repository Git melalui **Settings > Plugins**, atau buat plugin Anda sendiri.
+Claude GUI memiliki sistem plugin yang memungkinkan Anda menambahkan tab kustom dengan UI frontend sendiri dan backend Node.js opsional. Instal plugin langsung dari repository Git melalui **Settings > Plugins**, atau buat plugin Anda sendiri.
 
 ### Plugin yang Tersedia
 
@@ -177,7 +176,7 @@ CloudCLI memiliki sistem plugin yang memungkinkan Anda menambahkan tab kustom de
 | **[Web Terminal](https://github.com/cloudcli-ai/cloudcli-plugin-terminal)** | Terminal xterm.js lengkap dengan dukungan multi-tab |
 | **[Claude Watch](https://github.com/satsuki19980613/cloudcli-claude-watch)** | Memantau session Claude Code yang berjalan lama untuk mendeteksi hang dan menyediakan kontrol proses |
 | **[CloudCLI Scheduler](https://github.com/grostim/cloudcli-cron)** | Membuat prompt terjadwal dalam lingkup workspace dan menjalankannya melalui CLI lokal seperti Codex atau Claude Code |
-| **[PRISM CloudCLI](https://github.com/jakeefr/cloudcli-plugin-prism)** | Menyediakan informasi session untuk Claude Code di dalam CloudCLI, termasuk visibilitas penggunaan token |
+| **[PRISM CloudCLI](https://github.com/jakeefr/cloudcli-plugin-prism)** | Menyediakan informasi session untuk Claude Code di dalam Claude GUI, termasuk visibilitas penggunaan token |
 | **[Sessions](https://github.com/strykereye2/cloudcli-plugin-session-manager)** | Melihat, mengelola, dan menghentikan session Claude Code yang aktif |
 | **[Token Cost Calculator](https://github.com/NightmareAway/cloudcli-plugin-token-cost-calculator)** | Menghitung biaya API dari harga model dan penggunaan token, dengan dukungan preset harga model |
 | **[Task Queue](https://github.com/TadMSTR/cloudcli-plugin-task-queue)** | Dashboard antrean tugas untuk melihat, memfilter, dan menjalankan tugas agent |
@@ -197,12 +196,12 @@ CloudCLI memiliki sistem plugin yang memungkinkan Anda menambahkan tab kustom de
 
 Claude Code Remote Control memungkinkan Anda mengirim pesan ke session yang sudah berjalan di terminal lokal. Mesin Anda harus tetap menyala, terminal harus tetap terbuka, dan session akan timeout setelah sekitar 10 menit tanpa koneksi jaringan.
 
-CloudCLI UI dan CloudCLI Cloud memperluas Claude Code, bukan berjalan sebagai sistem terpisah di sampingnya — MCP server, izin, pengaturan, dan session Anda sama persis dengan yang digunakan Claude Code secara native. Tidak ada yang diduplikasi atau dikelola secara terpisah.
+Claude GUI dan CloudCLI Cloud memperluas Claude Code, bukan berjalan sebagai sistem terpisah di sampingnya — MCP server, izin, pengaturan, dan session Anda sama persis dengan yang digunakan Claude Code secara native. Tidak ada yang diduplikasi atau dikelola secara terpisah.
 
 Dalam praktiknya, ini berarti:
 
-- **Semua session Anda, bukan hanya satu** — CloudCLI UI secara otomatis menemukan setiap session dari folder `~/.claude`. Remote Control hanya mengekspos satu session aktif agar tersedia di aplikasi mobile Claude.
-- **Pengaturan Anda tetap menjadi sumber utama** — MCP server, izin tool, dan konfigurasi project yang Anda ubah di CloudCLI UI ditulis langsung ke konfigurasi Claude Code dan langsung berlaku, begitu pula sebaliknya.
+- **Semua session Anda, bukan hanya satu** — Claude GUI secara otomatis menemukan setiap session dari folder `~/.claude`. Remote Control hanya mengekspos satu session aktif agar tersedia di aplikasi mobile Claude.
+- **Pengaturan Anda tetap menjadi sumber utama** — MCP server, izin tool, dan konfigurasi project yang Anda ubah di Claude GUI ditulis langsung ke konfigurasi Claude Code dan langsung berlaku, begitu pula sebaliknya.
 - **Mendukung lebih banyak agent** — Claude Code, Cursor CLI, dan Codex, bukan hanya Claude Code.
 - **UI lengkap, bukan sekadar jendela chat** — file explorer, integrasi Git, manajemen MCP, dan terminal shell semuanya sudah tersedia.
 - **CloudCLI Cloud berjalan di cloud** — tutup laptop Anda dan agent tetap berjalan. Tidak ada terminal yang harus terus dipantau, dan tidak ada mesin yang harus terus menyala.
@@ -212,12 +211,12 @@ Dalam praktiknya, ini berarti:
 <details>
 <summary>Apakah saya perlu membayar langganan AI secara terpisah?</summary>
 
-Ya. CloudCLI menyediakan lingkungan, bukan AI. Anda menggunakan langganan Claude, Cursor, atau Codex milik Anda sendiri. CloudCLI Cloud mulai dari €7/bulan untuk lingkungan terkelola tersebut, di luar biaya langganan AI.
+Ya. Claude GUI menyediakan lingkungan, bukan AI. Anda menggunakan langganan Claude, Cursor, atau Codex milik Anda sendiri. CloudCLI Cloud mulai dari €7/bulan untuk lingkungan terkelola tersebut, di luar biaya langganan AI.
 
 </details>
 
 <details>
-<summary>Bisakah saya menggunakan CloudCLI UI di ponsel?</summary>
+<summary>Bisakah saya menggunakan Claude GUI di ponsel?</summary>
 
 Ya. Untuk self-hosted, jalankan server di mesin Anda lalu buka `[yourip]:port` di browser apa pun pada jaringan Anda. Untuk CloudCLI Cloud, buka dari perangkat apa pun — tanpa VPN, tanpa port forwarding, tanpa setup. Aplikasi native juga sedang dikembangkan.
 
@@ -226,7 +225,7 @@ Ya. Untuk self-hosted, jalankan server di mesin Anda lalu buka `[yourip]:port` d
 <details>
 <summary>Apakah perubahan yang saya buat di UI akan memengaruhi setup Claude Code lokal saya?</summary>
 
-Ya, untuk self-hosted. CloudCLI UI membaca dan menulis konfigurasi `~/.claude` yang sama dengan yang digunakan Claude Code secara native. MCP server yang Anda tambahkan melalui UI akan langsung muncul di Claude Code, begitu pula sebaliknya.
+Ya, untuk self-hosted. Claude GUI membaca dan menulis konfigurasi `~/.claude` yang sama dengan yang digunakan Claude Code secara native. MCP server yang Anda tambahkan melalui UI akan langsung muncul di Claude Code, begitu pula sebaliknya.
 
 </details>
 
@@ -245,7 +244,7 @@ GNU Affero General Public License v3.0 atau yang lebih baru (AGPL-3.0-or-later) 
 
 Project ini bersifat open source dan bebas digunakan, dimodifikasi, serta didistribusikan berdasarkan lisensi AGPL-3.0-or-later. Jika Anda memodifikasi software ini dan menjalankannya sebagai layanan jaringan, Anda harus menyediakan kode sumber hasil modifikasi kepada pengguna layanan tersebut.
 
-CloudCLI UI - (https://cloudcli.ai).
+Claude GUI - (https://cloudcli.ai).
 
 ## Ucapan Terima Kasih
 

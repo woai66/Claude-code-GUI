@@ -1,5 +1,6 @@
 {
   "projects": {
+    "options": "Project options",
     "title": "Projects",
     "newProject": "New Project",
     "deleteProject": "Remove Project",
@@ -20,10 +21,13 @@
     "runClaudeCli": "Run Claude CLI in a project directory to get started"
   },
   "app": {
-    "title": "CloudCLI",
+    "title": "Claude GUI",
     "subtitle": "AI coding assistant interface"
   },
   "sessions": {
+    "chooseProject": "Choose a project for a new session",
+    "count_one": "{{count}} session",
+    "count_other": "{{count}} sessions",
     "title": "Sessions",
     "newSession": "New Session",
     "deleteSession": "Delete Session",

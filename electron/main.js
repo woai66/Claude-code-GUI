@@ -5,8 +5,12 @@ import { fileURLToPath } from 'node:url';
 import { LocalServerController } from './localServer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const APP_NAME = 'CloudCLI';
+const APP_NAME = 'Claude GUI';
 const APP_USER_MODEL_ID = 'ai.cloudcli.desktop';
+
+// 保留旧桌面配置路径，使改名安装后仍能使用原有的本地设置。
+app.setPath('userData', path.join(app.getPath('appData'), 'CloudCLI'));
+app.setName(APP_NAME);
 
 let mainWindow = null;
 let localServer = null;

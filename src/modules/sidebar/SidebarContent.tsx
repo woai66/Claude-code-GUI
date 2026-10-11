@@ -84,7 +84,6 @@ function groupArchivedSessionsByProject(sessions: ArchivedSessionListItem[]): Ar
 type SidebarContentProps = {
   isPWA: boolean;
   isMobile: boolean;
-  isLoading: boolean;
   projects: Project[];
   runningSessionsCount: number;
   archivedProjects: ArchivedProjectListItem[];
@@ -136,7 +135,6 @@ type SidebarContentProps = {
 export default function SidebarContent({
   isPWA,
   isMobile,
-  isLoading,
   projects,
   runningSessionsCount,
   archivedProjects,
@@ -192,19 +190,16 @@ export default function SidebarContent({
 
   return (
     <div
-      className="flex h-full flex-col bg-background/80 backdrop-blur-sm md:w-full md:select-none"
-      style={{}}
+      className="flex h-full flex-col bg-background md:w-full md:select-none"
     >
       <SidebarHeader
         providerFilter={providerFilter}
         onProviderFilterChange={onProviderFilterChange}
         isPWA={isPWA}
         isMobile={isMobile}
-        isLoading={isLoading}
-        projectsCount={projects.length}
+        projects={projects}
+        selectedProject={projectListProps.selectedProject}
         runningSessionsCount={runningSessionsCount}
-        archivedSessionsCount={archivedSessionsCount}
-        isArchivedSessionsLoading={isArchivedSessionsLoading}
         searchFilter={searchFilter}
         onSearchFilterChange={onSearchFilterChange}
         onClearSearchFilter={onClearSearchFilter}
@@ -213,6 +208,7 @@ export default function SidebarContent({
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
         onCreateProject={onCreateProject}
+        onNewSession={projectListProps.onNewSession}
         onCollapseSidebar={onCollapseSidebar}
         t={t}
       />

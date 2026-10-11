@@ -120,7 +120,7 @@ function buildDesktopPackageJson() {
       appId: packageJson.build.appId,
       productName: packageJson.build.productName,
       asar: packageJson.build.asar,
-      artifactName: 'cloudcli-local-${version}-${os}-${arch}.${ext}',
+      artifactName: packageJson.build.artifactName,
       electronVersion: getElectronVersion(),
       // Staging rebuilds native dependencies before electron-builder collects them.
       npmRebuild: false,

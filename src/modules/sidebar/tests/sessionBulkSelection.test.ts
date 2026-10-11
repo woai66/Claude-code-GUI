@@ -114,7 +114,6 @@ const renderSessions = (overrides: ListOverrides = {}) =>
       onSessionSelect: noop,
       onDeleteSession: noop,
       onLoadMoreSessions: noop,
-      onNewSession: noop,
       selectedSessionIds: null,
       onSetSessionSelection: noop,
       onToggleSessionSelected: noop,
@@ -292,7 +291,7 @@ test('a page emptied by deleting every loaded row keeps Load more', () => {
     false,
     'the server still has sessions, so the list must not say there are none',
   );
-  const loadMore = buttonWithText(emptied.container, 'Load more sessions');
+  const loadMore = buttonWithText(emptied.container, 'sessions.showMore');
   assert.ok(loadMore, 'the rest of the sessions stay reachable without a refresh');
   fireEvent.click(loadMore);
   assert.deepEqual(onLoadMoreSessions.mock.calls, [['project-1']]);

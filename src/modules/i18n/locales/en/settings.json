@@ -549,7 +549,7 @@
     },
     "managed": {
       "badge": "Managed",
-      "hint": "Managed by CloudCLI."
+      "hint": "Managed by Claude GUI."
     },
     "help": {
       "title": "About Codex MCP",
@@ -581,7 +581,7 @@
     "docs": "Docs",
     "sections": {
       "officialTitle": "Official Plugins",
-      "officialDescription": "Maintained by the CloudCLI team and ready for direct install.",
+      "officialDescription": "Maintained by the Claude GUI team and ready for direct install.",
       "unofficialTitle": "Other Plugins",
       "unofficialDescription": "Unofficial plugins and integrations from other users. Review the source before installing."
     },
@@ -612,7 +612,7 @@
     "prismCloudCLI": {
       "name": "PRISM CloudCLI",
       "badge": "unofficial",
-      "description": "Session intelligence for Claude Code, inside CloudCLI. See why your sessions are burning tokens without leaving the browser.",
+      "description": "Session intelligence for Claude Code, inside Claude GUI. See why your sessions are burning tokens without leaving the browser.",
       "install": "Install"
     },
     "sessionManagerPlugin": {
@@ -843,7 +843,7 @@
     "tagline": "Open-source AI coding assistant interface",
     "starOnGitHub": "Star on GitHub",
     "docs": "Docs",
-    "hostedTitle": "Try CloudCLI Hosted",
+    "hostedTitle": "Try Claude GUI Hosted",
     "hostedDescription": "Team collaboration, shared MCP configs, settings sync across environments, and managed infrastructure.",
     "learnMore": "Learn more",
     "proFeaturesTitle": "CloudCLI Pro Features",
