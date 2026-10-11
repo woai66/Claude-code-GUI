@@ -4,7 +4,7 @@ import { render } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, test, vi } from 'vitest';
 
-import type { ActiveSidebarRename, RecentConversationListItem, SessionRowActions, SidebarProjectListProps } from '@/shared/types';
+import type { ActiveSidebarRename, Project, RecentConversationListItem, SessionRowActions, SidebarProjectListProps } from '@/shared/types';
 
 /**
  * The Conversations list renders the same controls as the Projects list, from
@@ -61,6 +61,7 @@ const renderList = (
 ) => render(
   <SidebarRecentConversations
     conversations={conversations}
+    projects={[{ projectId: 'project-1', fullPath: 'C:\\workspace\\project one' } as Project]}
     total={conversations.length}
     hasMore={false}
     isLoading={false}
@@ -88,6 +89,7 @@ test('every conversation row gets the shared session controls', () => {
   assert.equal(recordedOptionsProps[0].sessionName, 'title of s1');
   assert.equal(recordedOptionsProps[0].provider, 'claude');
   assert.equal(recordedOptionsProps[0].projectId, 'project-1');
+  assert.equal(recordedOptionsProps[0].projectPath, 'C:\\workspace\\project one');
 });
 
 test('a conversation with no known project still renders, and says so', () => {
@@ -96,6 +98,12 @@ test('a conversation with no known project still renders, and says so', () => {
   // SessionOptions withholds rename on a null projectId rather than guessing one.
   assert.equal(recordedOptionsProps.length, 1);
   assert.equal(recordedOptionsProps[0].projectId, null);
+  assert.equal(recordedOptionsProps[0].projectPath, null);
+});
+
+test('a conversation whose project is unavailable never guesses a working directory', () => {
+  renderList([conversation('s1', { projectId: 'missing-project' })], makeActions());
+  assert.equal(recordedOptionsProps[0].projectPath, null);
 });
 
 test('the rename open elsewhere does not put this row into editing', () => {

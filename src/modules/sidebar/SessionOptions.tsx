@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'react';
-import { Check, Edit2, GitBranch, MoreHorizontal, Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Check, Edit2, GitBranch, MoreHorizontal, Terminal, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { ActionMenu } from '@/shared/ui';
 import { cn } from '@/shared/utils';
-import type { LLMProvider } from '@/shared/types';
+import type { DesktopClaudeResumeResult, LLMProvider } from '@/shared/types';
 import { useSessionForkingProviders } from '@/shared/hooks/useProviderCapabilities';
 import { useProviderSessionIdCopy } from '@/modules/sidebar/hooks/useProviderSessionIdCopy';
 import { PROVIDER_LABELS } from '@/shared/constants';
@@ -18,6 +18,8 @@ type SessionOptionsProps = {
    * which case rename is withheld rather than guessed — it is keyed by project.
    */
   projectId: string | null;
+  /** 本地项目目录，用于在独立 PowerShell 中恢复 Claude 会话。 */
+  projectPath: string | null;
   /** A running session cannot be deleted or forked, matching the Projects row. */
   isProcessing: boolean;
   isEditing: boolean;
@@ -49,6 +51,7 @@ export default function SessionOptions({
   sessionName,
   provider,
   projectId,
+  projectPath,
   isProcessing,
   isEditing,
   renameDraft,
@@ -63,9 +66,42 @@ export default function SessionOptions({
   t,
 }: SessionOptionsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  // 菜单展示原生终端的启动结果，并在启动期间阻止重复点击。
+  const [resumeState, setResumeState] = useState<DesktopClaudeResumeResult | 'launching' | null>(null);
+  const resumePendingRef = useRef(false);
   const providerLabel = PROVIDER_LABELS[provider];
-  const { copyState, copyLabel, setOptionsOpen, handleCopyAction, isCopyPending, CopyStateIcon } =
-    useProviderSessionIdCopy(sessionId, providerLabel);
+  const {
+    copyState, copyLabel, setOptionsOpen, handleCopyAction, isCopyPending, CopyStateIcon,
+    providerSessionId, loadProviderSessionId,
+  } = useProviderSessionIdCopy(sessionId, providerLabel);
+  const desktopClaude = window.claudeGuiClaude;
+  const canResumeInPowerShell = provider === 'claude' && Boolean(desktopClaude);
+  const resumeError = resumeState && resumeState !== 'launching' && resumeState.error
+    ? t(`sessions.resumeErrors.${resumeState.error}`)
+    : null;
+
+  const handleOptionsOpen = useCallback((open: boolean) => {
+    setOptionsOpen(open);
+    if (open && !resumePendingRef.current) setResumeState(null);
+  }, [setOptionsOpen]);
+
+  const resumeInPowerShell = async () => {
+    if (!canResumeInPowerShell || !desktopClaude || !projectPath || isProcessing || resumePendingRef.current) return;
+    resumePendingRef.current = true;
+    setResumeState('launching');
+    try {
+      const nativeSessionId = providerSessionId ?? await loadProviderSessionId();
+      if (!nativeSessionId) {
+        setResumeState({ error: 'invalid-session' });
+        return;
+      }
+      setResumeState(await desktopClaude.resumeSession(nativeSessionId, projectPath));
+    } catch {
+      setResumeState({ error: 'launch-failed' });
+    } finally {
+      resumePendingRef.current = false;
+    }
+  };
 
   // Read from the backend capability matrix rather than branching on the
   // provider id here; the request is cached module-side, so every row shares one.
@@ -148,7 +184,7 @@ export default function SessionOptions({
           portal
           variant="ghost"
           size="icon"
-          onOpenChange={setOptionsOpen}
+          onOpenChange={handleOptionsOpen}
           triggerClassName="h-7 w-7 text-muted-foreground opacity-70 hover:bg-muted hover:opacity-100"
           menuClassName="w-[260px] rounded-xl p-1.5 shadow-xl"
           header={(
@@ -157,6 +193,9 @@ export default function SessionOptions({
                 {sessionName}
               </p>
               <p className="mt-0.5 text-[11px] text-muted-foreground">{providerLabel} session</p>
+              {resumeError && (
+                <p role="alert" className="mt-2 text-xs text-destructive">{resumeError}</p>
+              )}
             </div>
           )}
           items={[
@@ -175,6 +214,25 @@ export default function SessionOptions({
               closeOnSelect: false,
               onSelect: handleCopyAction,
             },
+            ...(canResumeInPowerShell ? [{
+              key: 'resume-powershell',
+              label: resumeState === 'launching'
+                ? t('sessions.resumingInPowerShell')
+                : resumeState?.success
+                  ? t('sessions.powerShellOpened')
+                  : t('sessions.resumeInPowerShell'),
+              description: isProcessing
+                ? t('sessions.resumeAfterProcessing')
+                : !projectPath
+                  ? t('sessions.resumeErrors.directory-unavailable')
+                  : undefined,
+              icon: Terminal,
+              loading: resumeState === 'launching' || copyState === 'loading',
+              disabled: isProcessing || !projectPath
+                || Boolean(resumeState && resumeState !== 'launching' && resumeState.success),
+              closeOnSelect: false,
+              onSelect: () => { void resumeInPowerShell(); },
+            }] : []),
             ...(canFork && onFork ? [{
               key: 'fork',
               label: 'Fork session',

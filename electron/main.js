@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import { LocalServerController } from './localServer.js';
 import { registerDirectoryHandlers } from './directoryAccess.js';
+import { registerSessionResumeHandler } from './sessionResume.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_NAME = 'Claude GUI';
@@ -140,6 +141,7 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     registerDirectoryHandlers({ ipcMain, dialog, getWindow: () => mainWindow, assertLocalPage });
+    registerSessionResumeHandler({ ipcMain, assertLocalPage });
 
     await createWindow();
   }).catch(showStartupError);

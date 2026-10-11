@@ -470,6 +470,7 @@ function SidebarSessionItem({
             sessionName={sessionView.sessionName}
             provider={session.__provider}
             projectId={project.projectId}
+            projectPath={project.fullPath}
             isProcessing={isProcessing}
             isEditing={isEditing}
             renameDraft={renameDraft}

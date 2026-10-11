@@ -390,6 +390,7 @@ export default function SidebarContent({
         ) : searchMode === 'conversations' ? (
           <SidebarRecentConversations
             conversations={recentConversations}
+            projects={projects}
             total={recentConversationsTotal}
             hasMore={recentConversationsHasMore}
             isLoading={isRecentConversationsLoading}

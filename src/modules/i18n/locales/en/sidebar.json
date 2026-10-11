@@ -25,6 +25,16 @@
     "subtitle": "AI coding assistant interface"
   },
   "sessions": {
+    "resumeInPowerShell": "Resume in PowerShell",
+    "resumingInPowerShell": "Opening PowerShell…",
+    "powerShellOpened": "PowerShell opened",
+    "resumeAfterProcessing": "Wait for the current response to finish.",
+    "resumeErrors": {
+      "unsupported": "This action requires the Windows desktop app.",
+      "invalid-session": "Could not read a valid Claude session ID. Please try again.",
+      "directory-unavailable": "The project folder is unavailable. Check that it still exists.",
+      "launch-failed": "Could not open PowerShell. Check that Windows PowerShell is available, then try again."
+    },
     "chooseProject": "Choose a project for a new session",
     "count_one": "{{count}} session",
     "count_other": "{{count}} sessions",

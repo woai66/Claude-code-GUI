@@ -21,4 +21,10 @@ if (window.location.protocol === 'http:' && (
       }
     },
   });
+  if (process.platform === 'win32') {
+    contextBridge.exposeInMainWorld('claudeGuiClaude', {
+      resumeSession: (sessionId, projectPath) =>
+        ipcRenderer.invoke('claude-gui:resume-claude-session', sessionId, projectPath),
+    });
+  }
 }

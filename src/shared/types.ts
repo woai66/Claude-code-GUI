@@ -1267,6 +1267,19 @@ export type ExistingPrdFile = {
 
 // ---------------------------
 
+//----------------- DESKTOP CLAUDE SESSION RESUME ------------
+
+/** 原生 PowerShell 启动结果；失败码供侧栏展示可翻译的提示。 */
+export type DesktopClaudeResumeResult = { success: true; error?: never }
+  | { error: 'unsupported' | 'invalid-session' | 'directory-unavailable' | 'launch-failed'; success?: never };
+
+/** Windows Electron preload 的受限能力，只能在项目目录恢复指定 Claude 会话。 */
+export type DesktopClaudeBridge = {
+  resumeSession(sessionId: string, projectPath: string): Promise<DesktopClaudeResumeResult>;
+};
+
+// ---------------------------
+
 //----------------- PROJECT CREATION WIZARD ------------
 
 /** 桌面目录验证结果；仅已有目录返回路径，错误码由界面翻译后展示。 */
