@@ -88,7 +88,7 @@
     "openInEditor": "在编辑器中打开"
   },
   "mainContent": {
-    "loading": "正在加载 CloudCLI",
+    "loading": "正在加载 Claude GUI",
     "settingUpWorkspace": "正在设置您的工作空间...",
     "chooseProject": "选择您的项目",
     "selectProjectDescription": "从侧边栏选择一个项目以开始使用 Claude 进行编程。每个项目包含您的聊天会话和文件历史。",
@@ -138,6 +138,25 @@
   },
   "projectWizard": {
     "title": "创建新项目",
+    "projectName": "项目名称",
+    "namePlaceholder": "默认使用文件夹名称",
+    "cloneRepository": "从 GitHub 克隆（可选）",
+    "folders": {
+      "source": "项目目录",
+      "choose": "选择文件夹",
+      "change": "更改",
+      "drop": "选择文件夹，或将文件夹拖到这里",
+      "chooseHint": "选择项目所在的文件夹",
+      "manual": "手动输入路径",
+      "pathPlaceholder": "项目目录的完整路径",
+      "cloneDestination": "克隆到",
+      "cloneHelp": "仓库会克隆到所选目录下的新文件夹中。",
+      "chooseFailed": "无法打开目录选择器，请重试。",
+      "desktopDrop": "请使用桌面版拖入文件夹，或手动输入目录路径。",
+      "singleFolder": "请每次拖入一个文件夹。",
+      "notDirectory": "请拖入文件夹，不能使用文件作为项目目录。",
+      "unavailable": "无法访问该文件夹，请重新选择。"
+    },
     "steps": {
       "type": "类型",
       "configure": "配置",

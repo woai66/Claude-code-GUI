@@ -76,6 +76,7 @@ test('background work shows as the purple dot in place of the green one, with no
   assert.equal(dot.getAttribute('aria-label'), 'tooltips.backgroundWorkIndicator');
   assert.equal(container.querySelectorAll('.animate-spin').length, 0);
   assert.equal(recordedOptionsProps.at(-1)?.isProcessing, false, 'the row is not locked the way a responding one is');
+  assert.equal(recordedOptionsProps.at(-1)?.projectPath, PROJECT.fullPath);
 });
 
 test('a response in flight still spins and shows no dot', () => {

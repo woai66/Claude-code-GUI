@@ -1,5 +1,6 @@
 import express, { type Request, type Response } from 'express';
 
+import { parseOptionalProviderFilter } from '@/shared/index.js';
 import { providerAuthService } from '@/modules/providers/services/provider-auth.service.js';
 import { claudeSettingsPermissionsService } from '@/modules/providers/services/claude-settings-permissions.service.js';
 import { providerCapabilitiesService } from '@/modules/providers/services/provider-capabilities.service.js';
@@ -621,7 +622,7 @@ router.get(
   '/:provider/models',
   asyncHandler(async (req: Request, res: Response) => {
     const provider = parseProvider(req.params.provider);
-    const models = await providerModelsService.getProviderModels(provider);
+    const models = await providerModelsService.getProviderModels(provider, readOptionalQueryString(req.query.cwd));
     res.json(createApiSuccessResponse({ provider, models }));
   }),
 );
@@ -672,7 +673,8 @@ router.get(
       sessionId,
       requestedModel,
     });
-    res.json(createApiSuccessResponse(result));
+    const permissionMode = await sessionsService.readPermissionMode(provider, sessionId);
+    res.json(createApiSuccessResponse({ ...result, permissionMode }));
   }),
 );
 
@@ -862,7 +864,8 @@ router.get(
   asyncHandler(async (req: Request, res: Response) => {
     const limit = parseBoundedIntegerQuery(req.query.limit, 'limit', 40, 1, 100);
     const offset = parseBoundedIntegerQuery(req.query.offset, 'offset', 0, 0);
-    const page = sessionsService.listRecentSessions(limit, offset);
+    const provider = parseOptionalProviderFilter(req.query.provider);
+    const page = sessionsService.listRecentSessions(limit, offset, provider);
     res.json(createApiSuccessResponse(page));
   }),
 );
@@ -980,6 +983,7 @@ router.get(
 router.get('/search/sessions', asyncHandler(async (req: Request, res: Response) => {
   const query = parseSessionSearchQuery(req.query.q);
   const limit = parseSessionSearchLimit(req.query.limit);
+  const provider = parseOptionalProviderFilter(req.query.provider);
 
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -999,6 +1003,7 @@ router.get('/search/sessions', asyncHandler(async (req: Request, res: Response) 
     await sessionConversationsSearchService.search({
       query,
       limit,
+      provider,
       signal: abortController.signal,
       onTitleResults: (titleResults) => {
         if (!closed) {

@@ -88,7 +88,7 @@
     "openInEditor": "Open in Editor"
   },
   "mainContent": {
-    "loading": "Loading CloudCLI",
+    "loading": "Loading Claude GUI",
     "settingUpWorkspace": "Setting up your workspace...",
     "chooseProject": "Choose Your Project",
     "selectProjectDescription": "Select a project from the sidebar to start coding with Claude. Each project contains your chat sessions and file history.",
@@ -141,6 +141,25 @@
   },
   "projectWizard": {
     "title": "Create New Project",
+    "projectName": "Project name",
+    "namePlaceholder": "Defaults to the folder name",
+    "cloneRepository": "Clone from GitHub (optional)",
+    "folders": {
+      "source": "Project folder",
+      "choose": "Choose folder",
+      "change": "Change",
+      "drop": "Choose a folder or drop it here",
+      "chooseHint": "Choose a project folder",
+      "manual": "Enter path manually",
+      "pathPlaceholder": "Full path to the project folder",
+      "cloneDestination": "Clone into",
+      "cloneHelp": "The repository will be cloned into a new subfolder here.",
+      "chooseFailed": "Could not open the folder picker. Please try again.",
+      "desktopDrop": "Use the desktop app to drop a folder, or enter its path.",
+      "singleFolder": "Drop one folder at a time.",
+      "notDirectory": "Please drop a folder, rather than a file.",
+      "unavailable": "This folder is unavailable. Please choose it again."
+    },
     "steps": {
       "type": "Type",
       "configure": "Configure",

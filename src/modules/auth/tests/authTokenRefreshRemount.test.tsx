@@ -6,7 +6,7 @@ import { afterEach, beforeEach, test, vi } from 'vitest';
 
 import { AuthProvider, useAuth } from '@/modules/auth/context/AuthContext';
 import { i18n } from '@/modules/i18n';
-import { storeAuthToken } from '@/shared/authToken';
+import { expireAuthSession, storeAuthToken } from '@/shared/authToken';
 
 /**
  * Issue #1269: once the stored JWT is past half of its lifetime, the server
@@ -95,6 +95,7 @@ const renderApp = () => render(
 );
 
 beforeEach(() => {
+  delete window.cloudcliDesktopSession;
   localStorage.clear();
   requestedPaths = [];
   nextRefreshedToken = null;
@@ -112,6 +113,7 @@ afterEach(async () => {
   cleanup();
   await i18n.changeLanguage('en');
   vi.unstubAllGlobals();
+  delete window.cloudcliDesktopSession;
 });
 
 test('a refreshed token on the initial auth check does not run a second loading pass', async () => {
@@ -256,4 +258,38 @@ test('signing in before onboarding shows onboarding without mounting the workspa
   assert.ok(requestedPaths.includes('/api/user/onboarding-status'));
   assert.notEqual(localStorage.getItem('auth-token'), null);
   assert.equal(workspaceMounts, 0);
+});
+
+test('local desktop opens the workspace without setup, login or onboarding', async () => {
+  const desktopToken = makeToken(nowSeconds());
+  const getSession = vi.fn(async () => ({
+    token: desktopToken, user: { id: 1, username: 'local-user' },
+  }));
+  window.cloudcliDesktopSession = { getSession };
+  hasCompletedOnboarding = false;
+  localStorage.setItem('auth-token', 'stale-installed-session');
+
+  renderApp();
+  await screen.findByText('workspace');
+  assert.equal(getSession.mock.calls.length, 1);
+  assert.equal(seenToken, desktopToken);
+  assert.equal(localStorage.getItem('auth-token'), desktopToken);
+  assert.equal(workspaceMounts, 1);
+  assert.ok(!requestedPaths.includes('/api/auth/status'));
+  assert.ok(!requestedPaths.includes('/api/user/onboarding-status'));
+});
+
+test('local desktop restores an expired session without remounting the workspace', async () => {
+  const getSession = vi.fn(async () => ({
+    token: makeToken(nowSeconds()), user: { id: 1, username: 'local-user' },
+  }));
+  window.cloudcliDesktopSession = { getSession };
+  renderApp();
+  await screen.findByText('workspace');
+
+  await act(async () => { expireAuthSession(); });
+  await waitFor(() => assert.equal(getSession.mock.calls.length, 2));
+  assert.ok(screen.getByText('workspace'));
+  assert.equal(workspaceMounts, 1);
+  assert.equal(loadingPasses, 1);
 });

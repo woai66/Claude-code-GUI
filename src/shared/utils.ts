@@ -1,7 +1,19 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-import type { Project, ProjectSession, QuickSettingsTab, SlashCommand } from '@/shared/types';
+import type { Project, ProjectSession, ProviderModelOption, QuickSettingsTab, SlashCommand } from '@/shared/types';
+
+//----------------- PROVIDER MODEL LOOKUP ------------
+
+/** Matches a CLI selector or canonical ID; exact and named choices take precedence over Default. */
+export function findProviderModelOption(options: ProviderModelOption[], model: string): ProviderModelOption | null {
+  return options.find((option) => option.value === model)
+    ?? options.find((option) => option.value !== 'default' && option.resolvedModel === model)
+    ?? options.find((option) => option.resolvedModel === model)
+    ?? null;
+}
+
+// ---------------------------
 
 //----------------- DEPLOYMENT MODE ------------
 
@@ -194,7 +206,7 @@ export const playChatCompletionSound = (options = {}): Promise<void> => playNoti
 //----------------- DOCUMENT TITLE ------------
 
 /** Browser tab title shown when no project or session is selected. Private to the title helpers. */
-const DEFAULT_PAGE_TITLE = 'CloudCLI UI';
+const DEFAULT_PAGE_TITLE = 'Claude GUI';
 
 /**
  * Resolves the human-readable label for a session: the persisted `summary` (the custom

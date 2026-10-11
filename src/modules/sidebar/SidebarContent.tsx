@@ -3,7 +3,7 @@ import { Activity, Archive, Folder, MessageSquare, RotateCcw, Search, Trash2 } f
 import type { TFunction } from 'i18next';
 
 import { LLMProviderLogo, ScrollArea } from '@/shared/ui';
-import type { ArchivedProjectListItem, ArchivedSessionListItem, ConversationSearchResults, Project, RecentConversationListItem, ReleaseInfo, SearchProgress, SidebarProjectListProps, SidebarSearchMode } from '@/shared/types';
+import type { ArchivedProjectListItem, ArchivedSessionListItem, ConversationSearchResults, Project, RecentConversationListItem, ReleaseInfo, SearchProgress, SidebarProjectListProps, SidebarSearchMode, SidebarProviderFilter } from '@/shared/types';
 import { formatCompactAge, getAllSessions } from '@/modules/sidebar/utils/sidebarProjectFormatting';
 import SidebarFooter from '@/modules/sidebar/SidebarFooter';
 import SidebarHeader from '@/modules/sidebar/SidebarHeader';
@@ -84,7 +84,6 @@ function groupArchivedSessionsByProject(sessions: ArchivedSessionListItem[]): Ar
 type SidebarContentProps = {
   isPWA: boolean;
   isMobile: boolean;
-  isLoading: boolean;
   projects: Project[];
   runningSessionsCount: number;
   archivedProjects: ArchivedProjectListItem[];
@@ -98,6 +97,9 @@ type SidebarContentProps = {
   isLoadingMoreRecentConversations: boolean;
   recentConversationsError: boolean;
   searchFilter: string;
+  providerFilter: SidebarProviderFilter;
+  onProviderFilterChange: (provider: SidebarProviderFilter) => void;
+  providerProjectsError: boolean;
   onSearchFilterChange: (value: string) => void;
   onClearSearchFilter: () => void;
   searchMode: SidebarSearchMode;
@@ -133,7 +135,6 @@ type SidebarContentProps = {
 export default function SidebarContent({
   isPWA,
   isMobile,
-  isLoading,
   projects,
   runningSessionsCount,
   archivedProjects,
@@ -147,6 +148,9 @@ export default function SidebarContent({
   isLoadingMoreRecentConversations,
   recentConversationsError,
   searchFilter,
+  providerFilter,
+  onProviderFilterChange,
+  providerProjectsError,
   onSearchFilterChange,
   onClearSearchFilter,
   searchMode,
@@ -186,17 +190,16 @@ export default function SidebarContent({
 
   return (
     <div
-      className="flex h-full flex-col bg-background/80 backdrop-blur-sm md:w-full md:select-none"
-      style={{}}
+      className="flex h-full flex-col bg-background md:w-full md:select-none"
     >
       <SidebarHeader
+        providerFilter={providerFilter}
+        onProviderFilterChange={onProviderFilterChange}
         isPWA={isPWA}
         isMobile={isMobile}
-        isLoading={isLoading}
-        projectsCount={projects.length}
+        projects={projects}
+        selectedProject={projectListProps.selectedProject}
         runningSessionsCount={runningSessionsCount}
-        archivedSessionsCount={archivedSessionsCount}
-        isArchivedSessionsLoading={isArchivedSessionsLoading}
         searchFilter={searchFilter}
         onSearchFilterChange={onSearchFilterChange}
         onClearSearchFilter={onClearSearchFilter}
@@ -205,10 +208,19 @@ export default function SidebarContent({
         onRefresh={onRefresh}
         isRefreshing={isRefreshing}
         onCreateProject={onCreateProject}
+        onNewSession={projectListProps.onNewSession}
         onCollapseSidebar={onCollapseSidebar}
         t={t}
       />
 
+      {providerProjectsError && (searchMode === 'projects' || searchMode === 'running') && (
+        <div role="alert" className="px-3 py-2 text-sm text-destructive">
+          {t('search.providerFilterError', 'Unable to load filtered projects.')}
+          <button type="button" className="ml-2 underline" onClick={onRefresh}>
+            {t('search.retry', 'Retry')}
+          </button>
+        </div>
+      )}
       <ScrollArea className="flex-1 overflow-y-auto overscroll-contain md:px-1.5 md:py-2">
         {showConversationSearch ? (
           isSearching && !conversationResults ? (
@@ -378,6 +390,7 @@ export default function SidebarContent({
         ) : searchMode === 'conversations' ? (
           <SidebarRecentConversations
             conversations={recentConversations}
+            projects={projects}
             total={recentConversationsTotal}
             hasMore={recentConversationsHasMore}
             isLoading={isRecentConversationsLoading}

@@ -88,7 +88,7 @@
     "openInEditor": "在編輯器中開啟"
   },
   "mainContent": {
-    "loading": "正在載入 CloudCLI",
+    "loading": "正在載入 Claude GUI",
     "settingUpWorkspace": "正在設定您的工作區...",
     "chooseProject": "選擇您的專案",
     "selectProjectDescription": "從側邊欄選擇一個專案以開始使用 Claude 進行程式開發。每個專案包含您的聊天紀錄和檔案歷史。",
@@ -138,6 +138,25 @@
   },
   "projectWizard": {
     "title": "建立新專案",
+    "projectName": "專案名稱",
+    "namePlaceholder": "預設使用資料夾名稱",
+    "cloneRepository": "從 GitHub 複製（選填）",
+    "folders": {
+      "source": "專案目錄",
+      "choose": "選擇資料夾",
+      "change": "變更",
+      "drop": "選擇資料夾，或將資料夾拖曳至此",
+      "chooseHint": "選擇專案所在的資料夾",
+      "manual": "手動輸入路徑",
+      "pathPlaceholder": "專案目錄的完整路徑",
+      "cloneDestination": "複製到",
+      "cloneHelp": "儲存庫將複製至所選目錄下的新資料夾中。",
+      "chooseFailed": "無法開啟目錄選擇器，請重試。",
+      "desktopDrop": "請使用桌面版拖入資料夾，或手動輸入目錄路徑。",
+      "singleFolder": "請每次拖入一個資料夾。",
+      "notDirectory": "請拖入資料夾，不能使用檔案作為專案目錄。",
+      "unavailable": "無法存取該資料夾，請重新選擇。"
+    },
     "steps": {
       "type": "類型",
       "configure": "設定",

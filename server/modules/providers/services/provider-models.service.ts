@@ -140,18 +140,18 @@ const isUniqueConstraintError = (error: unknown): boolean => (
  * Creates the provider model application service used by Providers routes,
  * Commands, and provider runtimes.
  *
- * Curated adapter definitions stay source-controlled and are merged at read
- * time with custom SQLite rows. This deliberately has no predefined-model
- * persistence, memory cache, disk cache, TTL, or provider-native discovery.
- * Tests inject a small custom-model store through the same boundary.
+ * Adapter definitions, including CLI-discovered catalogues, are merged at read
+ * time with custom SQLite rows. Discovery and caching belong to each adapter;
+ * this service does not persist predefined models. Tests inject a custom-model
+ * store through the same boundary.
  */
 export const createProviderModelsService = (dependencies: ProviderModelsServiceDependencies = {}) => {
   const resolveProvider = dependencies.resolveProvider ?? providerRegistry.resolveProvider;
   const catalog = dependencies.catalog ?? providerModelsDb;
   const sessions = dependencies.sessions ?? sessionsDb;
 
-  const getProviderModels = async (provider: LLMProvider): Promise<ProviderModelsDefinition> => {
-    const predefined = await resolveProvider(provider).models.getSupportedModels();
+  const getProviderModels = async (provider: LLMProvider, cwd?: string): Promise<ProviderModelsDefinition> => {
+    const predefined = await resolveProvider(provider).models.getSupportedModels(cwd);
     return mergeProviderModels(provider, predefined, catalog.listCustomProviderModels(provider));
   };
 

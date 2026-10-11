@@ -114,16 +114,36 @@
       "auto": "Auto Mode",
       "acceptEdits": "Accept Edits",
       "bypassPermissions": "Bypass Permissions",
-      "plan": "Plan Mode"
+      "plan": "Plan Mode",
+      "dontAsk": "Don't Ask"
     },
     "descriptions": {
       "default": "Only trusted commands (ls, cat, grep, git status, etc.) run automatically. Other commands are skipped. Can write to workspace.",
       "auto": "A model classifier decides per tool call whether to approve or deny. Hands-off, but safer than Bypass — denials still happen.",
       "acceptEdits": "All commands run automatically within the workspace. Full auto mode with sandboxed execution.",
       "bypassPermissions": "Full system access with no restrictions. All commands run automatically with full disk and network access. Use with caution.",
-      "plan": "Planning mode - no commands are executed"
+      "plan": "Planning mode - no commands are executed",
+      "dontAsk": "Never prompt for permission. Tools that are not already allowed are denied."
     },
     "technicalDetails": "Technical details"
+  },
+  "claude": {
+    "modes": {
+      "default": "Default Mode",
+      "auto": "Auto Mode",
+      "acceptEdits": "Accept Edits",
+      "bypassPermissions": "Bypass Permissions",
+      "plan": "Plan Mode",
+      "dontAsk": "Don't Ask"
+    },
+    "descriptions": {
+      "default": "Ask for permission when a tool needs approval.",
+      "auto": "A model classifier decides per tool call whether to approve or deny. Denials can still happen.",
+      "acceptEdits": "Automatically accept file edits while other permission checks remain active.",
+      "bypassPermissions": "Skip permission prompts and allow tools to run with full access. Use with caution.",
+      "plan": "Planning mode - no commands are executed",
+      "dontAsk": "Never prompt for permission. Tools that are not already allowed are denied."
+    }
   },
   "voice": {
     "input": "Voice input",

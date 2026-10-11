@@ -24,7 +24,7 @@ type DialogProps = {
   children: React.ReactNode;
 };
 
-/** Used by the chat, command-palette, sidebar and skills modules as the modal container. */
+/** 聊天、命令面板、侧栏、技能和新建项目模块使用的弹窗容器。 */
 export const Dialog: React.FC<DialogProps> = ({ open: controlledOpen, onOpenChange: controlledOnOpenChange, defaultOpen = false, children }) => {
   const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
   const triggerRef = React.useRef<HTMLElement | null>(null) as React.MutableRefObject<HTMLElement | null>;
@@ -100,7 +100,7 @@ type DialogContentProps = {
 
 const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-/** Focus-trapped panel of Dialog, used by the chat, command-palette, sidebar and skills modules. */
+/** 上述模块用它展示弹窗面板，并限制键盘焦点和处理关闭操作。 */
 export const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
   ({ className, children, onEscapeKeyDown, onPointerDownOutside, wrapperClassName, animationClassName, ...props }, ref) => {
     const { open, onOpenChange, triggerRef } = useDialog();

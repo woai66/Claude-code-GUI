@@ -34,6 +34,67 @@ import { getClaudeSDKSessionStartTime } from '@/modules/providers/list/claude/cl
 import { summarizeClaudeTokenUsage } from '@/modules/providers/services/provider-token-usage.service.js';
 
 const PROVIDER = 'claude';
+const CLAUDE_PERMISSION_MODES = new Set([
+  'default',
+  'auto',
+  'acceptEdits',
+  'bypassPermissions',
+  'plan',
+  'dontAsk',
+]);
+
+/** Reads the latest Claude permission-mode record without loading the whole transcript into memory. */
+async function readLatestPermissionMode(jsonlPath: string, providerSessionId: string): Promise<string | null> {
+  let file: fsp.FileHandle;
+  try {
+    file = await fsp.open(jsonlPath, 'r');
+  } catch {
+    return null;
+  }
+
+  try {
+    const { size } = await file.stat();
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let position = size;
+    let trailing = '';
+
+    const readMode = (line: string): string | null => {
+      if (!line.trim()) {
+        return null;
+      }
+      try {
+        const entry = JSON.parse(line) as AnyRecord;
+        return entry.type === 'permission-mode'
+          && entry.sessionId === providerSessionId
+          && typeof entry.permissionMode === 'string'
+          && CLAUDE_PERMISSION_MODES.has(entry.permissionMode)
+          ? entry.permissionMode
+          : null;
+      } catch {
+        return null;
+      }
+    };
+
+    while (position > 0) {
+      const length = Math.min(buffer.length, position);
+      position -= length;
+      const { bytesRead } = await file.read(buffer, 0, length, position);
+      const lines = `${buffer.toString('utf8', 0, bytesRead)}${trailing}`.split('\n');
+      trailing = lines.shift() ?? '';
+
+      for (let index = lines.length - 1; index >= 0; index -= 1) {
+        const mode = readMode(lines[index]);
+        if (mode) {
+          return mode;
+        }
+      }
+    }
+
+    return readMode(trailing);
+  } finally {
+    await file.close();
+  }
+}
 
 /** Tokens the way the CLI writes them: 725k rather than 724,871. */
 const formatTokenCount = (tokens: number): string => {
@@ -1194,6 +1255,20 @@ export class ClaudeSessionsProvider implements IProviderSessions {
 
   constructor({ getLiveRunStartTime = getClaudeSDKSessionStartTime }: ClaudeSessionsProviderOptions = {}) {
     this.getLiveRunStartTime = getLiveRunStartTime;
+  }
+
+  /** Reads the most recent permission mode Claude recorded for this session. */
+  async readPermissionMode(sessionId: string): Promise<string | null> {
+    const session = sessionsDb.getSessionById(sessionId)
+      ?? sessionsDb.getSessionByProviderSessionId(sessionId);
+    if (!session || session.provider !== PROVIDER || !session.jsonl_path) {
+      return null;
+    }
+
+    return readLatestPermissionMode(
+      session.jsonl_path,
+      session.provider_session_id ?? session.session_id,
+    );
   }
 
   /**

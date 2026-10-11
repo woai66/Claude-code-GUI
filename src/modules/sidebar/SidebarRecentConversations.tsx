@@ -1,15 +1,17 @@
 import { Loader2, MessageSquare } from 'lucide-react';
+import { useMemo } from 'react';
 import type { MouseEvent } from 'react';
 import type { TFunction } from 'i18next';
 
 import { Button, LLMProviderLogo, Tooltip } from '@/shared/ui';
 import { cn } from '@/shared/utils';
-import type { ProjectSession, RecentConversationListItem, SessionRowActions } from '@/shared/types';
+import type { Project, ProjectSession, RecentConversationListItem, SessionRowActions } from '@/shared/types';
 import { formatCompactAge } from '@/modules/sidebar/utils/sidebarProjectFormatting';
 import SessionOptions from '@/modules/sidebar/SessionOptions';
 
 type SidebarRecentConversationsProps = {
   conversations: RecentConversationListItem[];
+  projects: Project[];
   total: number;
   hasMore: boolean;
   isLoading: boolean;
@@ -51,6 +53,7 @@ function RecentConversationSkeleton() {
 /** Rendered by SidebarContent in the recents search mode to list recently active sessions across all projects. */
 export default function SidebarRecentConversations({
   conversations,
+  projects,
   total,
   hasMore,
   isLoading,
@@ -64,6 +67,10 @@ export default function SidebarRecentConversations({
   onRetry,
   t,
 }: SidebarRecentConversationsProps) {
+  const projectPaths = useMemo(
+    () => new Map(projects.map((project) => [project.projectId, project.fullPath])),
+    [projects],
+  );
   if (isLoading && conversations.length === 0) {
     return <RecentConversationSkeleton />;
   }
@@ -214,6 +221,7 @@ export default function SidebarRecentConversations({
                 sessionName={conversation.sessionTitle}
                 provider={conversation.provider}
                 projectId={conversation.projectId}
+                projectPath={conversation.projectId ? projectPaths.get(conversation.projectId) ?? null : null}
                 isProcessing={isProcessing}
                 isEditing={sessionRename !== null}
                 renameDraft={sessionRename?.draft ?? ''}

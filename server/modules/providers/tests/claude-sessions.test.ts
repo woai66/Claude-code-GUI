@@ -67,6 +67,46 @@ async function writeSessionJsonl(
   return filePath;
 }
 
+test('Claude permission mode reads the latest mode recorded by the CLI', { concurrency: false }, async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'claude-permission-mode-'));
+
+  try {
+    const sessionPath = await writeSessionJsonl(tempRoot, 'test-session-1.jsonl', [
+      JSON.stringify({
+        type: 'permission-mode',
+        permissionMode: 'auto',
+        sessionId: 'test-session-1',
+      }),
+      JSON.stringify({
+        type: 'permission-mode',
+        permissionMode: 'default',
+        sessionId: 'test-session-1',
+      }),
+    ]);
+
+    await withIsolatedDatabase(async () => {
+      const now = new Date().toISOString();
+      sessionsDb.createSession('test-session-1', 'claude', tempRoot, 'External Claude session', now, now, sessionPath);
+
+      const provider = new ClaudeSessionsProvider();
+      assert.equal(await provider.readPermissionMode('test-session-1'), 'default');
+
+      await writeFile(
+        sessionPath,
+        `${(await readFile(sessionPath, 'utf8')).trim()}\n${JSON.stringify({
+          type: 'permission-mode',
+          permissionMode: 'auto',
+          sessionId: 'test-session-1',
+        })}\n`,
+        'utf8',
+      );
+      assert.equal(await provider.readPermissionMode('test-session-1'), 'auto');
+    });
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});
+
 const SESSION_ID = 'claude-session-1';
 const AGENT_ID = 'a1b2c3d4e5f60718';
 const AGENT_TOOL_USE_ID = 'toolu_agent_1';

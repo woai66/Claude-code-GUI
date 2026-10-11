@@ -66,10 +66,11 @@ export default function SidebarProjectList({
     document.title = pageTitle;
   }, [pageTitle]);
 
-  const showProjects = !isLoading && projects.length > 0 && filteredProjects.length > 0;
+  // Removing populated rows during a refresh shrinks the viewport and resets its scroll position.
+  const showProjects = projects.length > 0 && filteredProjects.length > 0;
 
   return (
-      <div className="pb-safe-area-inset-bottom md:space-y-1">
+      <div aria-busy={isLoading} className="pb-safe-area-inset-bottom md:space-y-1">
         {!showProjects
           ? state
           : filteredProjects.map((project) => {

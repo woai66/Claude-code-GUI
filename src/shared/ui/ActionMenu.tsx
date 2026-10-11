@@ -35,11 +35,12 @@ type ActionMenuProps = {
   disabled?: boolean;
   iconOnly?: boolean;
   portal?: boolean;
+  menuWidth?: number;
   header?: React.ReactNode;
   onOpenChange?: (open: boolean) => void;
 };
 
-/** Used by the mcp and sidebar modules for the "…" overflow menu on a server or session row. */
+/** 聊天、MCP 和侧栏模块用它展示操作菜单及新建会话的项目选择菜单。 */
 export function ActionMenu({
   label,
   items,
@@ -54,11 +55,16 @@ export function ActionMenu({
   disabled,
   iconOnly = false,
   portal = false,
+  menuWidth = 260,
   header,
   onOpenChange,
 }: ActionMenuProps) {
+  // 保留菜单开关，以便统一处理鼠标、键盘和焦点恢复。
   const [isOpen, setIsOpen] = React.useState(false);
-  const [portalPosition, setPortalPosition] = React.useState<{ top: number; left: number } | null>(null);
+  // 根据真实菜单尺寸限制浮层位置，避免窄侧栏或长路径造成窗口外裁切。
+  const [portalPosition, setPortalPosition] = React.useState<{
+    top: number; left: number; width: number; maxHeight: number;
+  } | null>(null);
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
   const menuRef = React.useRef<HTMLDivElement | null>(null);
@@ -69,6 +75,29 @@ export function ActionMenu({
   const focusMenuOnOpenRef = React.useRef(false);
   const wasOpenRef = React.useRef(false);
   const menuId = React.useId();
+
+  React.useLayoutEffect(() => {
+    if (!isOpen || !portal || !triggerRef.current || !menuRef.current) {
+      return;
+    }
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const width = Math.min(menuWidth, Math.max(0, window.innerWidth - 16));
+    // offsetHeight 不受菜单的缩放入场动画影响。
+    const height = menuRef.current.offsetHeight || menuRef.current.getBoundingClientRect().height;
+    const below = Math.max(0, window.innerHeight - rect.bottom - 14);
+    const above = Math.max(0, rect.top - 14);
+    const openBelow = height <= below || below >= above;
+    const maxHeight = Math.min(height || window.innerHeight, openBelow ? below : above);
+    const preferredLeft = align === 'left' ? rect.left : rect.right - width;
+
+    setPortalPosition({
+      top: openBelow ? rect.bottom + 6 : Math.max(8, rect.top - maxHeight - 6),
+      left: Math.max(8, Math.min(preferredLeft, window.innerWidth - width - 8)),
+      width,
+      maxHeight,
+    });
+  }, [isOpen, portal, align, menuWidth, items, header]);
 
   const setMenuOpen = React.useCallback((open: boolean) => {
     setIsOpen(open);
@@ -114,7 +143,13 @@ export function ActionMenu({
       return;
     }
 
-    const closeOnViewportChange = () => setMenuOpen(false);
+    const closeOnViewportChange = (event: Event) => {
+      // 滚动菜单自己的项目列表时保持展开；只在锚点或窗口移动时关闭。
+      if (event.target instanceof Node && menuRef.current?.contains(event.target)) {
+        return;
+      }
+      setMenuOpen(false);
+    };
     window.addEventListener('resize', closeOnViewportChange);
     window.addEventListener('scroll', closeOnViewportChange, true);
     return () => {
@@ -163,22 +198,10 @@ export function ActionMenu({
       return;
     }
 
-    if (portal && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const menuWidth = 260;
-      const estimatedHeight = (header ? 52 : 0)
-        + items.reduce((height, item) => height + (item.description ? 58 : 40) + (item.showDividerBefore ? 9 : 0), 12);
-      setPortalPosition({
-        top: rect.bottom + 6 + estimatedHeight <= window.innerHeight - 8
-          ? rect.bottom + 6
-          : Math.max(8, rect.top - estimatedHeight - 6),
-        left: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)),
-      });
-    }
     setMenuOpen(true);
   };
 
-  const menu = isOpen && (!portal || portalPosition) && (
+  const menu = isOpen && (
     <div
       ref={menuRef}
       id={menuId}
@@ -186,13 +209,16 @@ export function ActionMenu({
       tabIndex={-1}
       data-escape-layer
       className={cn(
-        portal ? 'fixed z-[70]' : 'absolute top-full z-50 mt-2',
-        'min-w-[220px] rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg',
+        portal ? 'fixed z-[70] min-w-0 overflow-x-hidden overflow-y-auto' : 'absolute top-full z-50 mt-2 min-w-[220px]',
+        'rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg',
         'animate-in fade-in-0 zoom-in-95',
         !portal && (align === 'right' ? 'right-0' : 'left-0'),
         menuClassName,
       )}
-      style={portal && portalPosition ? portalPosition : undefined}
+      style={portal ? portalPosition ?? {
+        width: Math.min(menuWidth, Math.max(0, window.innerWidth - 16)),
+        visibility: 'hidden',
+      } : undefined}
     >
       {header}
       {items.map((item) => {
@@ -221,9 +247,9 @@ export function ActionMenu({
                 Icon && <Icon className="mt-0.5 h-4 w-4 flex-shrink-0" />
               )}
               <span className="min-w-0 flex-1">
-                <span className="block font-medium leading-5">{item.label}</span>
+                <span className="block truncate font-medium leading-5" title={item.label}>{item.label}</span>
                 {item.description && (
-                  <span className="mt-0.5 block text-xs leading-4 text-muted-foreground">
+                  <span className="mt-0.5 block truncate text-xs leading-4 text-muted-foreground" title={item.description}>
                     {item.description}
                   </span>
                 )}

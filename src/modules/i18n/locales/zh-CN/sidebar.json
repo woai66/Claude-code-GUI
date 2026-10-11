@@ -1,5 +1,6 @@
 {
   "projects": {
+    "options": "项目选项",
     "title": "项目",
     "newProject": "新建项目",
     "deleteProject": "移除项目",
@@ -20,10 +21,23 @@
     "runClaudeCli": "在项目目录中运行 Claude CLI 以开始使用"
   },
   "app": {
-    "title": "CloudCLI",
+    "title": "Claude GUI",
     "subtitle": "AI 编程助手"
   },
   "sessions": {
+    "resumeInPowerShell": "在 PowerShell 中恢复此对话",
+    "resumingInPowerShell": "正在打开 PowerShell…",
+    "powerShellOpened": "已打开 PowerShell",
+    "resumeAfterProcessing": "请等待当前回复完成后再恢复。",
+    "resumeErrors": {
+      "unsupported": "此操作需要 Windows 桌面版。",
+      "invalid-session": "无法读取有效的 Claude 会话 ID，请重试。",
+      "directory-unavailable": "项目目录不可用，请检查目录是否仍然存在。",
+      "launch-failed": "无法打开 PowerShell，请检查系统 PowerShell 是否可用后重试。"
+    },
+    "chooseProject": "选择项目以新建会话",
+    "count_one": "{{count}} 个会话",
+    "count_other": "{{count}} 个会话",
     "title": "会话",
     "newSession": "新建会话",
     "deleteSession": "删除会话",
@@ -129,6 +143,9 @@
     "restartRequired": "已安装更新 — 请重启服务器以生效"
   },
   "search": {
+    "providerFilter": "按 Agent 筛选",
+    "allProviders": "全部 Agent",
+    "providerFilterError": "加载筛选后的项目失败。",
     "modeProjects": "项目",
     "modeConversations": "对话",
     "modeMore": "更多",

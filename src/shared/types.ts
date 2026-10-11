@@ -7,9 +7,14 @@ import type { NavigateFunction } from 'react-router-dom';
 /** Identifies which coding-agent CLI backs a session, project selection or model list. */
 export type LLMProvider = 'claude' | 'cursor' | 'codex' | 'opencode';
 
+/** Agent restriction for sidebar lists and searches; "all" includes every provider. */
+export type SidebarProviderFilter = LLMProvider | 'all';
+
 /** One selectable model in a provider's model menu, including its optional reasoning-effort choices. */
 export type ProviderModelOption = {
   value: string;
+  /** Canonical CLI model ID, used to match resumed sessions against an alias row. */
+  resolvedModel?: string;
   label: string;
   description?: string;
   recordId?: number;
@@ -284,8 +289,8 @@ export type QueueItemStatus = 'completed' | 'in_progress' | 'pending';
 
 //----------------- CHAT MESSAGES AND PERMISSIONS ------------
 
-/** Permission preset a provider runs a turn under ('default', 'acceptEdits', 'auto', 'bypassPermissions' or 'plan'), chosen in the composer and sent with each message; the backend capability matrix decides which values a given provider accepts. */
-export type PermissionMode = 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan';
+/** Permission preset a provider runs a turn under, chosen in the composer and sent with each message; the backend capability matrix decides which values a given provider accepts. */
+export type PermissionMode = 'default' | 'acceptEdits' | 'auto' | 'bypassPermissions' | 'plan' | 'dontAsk';
 
 /** A non-image file attached to a chat message, described by its path in the server-managed attachment store plus display metadata so it can be listed and downloaded. */
 export type ChatAttachment = {
@@ -1262,7 +1267,30 @@ export type ExistingPrdFile = {
 
 // ---------------------------
 
+//----------------- DESKTOP CLAUDE SESSION RESUME ------------
+
+/** 原生 PowerShell 启动结果；失败码供侧栏展示可翻译的提示。 */
+export type DesktopClaudeResumeResult = { success: true; error?: never }
+  | { error: 'unsupported' | 'invalid-session' | 'directory-unavailable' | 'launch-failed'; success?: never };
+
+/** Windows Electron preload 的受限能力，只能在项目目录恢复指定 Claude 会话。 */
+export type DesktopClaudeBridge = {
+  resumeSession(sessionId: string, projectPath: string): Promise<DesktopClaudeResumeResult>;
+};
+
+// ---------------------------
+
 //----------------- PROJECT CREATION WIZARD ------------
+
+/** 桌面目录验证结果；仅已有目录返回路径，错误码由界面翻译后展示。 */
+export type DesktopDirectoryResult = { path: string; error?: never }
+  | { error: 'single-folder' | 'not-directory' | 'unavailable'; path?: never };
+
+/** Electron preload 提供的原生选目录与拖入目录能力，仅在本地桌面窗口可用。 */
+export type DesktopDirectoryBridge = {
+  chooseDirectory(defaultPath?: string): Promise<string | null>;
+  getDroppedDirectory(files: File[]): Promise<DesktopDirectoryResult>;
+};
 
 /** The one-based index of the step currently shown by the project-creation wizard: 1 configures the workspace, 2 reviews it before creation. */
 export type WizardStep = 1 | 2;
@@ -1284,7 +1312,7 @@ export type GithubTokenCredential = {
   is_active: boolean;
 };
 
-/** The full set of user-entered values carried across the project-creation wizard's steps, owned by ProjectCreationWizard and passed down to each step. */
+/** 新建项目弹窗保存的目录及可选克隆配置，由父组件传给配置区并提交给项目接口。 */
 export type WizardFormState = {
   workspacePath: string;
   githubUrl: string;

@@ -73,11 +73,13 @@ export type LLMProvider = 'claude' | 'codex' | 'cursor' | 'opencode';
  */
 export type ProviderModelOption = {
   value: string;
+  /** Canonical model ID resolved by the CLI; used to recognize aliases in resumed sessions. */
+  resolvedModel?: string;
   label: string;
   description?: string;
   /** Stable SQLite row id used only by model-management actions. */
   recordId?: number;
-  /** True for user-created rows; false for immutable CloudCLI defaults. */
+  /** True for user-created rows; false for model options supplied by the provider. */
   isCustom?: boolean;
   effort?: {
     default?: string;
@@ -107,8 +109,8 @@ export type ProviderModelsDefinition = {
  * One persisted custom-model row in the provider model library.
  *
  * Provider modules use this shape at the database boundary. Predefined models
- * never use this type because they remain source-controlled in provider
- * adapters. `modelId` is sent to the provider runtime, while `model` is the
+ * never use this type because they are supplied by provider adapters.
+ * `modelId` is sent to the provider runtime, while `model` is the
  * user-supplied display name shown in pickers.
  */
 export type CustomProviderModelRecord = {
@@ -634,7 +636,7 @@ export type ProviderRuntimeContext = {
     sessionId: string | undefined,
     requestedModel?: string | null,
   ): Promise<string | undefined>;
-  getProviderModels(): Promise<ProviderModelsDefinition>;
+  getProviderModels(cwd?: string): Promise<ProviderModelsDefinition>;
   normalizeMessage(raw: unknown, sessionId: string | null): NormalizedMessage[];
   isProviderInstalled(): Promise<boolean>;
   /**

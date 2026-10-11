@@ -14,7 +14,7 @@ import { PaperclipIcon, MessageSquareIcon, XIcon, Loader2, ArrowUpIcon, PencilIc
 
 import { useVoiceInput } from '@/modules/chat/hooks/useVoiceInput';
 import { useVoiceAvailable } from '@/modules/chat/hooks/useVoiceAvailable';
-import type { QueuedDraft, ScheduledMessage, SlashCommand,SessionActivity,PendingPermissionRequest,PermissionMode,ProviderModelOption } from '@/shared/types';
+import type { LLMProvider, QueuedDraft, ScheduledMessage, SlashCommand,SessionActivity,PendingPermissionRequest,PermissionMode,ProviderModelOption } from '@/shared/types';
 import {
   PromptInput,
   PromptInputHeader,
@@ -55,6 +55,7 @@ type ChatComposerProps = {
   permissionMode: PermissionMode;
   availablePermissionModes: PermissionMode[];
   onSelectPermissionMode: (mode: PermissionMode) => void;
+  provider: LLMProvider;
   providerLabel: string;
   effort: string;
   availableEffortOptions: NonNullable<ProviderModelOption['effort']>['values'];
@@ -130,6 +131,7 @@ export default function ChatComposer({
   permissionMode,
   availablePermissionModes,
   onSelectPermissionMode,
+  provider,
   providerLabel,
   effort,
   availableEffortOptions,
@@ -492,6 +494,7 @@ export default function ChatComposer({
               permissionMode={permissionMode}
               permissionModes={availablePermissionModes}
               onSelectPermissionMode={onSelectPermissionMode}
+              provider={provider}
               providerLabel={providerLabel}
             />
 

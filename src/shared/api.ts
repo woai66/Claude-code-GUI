@@ -5,6 +5,7 @@ import {
 } from '@/shared/authToken';
 import { IS_PLATFORM } from '@/shared/utils';
 import { readVoiceConfig, voiceConfigHeaders } from '@/shared/voiceConfig';
+import type { LLMProvider } from '@/shared/types';
 
 // Headers are a plain record rather than the full `HeadersInit` union so the
 // defaults below can be merged with a caller's headers by spreading.
@@ -188,6 +189,7 @@ const pluginAssetPath = (pluginName: string, assetFile: string) =>
 export const api = {
   // Auth endpoints (no token required)
   auth: {
+    desktopSession: () => window.cloudcliDesktopSession?.getSession(),
     status: () => fetch('/api/auth/status'),
     login: (username: string, password: string) => fetch('/api/auth/login', {
       method: 'POST',
@@ -207,15 +209,22 @@ export const api = {
   // config endpoint removed - no longer needed (frontend uses window.location)
   // After the projectName → projectId migration the path/query identifier is
   // the DB-assigned `projectId`; parameter names reflect that for clarity.
-  projects: () => get('/api/projects'),
+  projects: (
+    filters: { provider?: LLMProvider; skipSynchronization?: boolean; sessionsLimit?: number } = {},
+    options: ApiRequestOptions = {},
+  ) => get(`/api/projects${query({
+    provider: filters.provider,
+    skipSynchronization: filters.skipSynchronization ? 1 : undefined,
+    sessionsLimit: filters.sessionsLimit,
+  })}`, options),
   archivedProjects: () => get('/api/projects/archived'),
   projectSessions: (
     projectId: string,
-    { limit = 20, offset = 0 }: { limit?: number; offset?: number } = {},
+    { limit = 20, offset = 0, provider }: { limit?: number; offset?: number; provider?: LLMProvider } = {},
     options: ApiRequestOptions = {},
   ) =>
     get(
-      `/api/projects/${encodeURIComponent(projectId)}/sessions${query({ limit, offset })}`,
+      `/api/projects/${encodeURIComponent(projectId)}/sessions${query({ limit, offset, provider })}`,
       options,
     ),
   projectTaskmaster: (projectId: string) =>
@@ -245,10 +254,11 @@ export const api = {
   // a query parameter on the streaming endpoints below.
   cloneProjectProgressUrl: ({ cloneId }: { cloneId: string }) =>
     `/api/projects/clone-progress${query({ cloneId, token: getStoredAuthToken() })}`,
-  searchConversationsUrl: (searchQuery: string, limit = 50) =>
+  searchConversationsUrl: (searchQuery: string, limit = 50, provider?: LLMProvider) =>
     `/api/providers/search/sessions${query({
       q: searchQuery,
       limit,
+      provider,
       token: getStoredAuthToken(),
     })}`,
 
@@ -265,8 +275,8 @@ export const api = {
   sessionDetails: (sessionId: string) =>
     get(`/api/providers/sessions/${encodeURIComponent(sessionId)}`),
   runningSessions: () => get('/api/providers/sessions/running'),
-  recentConversations: ({ limit = 40, offset = 0 }: { limit?: number; offset?: number } = {}) =>
-    get(`/api/providers/sessions/recent${query({ limit, offset })}`),
+  recentConversations: ({ limit = 40, offset = 0, provider }: { limit?: number; offset?: number; provider?: LLMProvider } = {}) =>
+    get(`/api/providers/sessions/recent${query({ limit, offset, provider })}`),
   providerSessionId: (sessionId: string) =>
     get(`/api/providers/sessions/${encodeURIComponent(sessionId)}/provider-id`),
   restoreSession: (sessionId: string) => post(`/api/providers/sessions/${sessionId}/restore`),
@@ -409,7 +419,7 @@ export const api = {
       get(`/api/providers/${encodeURIComponent(provider)}/auth/status`),
     claudeSettingsPermissions: () => get('/api/providers/claude/settings-permissions'),
 
-    models: (provider: string) => get(`/api/providers/${provider}/models`),
+    models: (provider: string, cwd?: string) => get(`/api/providers/${provider}/models${query({ cwd })}`),
     createModel: (provider: string, input: unknown) =>
       post(`/api/providers/${provider}/models`, input),
     updateModel: (provider: string, recordId: string | number, input: unknown) =>

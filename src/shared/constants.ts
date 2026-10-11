@@ -17,14 +17,24 @@ import type { UserPreferenceKey } from '@/shared/userSettings';
 /** The four buckets the git changes view sorts working-tree files into. */
 type GitStatusFileGroup = 'modified' | 'added' | 'deleted' | 'untracked';
 
+//----------------- AGENT DISPLAY NAMES ------------
+/** Names used by sidebar agent filters and session actions to identify the owning CLI. */
+export const PROVIDER_LABELS: Record<LLMProvider, string> = {
+  claude: 'Claude',
+  codex: 'Codex',
+  cursor: 'Cursor',
+  opencode: 'OpenCode',
+};
+
+// ---------------------------
 //----------------- BRANDING ------------
 
 /**
- * Font stack used to render the CloudCLI wordmark consistently wherever the brand name
+ * Font stack used to render the Claude GUI wordmark consistently wherever the brand name
  * appears as text. Apply it inline so the wordmark does not inherit a themed font.
  */
-export const CLOUDCLI_WORDMARK_FONT_FAMILY =
-  'ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji';
+export const APP_WORDMARK_FONT_FAMILY =
+  'Georgia, Cambria, "Times New Roman", serif';
 
 // ---------------------------
 

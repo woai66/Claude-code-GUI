@@ -53,7 +53,7 @@ type ProviderCapabilities = {
 const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
   claude: {
     provider: 'claude',
-    permissionModes: ['default', 'auto', 'acceptEdits', 'bypassPermissions', 'plan'],
+    permissionModes: ['default', 'auto', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk'],
     defaultPermissionMode: 'default',
     supportsImages: true,
     supportsFiles: true,

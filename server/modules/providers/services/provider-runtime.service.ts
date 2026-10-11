@@ -29,7 +29,7 @@ const defaultDependencies: ProviderRuntimeServiceDependencies = {
   resolveProviderSessionId: (sessionId) => sessionsService.resolveProviderSessionId(sessionId),
   resolveResumeModel: (provider, sessionId, requestedModel) =>
     providerModelsService.resolveResumeModel(provider, sessionId, requestedModel),
-  getProviderModels: (provider) => providerModelsService.getProviderModels(provider),
+  getProviderModels: (provider, cwd) => providerModelsService.getProviderModels(provider, cwd),
 };
 
 /**
@@ -50,7 +50,7 @@ export function createProviderRuntimeService(
     resolveProviderSessionId: dependencies.resolveProviderSessionId,
     resolveResumeModel: (sessionId, requestedModel) =>
       dependencies.resolveResumeModel(provider.id, sessionId, requestedModel),
-    getProviderModels: async () => dependencies.getProviderModels(provider.id),
+    getProviderModels: async (cwd) => dependencies.getProviderModels(provider.id, cwd),
     normalizeMessage: (raw, sessionId) => provider.sessions.normalizeMessage(raw, sessionId),
     async isProviderInstalled() {
       try {

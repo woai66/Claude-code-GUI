@@ -7,11 +7,12 @@ import {
   ClipboardList,
   Hand,
   ShieldQuestion,
+  ShieldCheck,
   Smile,
   type LucideIcon,
 } from 'lucide-react';
 
-import type { PermissionMode } from '@/shared/types';
+import type { LLMProvider, PermissionMode } from '@/shared/types';
 import { useComposerMenuAnchor } from '@/modules/chat/hooks/useComposerMenuAnchor';
 import {
   ComposerMenuHeading,
@@ -58,6 +59,12 @@ const MODE_APPEARANCE: Record<PermissionMode, ModeAppearance> = {
     trigger: 'border-primary/20 bg-primary/5 text-primary hover:bg-primary/10',
     item: 'text-primary',
   },
+  dontAsk: {
+    icon: ShieldCheck,
+    trigger:
+      'border-violet-300/60 bg-violet-50 text-violet-700 hover:bg-violet-100 dark:border-violet-600/40 dark:bg-violet-900/15 dark:text-violet-300 dark:hover:bg-violet-900/25',
+    item: 'text-violet-700 dark:text-violet-300',
+  },
 };
 
 const UNKNOWN_MODE: ModeAppearance = {
@@ -74,6 +81,7 @@ type ComposerPermissionMenuProps = {
   /** Modes the active provider supports, in the order the backend reports them. */
   permissionModes: PermissionMode[];
   onSelectPermissionMode: (mode: PermissionMode) => void;
+  provider: LLMProvider;
   providerLabel: string;
 };
 
@@ -85,6 +93,7 @@ function ComposerPermissionMenu({
   permissionMode,
   permissionModes,
   onSelectPermissionMode,
+  provider,
   providerLabel,
 }: ComposerPermissionMenuProps) {
   const { t } = useTranslation('chat');
@@ -98,6 +107,7 @@ function ComposerPermissionMenu({
 
   const activeAppearance = getAppearance(permissionMode);
   const ActiveIcon = activeAppearance.icon;
+  const translationPrefix = provider === 'claude' ? 'claude' : 'codex';
   const heading = t('composer.permissionHeading', {
     provider: providerLabel,
     defaultValue: 'How should {{provider}} actions be approved?',
@@ -131,8 +141,12 @@ function ComposerPermissionMenu({
               <ComposerMenuItem
                 key={mode}
                 icon={<ModeIcon className="h-4 w-4" />}
-                label={t(`codex.modes.${mode}`, { defaultValue: mode })}
-                description={t(`codex.descriptions.${mode}`, { defaultValue: '' }) || undefined}
+                label={t(`${translationPrefix}.modes.${mode}`, {
+                  defaultValue: t(`codex.modes.${mode}`, { defaultValue: mode }),
+                })}
+                description={t(`${translationPrefix}.descriptions.${mode}`, {
+                  defaultValue: t(`codex.descriptions.${mode}`, { defaultValue: '' }),
+                }) || undefined}
                 isSelected={mode === permissionMode}
                 onSelect={() => {
                   onSelectPermissionMode(mode);

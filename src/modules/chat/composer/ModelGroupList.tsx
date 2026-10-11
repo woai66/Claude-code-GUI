@@ -3,6 +3,7 @@ import { Check, ChevronDown, ChevronRight } from "lucide-react";
 
 import type { LLMProvider, ProviderModelOption } from "@/shared/types";
 import { Badge, CommandGroup, CommandItem, LLMProviderLogo } from "@/shared/ui";
+import { findProviderModelOption } from '@/shared/utils';
 
 /**
  * One branch of the model picker.
@@ -73,6 +74,7 @@ export default function ModelGroupList({
     <>
       {groups.map((group, index) => {
         const isCollapsed = collapsed.has(group.key) && !searching;
+        const selectedModel = findProviderModelOption(group.models, currentModel);
 
         return (
           <CommandGroup
@@ -124,7 +126,7 @@ export default function ModelGroupList({
             ) : null}
 
             {!isCollapsed && group.models.map((model) => {
-              const isSelected = provider === group.provider && currentModel === model.value;
+              const isSelected = provider === group.provider && selectedModel?.value === model.value;
 
               return (
                 <CommandItem

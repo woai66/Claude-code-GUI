@@ -20,7 +20,7 @@ const recordedSessionRowProps: Record<string, unknown>[] = [];
 vi.mock('@/modules/sidebar/SidebarProjectItem', () => ({
   default: (props: Record<string, unknown>) => {
     recordedProjectRowProps.push(props);
-    return null;
+    return React.createElement('div', { 'data-testid': `project-row-${(props.project as Project).projectId}` });
   },
 }));
 
@@ -31,7 +31,10 @@ vi.mock('@/modules/sidebar/SidebarSessionItem', () => ({
   },
 }));
 
+vi.mock('@/modules/sidebar/GitHubStarBadge', () => ({ default: () => null }));
+
 const { default: SidebarProjectList } = await import('@/modules/sidebar/SidebarProjectList');
+const { default: SidebarHeader } = await import('@/modules/sidebar/SidebarHeader');
 const { default: SidebarProjectSessions } = await import('@/modules/sidebar/SidebarProjectSessions');
 const { getAllSessions } = await import('@/modules/sidebar/utils/sidebarProjectFormatting');
 
@@ -114,6 +117,49 @@ const changedProps = (before: Record<string, unknown>, after: Record<string, unk
 beforeEach(() => {
   recordedProjectRowProps.length = 0;
   recordedSessionRowProps.length = 0;
+});
+
+test('loaded project rows stay mounted when selection expands during a background refresh', () => {
+  const props = listProps(null);
+  const { getByTestId, queryByText, rerender } = render(React.createElement(SidebarProjectList, props));
+  const projectRow = getByTestId('project-row-b');
+
+  rerender(React.createElement(SidebarProjectList, {
+    ...props,
+    selectedProject: PROJECT_B,
+    isProjectExpanded: (projectId) => projectId === PROJECT_B.projectId,
+    isLoading: true,
+  }));
+  assert.equal(getByTestId('project-row-b'), projectRow);
+  assert.equal(queryByText('projects.loadingProjects'), null);
+
+  rerender(React.createElement(SidebarProjectList, { ...props, selectedProject: PROJECT_B }));
+  assert.equal(getByTestId('project-row-b'), projectRow);
+});
+
+test('an empty provider scope still shows loading until its first response arrives', () => {
+  const { getByText, queryByTestId } = render(React.createElement(SidebarProjectList, {
+    ...listProps(null), filteredProjects: [], isLoading: true,
+  }));
+  assert.ok(getByText('projects.loadingProjects'));
+  assert.equal(queryByTestId('project-row-a'), null);
+});
+
+test('background loading keeps the agent filter and search controls mounted on desktop and mobile', () => {
+  const props = {
+    isPWA: false, isMobile: false, projects: [PROJECT_A, PROJECT_B], selectedProject: PROJECT_A,
+    runningSessionsCount: 0,
+    searchFilter: '', providerFilter: 'codex' as const, onProviderFilterChange: noop,
+    onSearchFilterChange: noop, onClearSearchFilter: noop, searchMode: 'projects' as const,
+    onSearchModeChange: noop, onRefresh: noop, isRefreshing: false, onCreateProject: noop,
+    onNewSession: noop, onCollapseSidebar: noop, t,
+  };
+  const { getAllByRole, rerender } = render(React.createElement(SidebarHeader, props));
+  const filters = getAllByRole('combobox');
+  const searches = getAllByRole('textbox');
+  rerender(React.createElement(SidebarHeader, { ...props, isRefreshing: true }));
+  assert.deepEqual(getAllByRole('combobox'), filters);
+  assert.deepEqual(getAllByRole('textbox'), searches);
 });
 
 test('project expansion is resolved per project without dropping rows', () => {
@@ -249,7 +295,6 @@ const sessionsProps = (
   onSessionSelect: noop,
   onDeleteSession: noop,
   onLoadMoreSessions: noop,
-  onNewSession: noop,
   selectedSessionIds,
   onSetSessionSelection: noop,
   onToggleSessionSelected: noop,

@@ -10,6 +10,7 @@ import type { PendingPermissionRequest, PermissionMode,
   ProviderModelOption,
   ProviderModelsDefinition } from '@/shared/types';
 import { DEFAULT_EFFORT_VALUE } from '@/shared/constants';
+import { findProviderModelOption } from '@/shared/utils';
 import { readSelectedProvider, writeSelectedProvider } from '@/shared/selectedProvider';
 
 const FALLBACK_PROVIDER_EFFORT_VALUES: Partial<Record<LLMProvider, readonly string[]>> = {
@@ -47,7 +48,7 @@ const providerModelStorageKey = (provider: LLMProvider): string => `${provider}-
  * first paint and when the capabilities request fails.
  */
 const FALLBACK_PERMISSION_MODES: Record<LLMProvider, PermissionMode[]> = {
-  claude: ['default', 'auto', 'acceptEdits', 'bypassPermissions', 'plan'],
+  claude: ['default', 'auto', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk'],
   cursor: ['default', 'acceptEdits', 'bypassPermissions', 'plan'],
   codex: ['default', 'acceptEdits', 'bypassPermissions'],
   opencode: ['default', 'acceptEdits', 'bypassPermissions', 'plan'],
@@ -104,6 +105,7 @@ type SessionSelectionApiResponse = {
     sessionId?: string | null;
     model?: string | null;
     effort?: string | null;
+    permissionMode?: string | null;
     /**
      * `session` and `provider` are real answers for this session; `default`
      * means the backend had nothing recorded and returned the catalog default,
@@ -118,15 +120,18 @@ type SessionProviderSelection = {
   sessionId: string;
   model: string | null;
   effort: string | null;
+  permissionMode: string | null;
 };
 
 const getSessionSelectionKey = (provider: LLMProvider, sessionId: string): string => (
   `${provider}:${sessionId}`
 );
 
-export function useChatProviderState({ selectedSession, selectedProject: _selectedProject }: UseChatProviderStateArgs) {
+export function useChatProviderState({ selectedSession, selectedProject }: UseChatProviderStateArgs) {
   const [permissionMode, setPermissionMode] = useState<PermissionMode>('default');
   const [pendingPermissionRequests, setPendingPermissionRequests] = useState<PendingPermissionRequest[]>([]);
+  /** Session-specific provider settings restore model, effort and permission mode when a conversation is reopened. */
+  const [sessionSelection, setSessionSelection] = useState<SessionProviderSelection | null>(null);
   // The provider the composer sends under. Held here rather than read from
   // storage per render because switching it has to reset the model menu, the
   // permission mode and the session in one commit.
@@ -195,7 +200,7 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
     try {
       const results = await Promise.all(
         PROVIDERS.map(async (p) => {
-          const response = await api.providers.models(p);
+          const response = await api.providers.models(p, selectedProject?.fullPath || selectedProject?.path);
           const body = (await response.json()) as ProviderModelsApiResponse;
           if (!body.success || !body.data?.models) {
             return null;
@@ -228,7 +233,7 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
         setProviderModelsLoading(false);
       }
     }
-  }, []);
+  }, [selectedProject?.fullPath, selectedProject?.path]);
 
   useEffect(() => {
     void loadProviderModels();
@@ -292,10 +297,10 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
     def: ProviderModelsDefinition,
   ): string => {
     const stored = localStorage.getItem(storageKey);
-    if (stored && def.OPTIONS.some((o) => o.value === stored)) {
+    if (stored && findProviderModelOption(def.OPTIONS, stored)) {
       return stored;
     }
-    if (current && def.OPTIONS.some((o) => o.value === current)) {
+    if (current && findProviderModelOption(def.OPTIONS, current)) {
       return current;
     }
     return def.DEFAULT;
@@ -310,7 +315,7 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
       return null;
     }
 
-    return definition.OPTIONS.find((option) => option.value === model) ?? null;
+    return findProviderModelOption(definition.OPTIONS, model);
   }, [providerModelCatalog]);
 
   const getEffortOptionsForModel = useCallback((
@@ -326,8 +331,12 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
       return option.effort?.values ?? [];
     }
 
+    if (providerModelCatalog[targetProvider]) {
+      return [];
+    }
+
     return toProviderEffortOptions(FALLBACK_PROVIDER_EFFORT_VALUES[targetProvider] ?? []);
-  }, [getModelOption, getSupportsEffortForProvider]);
+  }, [getModelOption, getSupportsEffortForProvider, providerModelCatalog]);
 
   const getAllowedEffortValues = useCallback((
     targetProvider: LLMProvider,
@@ -411,16 +420,28 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
     const sessionSavedMode = selectedSession?.id
       ? (localStorage.getItem(`permissionMode-${selectedSession.id}`) as PermissionMode | null)
       : null;
-    // Fall back to the last mode picked for this provider: a brand-new chat
-    // only receives its session id after the first send, so without this the
-    // mode chosen beforehand would snap back to the default as soon as the
-    // session id appears.
+    const matchingSessionSelection = sessionSelection
+      && sessionSelection.sessionId === selectedSession?.id
+      && sessionSelection.provider === (selectedSession?.__provider ?? provider)
+      ? sessionSelection
+      : null;
+    const transcriptMode = matchingSessionSelection?.permissionMode as PermissionMode | null | undefined;
+    // A session-specific local choice wins first. The transcript mode is the
+    // compatibility fallback for sessions started in Claude CLI; the provider
+    // key remains the default for new chats without a transcript.
     const providerSavedMode = localStorage.getItem(`permissionMode-last-${provider}`) as PermissionMode | null;
-    const savedMode = [sessionSavedMode, providerSavedMode].find(
+    const savedMode = [sessionSavedMode, transcriptMode, providerSavedMode].find(
       (mode): mode is PermissionMode => Boolean(mode && validModes.includes(mode)),
     );
     setPermissionMode(savedMode ?? getDefaultPermissionModeForProvider(provider));
-  }, [selectedSession?.id, provider, getDefaultPermissionModeForProvider, getPermissionModesForProvider]);
+  }, [
+    selectedSession?.id,
+    selectedSession?.__provider,
+    provider,
+    sessionSelection,
+    getDefaultPermissionModeForProvider,
+    getPermissionModesForProvider,
+  ]);
 
   useEffect(() => {
     if (!selectedSession?.__provider || selectedSession.__provider === provider) {
@@ -482,8 +503,6 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
       : getDefaultPermissionModeForProvider(targetProvider);
   }, [getDefaultPermissionModeForProvider, getPermissionModesForProvider]);
 
-  /** Model and reasoning effort recorded for the open session by the backend. */
-  const [sessionSelection, setSessionSelection] = useState<SessionProviderSelection | null>(null);
   const selectedSessionId = selectedSession?.id?.trim() || null;
   const selectedSessionProvider = selectedSession?.__provider ?? provider;
   const selectedSessionKey = selectedSessionId
@@ -532,6 +551,9 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
           sessionId: selectedSessionId,
           model: body.success && resolvedModel && body.data?.source !== 'default' ? resolvedModel : null,
           effort: body.success ? resolvedEffort : null,
+          permissionMode: body.success && typeof body.data?.permissionMode === 'string'
+            ? body.data.permissionMode
+            : null,
         });
       } catch (error) {
         if (
@@ -545,6 +567,7 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
             sessionId: selectedSessionId,
             model: null,
             effort: null,
+            permissionMode: null,
           });
         }
       }
@@ -605,6 +628,9 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
         effort: current?.provider === targetProvider && current.sessionId === normalizedSessionId
           ? current.effort
           : body.data?.effort?.trim() || null,
+        permissionMode: current?.provider === targetProvider && current.sessionId === normalizedSessionId
+          ? current.permissionMode
+          : null,
       }));
     }
     return { scope: 'session' as const, model: storedModel };
@@ -641,6 +667,7 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
       sessionId: normalizedSessionId,
       model: previousSelection?.model ?? null,
       effort,
+      permissionMode: previousSelection?.permissionMode ?? null,
     });
 
     try {
@@ -666,6 +693,9 @@ export function useChatProviderState({ selectedSession, selectedProject: _select
             ? current.model
             : previousSelection?.model ?? null,
           effort: storedEffort,
+          permissionMode: current?.provider === targetProvider && current.sessionId === normalizedSessionId
+            ? current.permissionMode
+            : previousSelection?.permissionMode ?? null,
         }));
       }
 

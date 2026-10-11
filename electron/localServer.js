@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs/promises';
 import http from 'node:http';
 import net from 'node:net';
@@ -246,12 +247,13 @@ async function waitForCloudCliServer(baseUrl, timeoutMs) {
 }
 
 export class LocalServerController {
-  constructor({ appRoot, settingsPath, isPackaged = false, appVersion, onChange }) {
+  constructor({ appRoot, settingsPath, isPackaged = false, appVersion, onChange, localSession = false }) {
     this.appRoot = appRoot;
     this.settingsPath = settingsPath;
     this.isPackaged = isPackaged;
     this.appVersion = appVersion;
     this.onChange = onChange;
+    this.desktopSessionSecret = localSession ? randomBytes(32).toString('hex') : null;
     this.localServerUrl = null;
     this.localServerPort = null;
     this.ownedServerProcess = null;
@@ -323,6 +325,7 @@ export class LocalServerController {
   }
 
   getServerBindHost() {
+    if (this.desktopSessionSecret) return HOST;
     return this.desktopSettings.exposeLocalServerOnNetwork ? '0.0.0.0' : HOST;
   }
 
@@ -414,6 +417,10 @@ export class LocalServerController {
         HOST: bindHost,
         SERVER_PORT: String(port),
         PATH: getDesktopPath(),
+        ...(this.desktopSessionSecret ? {
+          CLOUDCLI_DESKTOP_SESSION_SECRET: this.desktopSessionSecret,
+          VITE_IS_PLATFORM: 'false',
+        } : {}),
       },
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
@@ -449,9 +456,13 @@ export class LocalServerController {
     const defaultUrl = `http://${HOST}:${DEFAULT_PORT}`;
     const defaultDisplayUrl = `http://${DISPLAY_HOST}:${DEFAULT_PORT}`;
     const devUrl = process.env.ELECTRON_DEV_URL;
-    const forceOwnServer = process.env.ELECTRON_FORCE_OWN_SERVER === '1';
+    // Packaged builds must run their own backend instead of an older npm/dev server.
+    const hasBundledServer = this.isPackaged
+      && await pathExists(path.join(this.appRoot, 'dist-server', 'server', 'index.js'));
+    const forceOwnServer = process.env.ELECTRON_FORCE_OWN_SERVER === '1'
+      || hasBundledServer || Boolean(this.desktopSessionSecret);
 
-    if (devUrl) {
+    if (devUrl && !this.desktopSessionSecret) {
       const ready = await waitForCloudCliServer(defaultUrl, SERVER_START_TIMEOUT_MS);
       if (!ready) {
         throw new Error(`Development backend did not become ready at ${defaultDisplayUrl}`);
@@ -501,6 +512,22 @@ export class LocalServerController {
       this.localServerUrl = await this.resolveLocalServerUrl();
     }
     return this.localServerUrl;
+  }
+
+  async getDesktopSession() {
+    if (!this.desktopSessionSecret || !this.localServerPort) {
+      throw new Error('Local desktop server is not ready.');
+    }
+    const response = await fetch(`${this.getHealthCheckUrl()}/api/auth/desktop-session`, {
+      method: 'POST',
+      headers: { 'X-Desktop-Session': this.desktopSessionSecret },
+      signal: AbortSignal.timeout(10000),
+    });
+    const session = await response.json();
+    if (!response.ok || !session.token || !session.user) {
+      throw new Error('Could not sign in to the local desktop server.');
+    }
+    return session;
   }
 
   async getResolvedTarget() {

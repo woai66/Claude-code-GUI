@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Eye, EyeOff, FolderOpen, FolderPlus, Loader2, Plus, X } from 'lucide-react';
 
-import { Button, Input } from '@/shared/ui';
+import { Button, Dialog, DialogContent, Input } from '@/shared/ui';
 import { browseFilesystemFolders, createFolderInFilesystem } from '@/modules/project-creation-wizard/utils/workspaceApi';
 import { getParentPath, joinFolderPath } from '@/modules/project-creation-wizard/utils/pathUtils';
 import type { FolderSuggestion } from '@/shared/types';
@@ -110,8 +110,10 @@ export default function FolderBrowserModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-      <div className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-lg border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
+    <Dialog open onOpenChange={(open) => { if (!open) handleClose(); }}>
+      <DialogContent data-folder-browser wrapperClassName="z-[70]"
+        aria-label={t('folderBrowser.title')}
+        className="flex max-h-[80vh] w-[calc(100%-2rem)] max-w-2xl flex-col overflow-hidden rounded-xl border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-700">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/50">
@@ -258,7 +260,7 @@ export default function FolderBrowserModal({
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

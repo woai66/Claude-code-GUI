@@ -536,7 +536,7 @@
     },
     "managed": {
       "badge": "Dikelola",
-      "hint": "Dikelola oleh CloudCLI."
+      "hint": "Dikelola oleh Claude GUI."
     },
     "help": {
       "title": "Tentang MCP Codex",
@@ -568,7 +568,7 @@
     "docs": "Dokumentasi",
     "sections": {
       "officialTitle": "Plugin Resmi",
-      "officialDescription": "Dikelola oleh tim CloudCLI dan siap langsung diinstal.",
+      "officialDescription": "Dikelola oleh tim Claude GUI dan siap langsung diinstal.",
       "unofficialTitle": "Plugin Lainnya",
       "unofficialDescription": "Plugin dan integrasi tidak resmi dari pengguna lain. Tinjau kode sumber sebelum menginstal."
     },
@@ -599,7 +599,7 @@
     "prismCloudCLI": {
       "name": "PRISM CloudCLI",
       "badge": "tidak resmi",
-      "description": "Intelijen sesi untuk Claude Code di dalam CloudCLI. Lihat penyebab penggunaan token tinggi tanpa meninggalkan browser.",
+      "description": "Intelijen sesi untuk Claude Code di dalam Claude GUI. Lihat penyebab penggunaan token tinggi tanpa meninggalkan browser.",
       "install": "Instal"
     },
     "sessionManagerPlugin": {
@@ -818,7 +818,7 @@
     "tagline": "Antarmuka asisten coding AI open source",
     "starOnGitHub": "Beri Bintang di GitHub",
     "docs": "Dokumentasi",
-    "hostedTitle": "Coba CloudCLI Hosted",
+    "hostedTitle": "Coba Claude GUI Hosted",
     "hostedDescription": "Kolaborasi tim, konfigurasi MCP bersama, sinkronisasi pengaturan antar-environment, dan infrastruktur terkelola.",
     "learnMore": "Pelajari lebih lanjut",
     "proFeaturesTitle": "Fitur CloudCLI Pro",

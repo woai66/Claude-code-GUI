@@ -6,7 +6,8 @@ import type { TFunction } from 'i18next';
 import { Badge, Dialog, DialogContent, DialogTitle, LLMProviderLogo, Tooltip, buttonVariants } from '@/shared/ui';
 import { cn } from '@/shared/utils';
 import type { LLMProvider, Project, ProjectSession, SessionWithProvider } from '@/shared/types';
-import { PROVIDER_LABELS, createSessionViewModel, formatCompactAge } from '@/modules/sidebar/utils/sidebarProjectFormatting';
+import { createSessionViewModel, formatCompactAge } from '@/modules/sidebar/utils/sidebarProjectFormatting';
+import { PROVIDER_LABELS } from '@/shared/constants';
 import { useCompactSidebar } from '@/modules/sidebar/hooks/useCompactSidebar';
 import { useProviderSessionIdCopy } from '@/modules/sidebar/hooks/useProviderSessionIdCopy';
 import SessionOptions from '@/modules/sidebar/SessionOptions';
@@ -469,6 +470,7 @@ function SidebarSessionItem({
             sessionName={sessionView.sessionName}
             provider={session.__provider}
             projectId={project.projectId}
+            projectPath={project.fullPath}
             isProcessing={isProcessing}
             isEditing={isEditing}
             renameDraft={renameDraft}

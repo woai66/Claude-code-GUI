@@ -88,6 +88,10 @@ function Sidebar({
     currentTime,
     isRefreshing,
     searchFilter,
+    providerFilter,
+    setProviderFilter,
+    isProviderProjectsLoading,
+    providerProjectsError,
     searchMode,
     setSearchMode,
     conversationResults,
@@ -179,6 +183,11 @@ function Sidebar({
     void paletteOps.refreshProjects();
   };
 
+  const handleNewSession = useCallback((project: Project) => {
+    handleProjectSelect(project);
+    onNewSession(project);
+  }, [handleProjectSelect, onNewSession]);
+
   // Stable so memo() on the row components can bail out; an inline arrow here
   // would give every row a new callback on each sidebar render.
   const handleSaveProjectName = useCallback((projectId: string, nextName: string) => {
@@ -197,7 +206,7 @@ function Sidebar({
     filteredProjects,
     selectedProject,
     selectedSession,
-    isLoading,
+    isLoading: isLoading || isProviderProjectsLoading,
     loadingProgress,
     isProjectExpanded,
     activeRename,
@@ -224,7 +233,7 @@ function Sidebar({
     onDeleteSession: showDeleteSessionConfirmation,
     onForkSession: forkSession,
     onLoadMoreSessions: loadMoreSessionsForProject,
-    onNewSession,
+    onNewSession: handleNewSession,
     onStartEditingSession: startEditingSession,
     onCancelEditingSession: cancelRename,
     onSaveEditingSession: handleSaveSessionName,
@@ -274,7 +283,6 @@ function Sidebar({
         <SidebarContent
             isPWA={isPWA}
             isMobile={isMobile}
-            isLoading={isLoading}
             projects={projects}
             runningSessionsCount={runningSessionsCount}
             archivedProjects={archivedProjects}
@@ -288,6 +296,9 @@ function Sidebar({
             isLoadingMoreRecentConversations={isLoadingMoreRecentConversations}
             recentConversationsError={recentConversationsError}
             searchFilter={searchFilter}
+            providerFilter={providerFilter}
+            onProviderFilterChange={setProviderFilter}
+            providerProjectsError={providerProjectsError}
             onSearchFilterChange={setSearchFilter}
             onClearSearchFilter={() => setSearchFilter('')}
             searchMode={searchMode}

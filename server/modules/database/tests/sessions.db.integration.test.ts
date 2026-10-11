@@ -53,6 +53,33 @@ test('session archive queries hide archived rows from active project views', asy
   });
 });
 
+test('provider filters apply before paging and counts, including sessions beyond the unfiltered first page', async () => {
+  await withIsolatedDatabase(() => {
+    for (let index = 0; index < 45; index += 1) {
+      sessionsDb.createSession(`codex-${index}`, 'codex', '/workspace/mixed', 'Codex',
+        '2026-10-01T10:00:00.000Z', '2026-10-01T11:00:00.000Z');
+    }
+    for (const id of ['claude-a', 'claude-b']) {
+      sessionsDb.createSession(id, 'claude', '/workspace/mixed', 'Claude',
+        '2026-10-01T08:00:00.000Z', '2026-10-01T09:00:00.000Z');
+    }
+    sessionsDb.createSession('claude-archived', 'claude', '/workspace/mixed', 'Archived');
+    sessionsDb.updateSessionIsArchived('claude-archived', true);
+    assert.equal(sessionsDb.getRecentSessionsPage(40, 0).sessions.some((row) => row.provider === 'claude'), false);
+    const first = sessionsDb.getRecentSessionsPage(1, 0, 'claude');
+    const second = sessionsDb.getRecentSessionsPage(1, 1, 'claude');
+    assert.equal(first.total, 2);
+    assert.equal(second.total, 2);
+    assert.equal(first.sessions[0].provider, 'claude');
+    assert.notEqual(first.sessions[0].session_id, second.sessions[0].session_id);
+    assert.deepEqual(sessionsDb.getSessionsByProjectPathPage('/workspace/mixed', 20, 0, 'claude')
+      .map((row) => row.session_id).sort(), ['claude-a', 'claude-b']);
+    assert.equal(sessionsDb.countSessionsByProjectPath('/workspace/mixed', 'claude'), 2);
+    assert.equal(sessionsDb.countSessionsByProjectPath('/workspace/mixed', 'cursor'), 0);
+    assert.equal(sessionsDb.getRecentSessionsPage(40, 0, 'cursor').total, 0);
+  });
+});
+
 test('createSession reactivates archived rows when the session becomes active again', async () => {
   await withIsolatedDatabase(() => {
     sessionsDb.createSession('session-reused', 'claude', '/workspace/demo-project', 'First Name');

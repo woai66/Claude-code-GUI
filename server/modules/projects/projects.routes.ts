@@ -1,5 +1,6 @@
 import express from 'express';
 
+import { parseOptionalProviderFilter } from '@/shared/index.js';
 import { createProject, updateProjectDisplayName } from '@/modules/projects/services/project-management.service.js';
 import { createProjectCloneRouter } from '@/modules/projects/project-clone.routes.js';
 import { createPendingCloneRequests } from '@/modules/projects/services/project-clone-request.service.js';
@@ -67,6 +68,7 @@ router.get(
     const sessionsLimit = readOptionalNumericQueryValue(req.query.sessionsLimit) ?? undefined;
     const sessionsOffset = readOptionalNumericQueryValue(req.query.sessionsOffset) ?? undefined;
     const projects = await getProjectsWithSessions({
+      provider: parseOptionalProviderFilter(req.query.provider),
       skipSynchronization,
       sessionsLimit,
       sessionsOffset,
@@ -89,7 +91,8 @@ router.get(
     const projectId = typeof req.params.projectId === 'string' ? req.params.projectId : '';
     const limit = parseNonNegativeIntQuery(req.query.limit, 'limit', 20);
     const offset = parseNonNegativeIntQuery(req.query.offset, 'offset', 0);
-    const sessionsPage = await getProjectSessionsPage(projectId, { limit, offset });
+    const provider = parseOptionalProviderFilter(req.query.provider);
+    const sessionsPage = await getProjectSessionsPage(projectId, { limit, offset, provider });
     res.json(sessionsPage);
   }),
 );

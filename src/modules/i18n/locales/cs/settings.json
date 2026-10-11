@@ -515,7 +515,7 @@
     },
     "managed": {
       "badge": "Spravováno",
-      "hint": "Spravuje CloudCLI."
+      "hint": "Spravuje Claude GUI."
     },
     "help": {
       "title": "O MCP pro Codex",
@@ -547,7 +547,7 @@
     "docs": "Dokumentace",
     "sections": {
       "officialTitle": "Oficiální pluginy",
-      "officialDescription": "Spravuje je tým CloudCLI a jsou připravené k přímé instalaci.",
+      "officialDescription": "Spravuje je tým Claude GUI a jsou připravené k přímé instalaci.",
       "unofficialTitle": "Další pluginy",
       "unofficialDescription": "Neoficiální pluginy a integrace od jiných uživatelů. Před instalací zkontrolujte zdrojový kód."
     },
@@ -578,7 +578,7 @@
     "prismCloudCLI": {
       "name": "PRISM CloudCLI",
       "badge": "neoficiální",
-      "description": "Analýza relací Claude Code přímo v CloudCLI. Zjistěte, proč vaše relace spalují tokeny, aniž byste opustili prohlížeč.",
+      "description": "Analýza relací Claude Code přímo v Claude GUI. Zjistěte, proč vaše relace spalují tokeny, aniž byste opustili prohlížeč.",
       "install": "Instalovat"
     },
     "sessionManagerPlugin": {
@@ -809,7 +809,7 @@
     "tagline": "Open-source rozhraní pro AI asistenty programování",
     "starOnGitHub": "Dát hvězdičku na GitHubu",
     "docs": "Dokumentace",
-    "hostedTitle": "Vyzkoušejte CloudCLI Hosted",
+    "hostedTitle": "Vyzkoušejte Claude GUI Hosted",
     "hostedDescription": "Týmová spolupráce, sdílené konfigurace MCP, synchronizace nastavení napříč prostředími a spravovaná infrastruktura.",
     "learnMore": "Další informace",
     "proFeaturesTitle": "Funkce CloudCLI Pro",

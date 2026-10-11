@@ -4,7 +4,7 @@ import path from 'node:path';
 import { projectsDb, sessionsDb } from '@/modules/database/index.js';
 import { sessionSynchronizerService } from '@/modules/providers/index.js';
 import { WS_OPEN_STATE, connectedClients } from '@/modules/websocket/index.js';
-import type { RealtimeClientConnection } from '@/shared/types.js';
+import type { LLMProvider, RealtimeClientConnection } from '@/shared/types.js';
 import { AppError } from '@/shared/utils.js';
 
 type SessionSummary = {
@@ -48,12 +48,14 @@ type ProgressUpdate = {
 };
 
 type GetProjectsWithSessionsOptions = {
+  provider?: LLMProvider;
   skipSynchronization?: boolean;
   sessionsLimit?: number;
   sessionsOffset?: number;
 };
 
 type SessionPaginationOptions = {
+  provider?: LLMProvider;
   limit?: number;
   offset?: number;
 };
@@ -149,8 +151,9 @@ function readProjectSessionsPageByPath(
     projectPath,
     pagination.limit,
     pagination.offset,
+    options.provider,
   ) as SessionRepositoryRow[];
-  const total = sessionsDb.countSessionsByProjectPath(projectPath);
+  const total = sessionsDb.countSessionsByProjectPath(projectPath, options.provider);
 
   return {
     sessions: rows.map(mapSessionRowToSummary),
@@ -213,9 +216,14 @@ export async function getProjectsWithSessions(
         : await generateDisplayName(path.basename(projectPath) || projectPath, projectPath);
 
     const sessionsPage = readProjectSessionsPageByPath(projectPath, {
+      provider: options.provider,
       limit: options.sessionsLimit,
       offset: options.sessionsOffset,
     });
+
+    if (options.provider && sessionsPage.total === 0) {
+      continue;
+    }
 
     projects.push({
       projectId,

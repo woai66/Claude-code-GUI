@@ -1,23 +1,21 @@
-import { useCallback, useMemo, useState } from 'react';
-import { FolderPlus, X } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
+import { Loader2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Button, Dialog, DialogContent } from '@/shared/ui';
 import ErrorBanner from '@/modules/project-creation-wizard/ErrorBanner';
 import StepConfiguration from '@/modules/project-creation-wizard/StepConfiguration';
-import StepReview from '@/modules/project-creation-wizard/StepReview';
-import WizardFooter from '@/modules/project-creation-wizard/WizardFooter';
-import WizardProgress from '@/modules/project-creation-wizard/WizardProgress';
 import { useGithubTokens } from '@/modules/project-creation-wizard/hooks/useGithubTokens';
 import { cloneWorkspaceWithProgress, createProjectRequest } from '@/modules/project-creation-wizard/utils/workspaceApi';
 import { isCloneWorkflow, shouldShowGithubAuthentication } from '@/modules/project-creation-wizard/utils/pathUtils';
-import type { TokenMode, WizardFormState, WizardStep } from '@/shared/types';
+import type { WizardFormState } from '@/shared/types';
 
 type ProjectCreationWizardProps = {
   onClose: () => void;
   onProjectCreated?: (project?: Record<string, unknown>) => void;
 };
 
-const initialFormState: WizardFormState = {
+const INITIAL_FORM_STATE: WizardFormState = {
   workspacePath: '',
   githubUrl: '',
   tokenMode: 'stored',
@@ -25,140 +23,80 @@ const initialFormState: WizardFormState = {
   newGithubToken: '',
 };
 
-/** Rendered by the sidebar module's modal layer to create a new project or clone one from GitHub. */
-export default function ProjectCreationWizard({
-  onClose,
-  onProjectCreated,
-}: ProjectCreationWizardProps) {
+/** 侧栏的弹窗层用此单页表单添加本地项目，或按需从 GitHub 克隆项目。 */
+export default function ProjectCreationWizard({ onClose, onProjectCreated }: ProjectCreationWizardProps) {
   const { t } = useTranslation();
-  const [step, setStep] = useState<WizardStep>(1);
-  const [formState, setFormState] = useState<WizardFormState>(initialFormState);
+  // 保存目录及可选克隆配置，提交时复用现有项目接口。
+  const [formState, setFormState] = useState<WizardFormState>(INITIAL_FORM_STATE);
+  // 未编辑时从目录生成名称，用户改名后不被后续目录选择覆盖。
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  // 创建期间锁定字段与关闭操作，防止重复提交。
   const [isCreating, setIsCreating] = useState(false);
+  // 在弹窗内展示创建失败原因，保留输入便于修正。
   const [error, setError] = useState<string | null>(null);
+  // 克隆耗时较长，持续展示接口返回的进度。
   const [cloneProgress, setCloneProgress] = useState('');
-
-  const shouldLoadTokens =
-    step === 1 && shouldShowGithubAuthentication(formState.githubUrl);
+  const createPendingRef = useRef(false);
+  const shouldCloneRepository = isCloneWorkflow(formState.githubUrl);
+  const folderName = formState.workspacePath.trim().replace(/[\\/]+$/, '').split(/[\\/]/).pop() || '';
+  const projectName = nameDraft ?? folderName;
 
   const autoSelectToken = useCallback((tokenId: string) => {
     setFormState((previous) => ({ ...previous, selectedGithubToken: tokenId }));
   }, []);
-
-  const {
-    tokens: availableTokens,
-    loading: loadingTokens,
-    loadError: tokenLoadError,
-    selectedTokenName,
-  } = useGithubTokens({
-    shouldLoad: shouldLoadTokens,
+  const { tokens: availableTokens, loading: loadingTokens, loadError: tokenLoadError } = useGithubTokens({
+    shouldLoad: shouldShowGithubAuthentication(formState.githubUrl),
     selectedTokenId: formState.selectedGithubToken,
     onAutoSelectToken: autoSelectToken,
   });
 
-  // Keep cross-step values in this component; local UI state lives in child components.
   const updateField = useCallback(<K extends keyof WizardFormState>(key: K, value: WizardFormState[K]) => {
     setFormState((previous) => ({ ...previous, [key]: value }));
   }, []);
 
-  const updateTokenMode = useCallback(
-    (tokenMode: TokenMode) => updateField('tokenMode', tokenMode),
-    [updateField],
-  );
-
-  const handleNext = useCallback(() => {
-    setError(null);
-
-    if (step === 1) {
-      if (!formState.workspacePath.trim()) {
-        setError(t('projectWizard.errors.providePath'));
-        return;
-      }
-      setStep(2);
+  const handleCreate = async () => {
+    if (createPendingRef.current) return;
+    if (!formState.workspacePath.trim()) {
+      setError(t('projectWizard.errors.providePath'));
+      return;
     }
-  }, [formState.workspacePath, step, t]);
-
-  const handleBack = useCallback(() => {
-    setError(null);
-    setStep((previousStep) => (previousStep > 1 ? ((previousStep - 1) as WizardStep) : previousStep));
-  }, []);
-
-  const handleCreate = useCallback(async () => {
+    createPendingRef.current = true;
     setIsCreating(true);
     setError(null);
     setCloneProgress('');
-
     try {
-      const shouldCloneRepository = isCloneWorkflow(formState.githubUrl);
-
-      if (shouldCloneRepository) {
-        const project = await cloneWorkspaceWithProgress(
-          {
-            workspacePath: formState.workspacePath,
-            githubUrl: formState.githubUrl,
-            tokenMode: formState.tokenMode,
-            selectedGithubToken: formState.selectedGithubToken,
-            newGithubToken: formState.newGithubToken,
-          },
-          {
-            onProgress: setCloneProgress,
-          },
-        );
-
-        onProjectCreated?.(project);
-        onClose();
-        return;
-      }
-
-      const project = await createProjectRequest({
-        path: formState.workspacePath.trim(),
-      });
-
+      const project = shouldCloneRepository
+        ? await cloneWorkspaceWithProgress(formState, { onProgress: setCloneProgress })
+        : await createProjectRequest({ path: formState.workspacePath.trim(), customName: projectName.trim() || undefined });
       onProjectCreated?.(project);
       onClose();
     } catch (createError) {
-      const errorMessage =
-        createError instanceof Error
-          ? createError.message
-          : t('projectWizard.errors.failedToCreate');
-      setError(errorMessage);
+      setError(createError instanceof Error ? createError.message : t('projectWizard.errors.failedToCreate'));
     } finally {
+      createPendingRef.current = false;
       setIsCreating(false);
     }
-  }, [formState, onClose, onProjectCreated, t]);
-
-  const shouldCloneRepository = useMemo(
-    () => isCloneWorkflow(formState.githubUrl),
-    [formState.githubUrl],
-  );
+  };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 top-0 z-[60] flex items-center justify-center bg-black/50 p-0 backdrop-blur-sm sm:p-4">
-      <div className="h-full w-full overflow-y-auto rounded-none border-0 border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800 sm:h-auto sm:max-w-2xl sm:rounded-lg sm:border">
-        <div className="flex items-center justify-between border-b border-gray-200 p-6 dark:border-gray-700">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/50">
-              <FolderPlus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {t('projectWizard.title')}
-            </h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-            disabled={isCreating}
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <WizardProgress step={step} />
-
-        <div className="min-h-[300px] space-y-6 p-6">
+    <Dialog open onOpenChange={(open) => {
+      // 网页目录浏览有自己的关闭入口，避免 Escape 同时关闭父弹窗。
+      if (!open && !isCreating && !document.querySelector('[data-folder-browser]')) onClose();
+    }}>
+      <DialogContent
+        wrapperClassName="z-[60]"
+        className="max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[520px] overflow-y-auto rounded-2xl p-5 font-sans sm:p-6"
+        aria-labelledby="create-project-title"
+      >
+        <h2 id="create-project-title" className="mb-5 pr-8 text-lg font-semibold tracking-tight">
+          {t('projectWizard.title')}
+        </h2>
+        <div className="space-y-4">
           {error && <ErrorBanner message={error} />}
-
-          {step === 1 && (
+          <fieldset className="min-w-0" disabled={isCreating}>
             <StepConfiguration
+              projectName={projectName}
+              onProjectNameChange={setNameDraft}
               workspacePath={formState.workspacePath}
               githubUrl={formState.githubUrl}
               tokenMode={formState.tokenMode}
@@ -168,39 +106,31 @@ export default function ProjectCreationWizard({
               loadingTokens={loadingTokens}
               tokenLoadError={tokenLoadError}
               isCreating={isCreating}
-              onWorkspacePathChange={(workspacePath) => updateField('workspacePath', workspacePath)}
-              onGithubUrlChange={(githubUrl) => updateField('githubUrl', githubUrl)}
-              onTokenModeChange={updateTokenMode}
-              onSelectedGithubTokenChange={(selectedGithubToken) =>
-                updateField('selectedGithubToken', selectedGithubToken)
-              }
-              onNewGithubTokenChange={(newGithubToken) =>
-                updateField('newGithubToken', newGithubToken)
-              }
-              onAdvanceToConfirm={() => setStep(2)}
+              onWorkspacePathChange={(directory) => updateField('workspacePath', directory)}
+              onGithubUrlChange={(url) => updateField('githubUrl', url)}
+              onTokenModeChange={(mode) => updateField('tokenMode', mode)}
+              onSelectedGithubTokenChange={(token) => updateField('selectedGithubToken', token)}
+              onNewGithubTokenChange={(token) => updateField('newGithubToken', token)}
             />
-          )}
-
-          {step === 2 && (
-            <StepReview
-              formState={formState}
-              selectedTokenName={selectedTokenName}
-              isCreating={isCreating}
-              cloneProgress={cloneProgress}
-            />
-          )}
+          </fieldset>
+          {cloneProgress && <p role="status" className="break-words text-xs text-muted-foreground">{cloneProgress}</p>}
         </div>
-
-        <WizardFooter
-          step={step}
-          isCreating={isCreating}
-          isCloneWorkflow={shouldCloneRepository}
-          onClose={onClose}
-          onBack={handleBack}
-          onNext={handleNext}
-          onCreate={handleCreate}
-        />
-      </div>
-    </div>
+        <div className="mt-6 flex items-center justify-end gap-2">
+          <Button type="button" variant="ghost" className="rounded-lg text-muted-foreground"
+            onClick={onClose} disabled={isCreating}>{t('projectWizard.buttons.cancel')}</Button>
+          <Button type="button" className="rounded-lg bg-foreground px-4 text-background hover:bg-foreground/90"
+            disabled={isCreating || !formState.workspacePath.trim()} onClick={handleCreate}>
+            {isCreating && <Loader2 className="h-4 w-4 animate-spin" />}
+            {isCreating
+              ? t(shouldCloneRepository ? 'projectWizard.buttons.cloning' : 'projectWizard.buttons.creating')
+              : t('projectWizard.buttons.createProject')}
+          </Button>
+        </div>
+        <Button type="button" variant="ghost" size="icon" className="absolute right-3 top-3 h-8 w-8 rounded-lg text-muted-foreground"
+          aria-label={t('common:buttons.close', 'Close')} onClick={onClose} disabled={isCreating}>
+          <X className="h-4 w-4" />
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 }

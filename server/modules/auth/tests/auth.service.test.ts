@@ -13,6 +13,7 @@ function createDependencies(overrides: Partial<AuthDependencies> = {}): AuthDepe
       hasUsers: () => false,
       createUser: (username, passwordHash) => ({ id: 1, username, password_hash: passwordHash }),
       getUserByUsername: () => undefined,
+      getFirstUser: () => undefined,
       updateLastLogin: () => undefined,
     },
     transaction: {
@@ -46,6 +47,7 @@ test('register hashes credentials and commits through injected dependencies', as
         return { id: 1, username, password_hash: passwordHash };
       },
       getUserByUsername: () => undefined,
+      getFirstUser: () => undefined,
       updateLastLogin: (userId) => operations.push(`login:${userId}`),
     },
   }));
@@ -63,6 +65,7 @@ test('login rejects an invalid password without issuing a token', async () => {
       hasUsers: () => true,
       createUser: () => { throw new Error('unused'); },
       getUserByUsername: () => ({ id: 1, username: 'alice', password_hash: 'hash' }),
+      getFirstUser: () => ({ id: 1, username: 'alice' }),
       updateLastLogin: () => undefined,
     },
     comparePassword: async () => false,
@@ -92,4 +95,67 @@ test('refreshSession issues a replacement token for the authenticated user', () 
 
   assert.deepEqual(result, { token: 'replacement-token' });
   assert.deepEqual(tokenUser, { id: 7, username: 'alice' });
+});
+
+test('desktop session creates a local user once and issues a normal token', async () => {
+  let user: { id: number; username: string } | undefined;
+  let createdUsers = 0;
+  const service = createAuthService(createDependencies({
+    desktopSessionSecret: 'a'.repeat(64),
+    hashPassword: async (password) => {
+      assert.equal(password.length, 64);
+      return 'random-password-hash';
+    },
+    users: {
+      hasUsers: () => Boolean(user),
+      getFirstUser: () => user,
+      createUser: (username, passwordHash) => {
+        assert.equal(passwordHash, 'random-password-hash');
+        createdUsers += 1;
+        user = { id: 1, username };
+        return user;
+      },
+      getUserByUsername: () => undefined,
+      updateLastLogin: () => undefined,
+    },
+  }));
+
+  const first = await service.getDesktopSession('a'.repeat(64), '127.0.0.1');
+  const second = await service.getDesktopSession('a'.repeat(64), '::ffff:127.0.0.1');
+  assert.deepEqual(first.user, { id: 1, username: 'local-user' });
+  assert.equal(first.token, 'signed-token');
+  assert.deepEqual(second.user, first.user);
+  assert.equal(createdUsers, 1);
+});
+
+test('desktop session preserves the existing account without changing its password', async () => {
+  const service = createAuthService(createDependencies({
+    desktopSessionSecret: 'a'.repeat(64),
+    users: {
+      hasUsers: () => true,
+      getFirstUser: () => ({ id: 8, username: 'existing-user' }),
+      createUser: () => { throw new Error('Must reuse the existing user'); },
+      getUserByUsername: () => undefined,
+      updateLastLogin: () => undefined,
+    },
+    hashPassword: async () => { throw new Error('Must preserve the password'); },
+  }));
+
+  const session = await service.getDesktopSession('a'.repeat(64), '::1');
+  assert.deepEqual(session.user, { id: 8, username: 'existing-user' });
+});
+
+test('desktop session refuses missing credentials, wrong credentials and remote clients', async () => {
+  const disabled = createAuthService(createDependencies());
+  await assert.rejects(disabled.getDesktopSession('a'.repeat(64), '127.0.0.1'),
+    (error: unknown) => error instanceof AppError && error.statusCode === 404);
+
+  const service = createAuthService(createDependencies({ desktopSessionSecret: 'a'.repeat(64) }));
+  for (const [secret, address] of [
+    [undefined, '127.0.0.1'], ['b'.repeat(64), '127.0.0.1'],
+    ['a'.repeat(64), '192.168.1.20'], ['a'.repeat(64), undefined],
+  ]) {
+    await assert.rejects(service.getDesktopSession(secret, address),
+      (error: unknown) => error instanceof AppError && error.statusCode === 403);
+  }
 });

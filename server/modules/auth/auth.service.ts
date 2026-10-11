@@ -1,3 +1,5 @@
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+
 import { AppError } from '@/shared/utils.js';
 
 type AuthUser = {
@@ -12,6 +14,7 @@ type AuthDependencies = {
     hasUsers(): boolean;
     createUser(username: string, passwordHash: string): AuthUser;
     getUserByUsername(username: string): AuthLoginUser | undefined;
+    getFirstUser(): AuthUser | undefined;
     updateLastLogin(userId: number): void;
   };
   transaction: {
@@ -22,6 +25,7 @@ type AuthDependencies = {
   hashPassword(password: string): Promise<string>;
   comparePassword(password: string, passwordHash: string): Promise<boolean>;
   generateToken(user: AuthUser): string;
+  desktopSessionSecret?: string;
 };
 
 function numericUserId(userId: number | bigint): number {
@@ -36,6 +40,7 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 /**
+ * Used by the auth module and its tests to assemble authentication behavior.
  * Creates the Auth application service around explicit persistence, crypto,
  * transaction, and token dependencies.
  */
@@ -45,6 +50,45 @@ export function createAuthService(dependencies: AuthDependencies) {
       return {
         needsSetup: !dependencies.users.hasUsers(),
         isAuthenticated: false,
+      };
+    },
+
+    async getDesktopSession(secretInput: unknown, remoteAddress: string | undefined) {
+      const expectedSecret = dependencies.desktopSessionSecret;
+      if (!expectedSecret || expectedSecret.length < 64) {
+        throw new AppError('Local desktop sessions are unavailable', {
+          code: 'AUTH_DESKTOP_UNAVAILABLE', statusCode: 404,
+        });
+      }
+
+      const secret = Buffer.from(typeof secretInput === 'string' ? secretInput : '');
+      const expected = Buffer.from(expectedSecret);
+      const isLoopback = remoteAddress === '127.0.0.1' || remoteAddress === '::1'
+        || remoteAddress === '::ffff:127.0.0.1';
+      if (!isLoopback || secret.length !== expected.length || !timingSafeEqual(secret, expected)) {
+        throw new AppError('Invalid local desktop credential', {
+          code: 'AUTH_DESKTOP_DENIED', statusCode: 403,
+        });
+      }
+
+      let user = dependencies.users.getFirstUser();
+      if (!user) {
+        if (dependencies.users.hasUsers()) {
+          throw new AppError('No active local user is available', {
+            code: 'AUTH_USER_REQUIRED', statusCode: 403,
+          });
+        }
+        const passwordHash = await dependencies.hashPassword(randomBytes(32).toString('hex'));
+        // Another bootstrap may finish while hashing; keep this a single-user database.
+        user = dependencies.users.getFirstUser()
+          ?? dependencies.users.createUser('local-user', passwordHash);
+      }
+
+      dependencies.users.updateLastLogin(numericUserId(user.id));
+      return {
+        success: true,
+        user: { id: user.id, username: user.username },
+        token: dependencies.generateToken(user),
       };
     },
 

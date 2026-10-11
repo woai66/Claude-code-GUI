@@ -1,22 +1,42 @@
+// @ts-expect-error web-push 在本项目中没有类型声明。
 import webPush from 'web-push';
 
 import { notificationPreferencesDb, pushSubscriptionsDb, sessionsDb } from '@/modules/database/index.js';
 import { sendDesktopNotification as sendDesktopNotificationToClients } from '@/modules/notifications/services/desktop-notification-clients.service.js';
 
-const KIND_TO_PREF_KEY = {
+type NotificationEvent = {
+  provider: string;
+  sessionId?: string | null;
+  kind?: string;
+  code?: string;
+  meta?: Record<string, unknown>;
+  severity?: string;
+  dedupeKey?: string | null;
+  requiresUserAction?: boolean;
+  createdAt?: string;
+};
+
+type RunNotificationOptions = {
+  userId: number | string | null;
+  provider: string;
+  sessionId?: string | null;
+  sessionName?: string | null;
+};
+
+const KIND_TO_PREF_KEY: Record<string, 'actionRequired' | 'stop' | 'error'> = {
   action_required: 'actionRequired',
   stop: 'stop',
   error: 'error'
 };
 
-const PROVIDER_LABELS = {
+const PROVIDER_LABELS: Record<string, string> = {
   claude: 'Claude',
   cursor: 'Cursor',
   codex: 'Codex',
   system: 'System'
 };
 
-const recentEventKeys = new Map();
+const recentEventKeys = new Map<string, number>();
 const DEDUPE_WINDOW_MS = 20000;
 
 const cleanupOldEventKeys = () => {
@@ -28,14 +48,17 @@ const cleanupOldEventKeys = () => {
   }
 };
 
-function isNotificationEventEnabled(preferences, event) {
-  const prefEventKey = KIND_TO_PREF_KEY[event.kind];
+function isNotificationEventEnabled(
+  preferences: ReturnType<typeof notificationPreferencesDb.getPreferences>,
+  event: NotificationEvent,
+) {
+  const prefEventKey = KIND_TO_PREF_KEY[event.kind || 'info'];
   const eventEnabled = prefEventKey ? Boolean(preferences?.events?.[prefEventKey]) : true;
 
   return eventEnabled;
 }
 
-function isDuplicate(event) {
+function isDuplicate(event: NotificationEvent) {
   cleanupOldEventKeys();
   const key = event.dedupeKey || `${event.provider}:${event.kind || 'info'}:${event.code || 'generic'}:${event.sessionId || 'none'}`;
   if (recentEventKeys.has(key)) {
@@ -45,7 +68,8 @@ function isDuplicate(event) {
   return false;
 }
 
-function createNotificationEvent({
+/** 设置和各 Agent 运行模块使用此函数创建通知事件。 */
+export function createNotificationEvent({
   provider,
   sessionId = null,
   kind = 'info',
@@ -54,7 +78,7 @@ function createNotificationEvent({
   severity = 'info',
   dedupeKey = null,
   requiresUserAction = false
-}) {
+}: NotificationEvent) {
   return {
     provider,
     sessionId,
@@ -68,12 +92,12 @@ function createNotificationEvent({
   };
 }
 
-function normalizeErrorMessage(error) {
+function normalizeErrorMessage(error: unknown) {
   if (typeof error === 'string') {
     return error;
   }
 
-  if (error && typeof error.message === 'string') {
+  if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
     return error.message;
   }
 
@@ -84,7 +108,7 @@ function normalizeErrorMessage(error) {
   return String(error);
 }
 
-function normalizeSessionName(sessionName) {
+function normalizeSessionName(sessionName: unknown) {
   if (typeof sessionName !== 'string') {
     return null;
   }
@@ -97,11 +121,11 @@ function normalizeSessionName(sessionName) {
   return normalized.length > 80 ? `${normalized.slice(0, 77)}...` : normalized;
 }
 
-function rowMatchesProvider(row, provider) {
+function rowMatchesProvider(row: ReturnType<typeof sessionsDb.getSessionById>, provider: string) {
   return row && (!provider || row.provider === provider);
 }
 
-function resolveSessionRow(sessionId, provider) {
+function resolveSessionRow(sessionId: string | null | undefined, provider: string) {
   if (!sessionId) {
     return null;
   }
@@ -119,7 +143,7 @@ function resolveSessionRow(sessionId, provider) {
   return null;
 }
 
-function normalizeNotificationSession(event) {
+function normalizeNotificationSession(event: NotificationEvent) {
   if (!event?.sessionId || !event.provider || event.provider === 'system') {
     return event;
   }
@@ -135,7 +159,7 @@ function normalizeNotificationSession(event) {
   };
 }
 
-function resolveSessionName(event) {
+function resolveSessionName(event: NotificationEvent) {
   const explicitSessionName = normalizeSessionName(event.meta?.sessionName);
   if (explicitSessionName) {
     return explicitSessionName;
@@ -148,9 +172,10 @@ function resolveSessionName(event) {
   return normalizeSessionName(sessionsDb.getSessionName(event.sessionId, event.provider));
 }
 
-function buildNotificationPayload(event) {
+/** 通知投递流程和测试使用此函数生成浏览器及桌面的展示内容。 */
+export function buildNotificationPayload(event: NotificationEvent) {
   const normalizedEvent = normalizeNotificationSession(event);
-  const CODE_MAP = {
+  const codeMessages: Record<string, unknown> = {
     'permission.required': normalizedEvent.meta?.toolName
       ? `Action Required: Tool "${normalizedEvent.meta.toolName}" needs approval`
       : 'Action Required: A tool needs your approval',
@@ -162,10 +187,10 @@ function buildNotificationPayload(event) {
   };
   const providerLabel = PROVIDER_LABELS[normalizedEvent.provider] || 'Assistant';
   const sessionName = resolveSessionName(normalizedEvent);
-  const message = CODE_MAP[normalizedEvent.code] || 'You have a new notification';
+  const message = codeMessages[normalizedEvent.code || 'generic.info'] || 'You have a new notification';
 
   return {
-    title: sessionName || 'CloudCLI',
+    title: sessionName || 'Claude GUI',
     body: `${providerLabel}: ${message}`,
     data: {
       sessionId: normalizedEvent.sessionId || null,
@@ -177,8 +202,8 @@ function buildNotificationPayload(event) {
   };
 }
 
-function sendWebPushPayload(userId, payload) {
-  const subscriptions = pushSubscriptionsDb.getSubscriptions(userId);
+function sendWebPushPayload(userId: number | string, payload: ReturnType<typeof buildNotificationPayload>) {
+  const subscriptions = pushSubscriptionsDb.getSubscriptions(Number(userId));
   if (!subscriptions.length) return Promise.resolve();
 
   const serializedPayload = JSON.stringify(payload);
@@ -207,28 +232,36 @@ function sendWebPushPayload(userId, payload) {
   });
 }
 
+type NotificationDelivery = {
+  userId: number | string;
+  payload: ReturnType<typeof buildNotificationPayload>;
+};
+
 const notificationChannels = [
   {
     id: 'webPush',
     // TODO: Web push still uses push_subscriptions. Do not remove that table until
     // browser push subscriptions are migrated into notification_channel_endpoints.
-    isEnabled: (preferences) => Boolean(preferences?.channels?.webPush),
-    send: ({ userId, payload }) => sendWebPushPayload(userId, payload)
+    isEnabled: (preferences: ReturnType<typeof notificationPreferencesDb.getPreferences>) =>
+      Boolean(preferences?.channels?.webPush),
+    send: ({ userId, payload }: NotificationDelivery) => sendWebPushPayload(userId, payload)
   },
   {
     id: 'desktop',
-    isEnabled: (preferences) => Boolean(preferences?.channels?.desktop),
-    send: ({ userId, payload }) => sendDesktopNotificationToClients(userId, payload)
+    isEnabled: (preferences: ReturnType<typeof notificationPreferencesDb.getPreferences>) =>
+      Boolean(preferences?.channels?.desktop),
+    send: ({ userId, payload }: NotificationDelivery) => sendDesktopNotificationToClients(userId, payload)
   }
 ];
 
-function notifyUserIfEnabled({ userId, event }) {
+/** 设置和各 Agent 运行模块使用此函数按用户偏好投递通知。 */
+export function notifyUserIfEnabled({ userId, event }: { userId: number | string | null; event: unknown }) {
   if (!userId || !event) {
     return;
   }
 
-  const normalizedEvent = normalizeNotificationSession(event);
-  const preferences = notificationPreferencesDb.getPreferences(userId);
+  const normalizedEvent = normalizeNotificationSession(event as NotificationEvent);
+  const preferences = notificationPreferencesDb.getPreferences(Number(userId));
   if (!isNotificationEventEnabled(preferences, normalizedEvent)) {
     return;
   }
@@ -241,13 +274,16 @@ function notifyUserIfEnabled({ userId, event }) {
     if (!channel.isEnabled(preferences)) {
       continue;
     }
-    Promise.resolve(channel.send({ userId, event: normalizedEvent, payload })).catch((err) => {
+    Promise.resolve(channel.send({ userId, payload })).catch((err) => {
       console.error(`Notification channel "${channel.id}" send error:`, err);
     });
   }
 }
 
-function notifyRunStopped({ userId, provider, sessionId = null, stopReason = 'completed', sessionName = null }) {
+/** 各 Agent 运行模块使用此函数通知会话已停止。 */
+export function notifyRunStopped({
+  userId, provider, sessionId = null, stopReason = 'completed', sessionName = null,
+}: RunNotificationOptions & { stopReason?: string }) {
   notifyUserIfEnabled({
     userId,
     event: createNotificationEvent({
@@ -269,7 +305,9 @@ function notifyRunStopped({ userId, provider, sessionId = null, stopReason = 'co
  * than needing a new opt-in that would default to off. No explicit dedupeKey, so
  * the default composite key collapses repeats inside the dedupe window.
  */
-function notifyBackgroundWorkCompleted({ userId, provider, sessionId = null, sessionName = null }) {
+export function notifyBackgroundWorkCompleted({
+  userId, provider, sessionId = null, sessionName = null,
+}: RunNotificationOptions) {
   notifyUserIfEnabled({
     userId,
     event: createNotificationEvent({
@@ -283,7 +321,10 @@ function notifyBackgroundWorkCompleted({ userId, provider, sessionId = null, ses
   });
 }
 
-function notifyRunFailed({ userId, provider, sessionId = null, error, sessionName = null }) {
+/** 各 Agent 运行模块使用此函数通知失败的运行。 */
+export function notifyRunFailed({
+  userId, provider, sessionId = null, error, sessionName = null,
+}: RunNotificationOptions & { error: unknown }) {
   const errorMessage = normalizeErrorMessage(error);
 
   notifyUserIfEnabled({
@@ -299,12 +340,3 @@ function notifyRunFailed({ userId, provider, sessionId = null, error, sessionNam
     })
   });
 }
-
-export {
-  buildNotificationPayload,
-  createNotificationEvent,
-  notifyUserIfEnabled,
-  notifyRunStopped,
-  notifyRunFailed,
-  notifyBackgroundWorkCompleted
-};

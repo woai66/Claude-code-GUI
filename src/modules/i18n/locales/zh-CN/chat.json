@@ -101,16 +101,36 @@
       "auto": "Auto Mode",
       "acceptEdits": "编辑模式",
       "bypassPermissions": "无限制模式",
-      "plan": "计划模式"
+      "plan": "计划模式",
+      "dontAsk": "不询问模式"
     },
     "descriptions": {
       "default": "只有受信任的命令（ls、cat、grep、git status 等）自动运行。其他命令将被跳过。可以写入工作区。",
       "auto": "A model classifier decides per tool call whether to approve or deny. Hands-off, but safer than Bypass — denials still happen.",
       "acceptEdits": "工作区内的所有命令自动运行。完全自动模式，具有沙盒执行功能。",
       "bypassPermissions": "完全的系统访问，无限制。所有命令自动运行，具有完整的磁盘和网络访问权限。请谨慎使用。",
-      "plan": "计划模式 - 不执行任何命令"
+      "plan": "计划模式 - 不执行任何命令",
+      "dontAsk": "不请求权限；未预先允许的工具调用会被拒绝。"
     },
     "technicalDetails": "技术细节"
+  },
+  "claude": {
+    "modes": {
+      "default": "默认模式",
+      "auto": "自动模式",
+      "acceptEdits": "接受编辑",
+      "bypassPermissions": "无限制模式",
+      "plan": "计划模式",
+      "dontAsk": "不询问模式"
+    },
+    "descriptions": {
+      "default": "工具需要授权时请求确认。",
+      "auto": "由模型分类器逐个判断工具调用是否批准，仍可能拒绝。",
+      "acceptEdits": "自动接受文件编辑，其他权限检查仍然生效。",
+      "bypassPermissions": "跳过权限提示，工具以完整权限运行，请谨慎使用。",
+      "plan": "计划模式 - 不执行任何命令",
+      "dontAsk": "从不请求权限；未预先允许的工具调用会被拒绝。"
+    }
   },
   "voice": {
     "input": "语音输入",
