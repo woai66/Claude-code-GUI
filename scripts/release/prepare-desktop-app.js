@@ -10,6 +10,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..', '..');
 const stageDir = path.join(rootDir, '.desktop-build', 'desktop-app');
 
+// The frontend is already bundled into dist; only the local backend needs Node packages.
+const SERVER_DEPENDENCIES = [
+  '@anthropic-ai/claude-agent-sdk', '@iarna/toml', '@octokit/rest',
+  '@openai/codex', '@openai/codex-sdk', '@vscode/ripgrep',
+  'bcrypt', 'better-sqlite3', 'chokidar', 'cors', 'cross-spawn', 'express',
+  'gray-matter', 'ignore', 'jsonwebtoken', 'mime-types', 'multer',
+  'node-pty', 'web-push', 'ws',
+];
+
 const packageJson = JSON.parse(
   await fs.readFile(path.join(rootDir, 'package.json'), 'utf8'),
 );
@@ -101,13 +110,17 @@ function buildDesktopPackageJson() {
     license: packageJson.license,
     type: 'module',
     main: 'electron/main.js',
-    dependencies: packageJson.dependencies,
-    optionalDependencies: packageJson.optionalDependencies,
+    dependencies: Object.fromEntries(SERVER_DEPENDENCIES.map((name) => {
+      if (!packageJson.dependencies[name]) {
+        throw new Error(`Missing desktop backend dependency: ${name}`);
+      }
+      return [name, packageJson.dependencies[name]];
+    })),
     build: {
       appId: packageJson.build.appId,
       productName: packageJson.build.productName,
       asar: packageJson.build.asar,
-      artifactName: packageJson.build.artifactName,
+      artifactName: 'cloudcli-local-${version}-${os}-${arch}.${ext}',
       electronVersion: getElectronVersion(),
       // Staging rebuilds native dependencies before electron-builder collects them.
       npmRebuild: false,
@@ -118,15 +131,17 @@ function buildDesktopPackageJson() {
         main: 'electron/main.js',
       },
       files: [
-        'electron/**',
-        '!electron/tests/**',
+        'electron/main.js',
+        'electron/preload.cjs',
+        'electron/localServer.js',
+        'electron/serverInstaller.js',
+        'electron/assets/**',
         'public/**',
         'dist/**',
         'dist-server/**',
         'node_modules/**',
         'package.json',
       ],
-      protocols: packageJson.build.protocols,
       mac: packageJson.build.mac,
       win: packageJson.build.win,
       nsis: packageJson.build.nsis,

@@ -7,7 +7,7 @@ import { test } from 'node:test';
 
 import { LocalServerController } from '../localServer.js';
 
-async function createFixture(t, { isPackaged, bundled }) {
+async function createFixture(t, { isPackaged, bundled, localSession = false }) {
   const appRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'cloudcli-desktop-test-'));
   t.after(() => fs.rm(appRoot, { recursive: true, force: true }));
   const serverEntry = path.join(appRoot, 'dist-server', 'server', 'index.js');
@@ -40,6 +40,7 @@ async function createFixture(t, { isPackaged, bundled }) {
     settingsPath: path.join(appRoot, 'settings.json'),
     isPackaged,
     appVersion: '1.0.0',
+    localSession,
   });
   return { controller, serverEntry };
 }
@@ -100,4 +101,28 @@ test('bundled backend resolves without accessing a remotely installed runtime', 
   const { controller, serverEntry } = await createFixture(t, { isPackaged: true, bundled: true });
   controller.appVersion = null;
   assert.equal(await controller.resolveServerEntry(), serverEntry);
+});
+
+test('direct local desktop ignores saved LAN exposure and creates a private session secret', async (t) => {
+  const { controller } = await createFixture(t, { isPackaged: false, bundled: true, localSession: true });
+  controller.desktopSettings.exposeLocalServerOnNetwork = true;
+  assert.equal(controller.getServerBindHost(), '127.0.0.1');
+  assert.equal(controller.desktopSessionSecret.length, 64);
+  const second = await createFixture(t, { isPackaged: false, bundled: true, localSession: true });
+  assert.notEqual(second.controller.desktopSessionSecret, controller.desktopSessionSecret);
+});
+
+test('desktop bootstrap sends its credential only to the owned loopback backend', async (t) => {
+  const { controller } = await createFixture(t, { isPackaged: false, bundled: true, localSession: true });
+  const server = http.createServer((req, res) => {
+    assert.equal(req.method, 'POST');
+    assert.equal(req.url, '/api/auth/desktop-session');
+    assert.equal(req.headers['x-desktop-session'], controller.desktopSessionSecret);
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ user: { id: 1, username: 'local-user' }, token: 'desktop-token' }));
+  });
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  controller.localServerPort = server.address().port;
+  assert.equal((await controller.getDesktopSession()).token, 'desktop-token');
 });

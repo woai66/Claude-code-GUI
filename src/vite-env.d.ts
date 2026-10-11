@@ -6,3 +6,8 @@
  * runners such as `tsx` that do not apply Vite's define replacement.
  */
 declare const __APP_VERSION__: string;
+
+/** The isolated Electron preload exposes only local session bootstrap to the page. */
+declare var cloudcliDesktopSession: {
+  getSession(): Promise<{ token: string; user: { id: number; username: string } }>;
+} | undefined;

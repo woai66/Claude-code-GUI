@@ -141,6 +141,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
     await checkOnboardingStatus();
   }, [checkOnboardingStatus]);
 
+  const restoreDesktopSession = useCallback(async () => {
+    const session = await api.auth.desktopSession();
+    if (!session?.token || !session.user) {
+      throw new Error('Local desktop session is unavailable');
+    }
+    persistToken(session.token);
+    setToken(session.token);
+    setUser(session.user);
+    setNeedsSetup(false);
+    setHasCompletedOnboarding(true);
+    setError(null);
+  }, []);
+
   const refreshSession = useCallback(async () => {
     if (IS_PLATFORM || !token || !user) {
       return;
@@ -172,6 +185,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     };
     const handleSessionExpired = () => {
+      if (window.cloudcliDesktopSession) {
+        void restoreDesktopSession().catch(() => {
+          clearSession();
+          setError(t(AUTH_ERROR_MESSAGES.sessionExpired));
+        });
+        return;
+      }
       clearSession();
       setError(t(AUTH_ERROR_MESSAGES.sessionExpired));
     };
@@ -182,7 +202,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       window.removeEventListener(AUTH_TOKEN_REFRESHED_EVENT, handleTokenRefreshed);
       window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired);
     };
-  }, [clearSession, t]);
+  }, [clearSession, restoreDesktopSession, t]);
 
   // The startup check below needs `t` only for its failure message.
   // react-i18next gives `t` a new identity on every language change, so
@@ -198,6 +218,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       setIsLoading(true);
       setError(null);
+
+      if (window.cloudcliDesktopSession) {
+        await restoreDesktopSession();
+        return;
+      }
 
       const statusResponse = await api.auth.status();
       const statusPayload = await parseJsonSafely<AuthStatusPayload>(statusResponse);
@@ -237,7 +262,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [checkOnboardingStatus, clearSession]);
+  }, [checkOnboardingStatus, clearSession, restoreDesktopSession]);
 
   useEffect(() => {
     if (IS_PLATFORM) {

@@ -32,6 +32,7 @@ export default function AboutTab() {
   const { t } = useTranslation('settings');
   const { updateAvailable, latestVersion, currentVersion, releaseInfo } = useVersionCheck('siteboon', 'claudecodeui');
   const releasesUrl = releaseInfo?.htmlUrl || `${GITHUB_REPO_URL}/releases`;
+  const isLocalDesktop = Boolean(window.cloudcliDesktopSession);
 
   return (
     <div className="space-y-6">
@@ -115,7 +116,7 @@ export default function AboutTab() {
           <ExternalLink className="h-3.5 w-3.5" />
           Docs
         </a>
-        <a
+        {!isLocalDesktop && <a
           href={CLOUDCLI_URL}
           target="_blank"
           rel="noopener noreferrer"
@@ -123,11 +124,11 @@ export default function AboutTab() {
         >
           <ExternalLink className="h-3.5 w-3.5" />
           cloudcli.ai
-        </a>
+        </a>}
       </div>
 
       {/* Hosted CTA (OSS mode only) */}
-      {!IS_PLATFORM && (
+      {!IS_PLATFORM && !isLocalDesktop && (
         <div className="rounded-xl border border-primary/10 bg-primary/5 p-4">
           <h4 className="text-sm font-medium text-foreground">{t('about.hostedTitle')}</h4>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -146,7 +147,7 @@ export default function AboutTab() {
       )}
 
       {/* Premium feature placeholders (OSS mode only) */}
-      {!IS_PLATFORM && (
+      {!IS_PLATFORM && !isLocalDesktop && (
         <div className="space-y-4 border-t border-border/50 pt-6">
           <h3 className="text-sm font-medium text-foreground">{t('about.proFeaturesTitle')}</h3>
           <PremiumFeatureCard

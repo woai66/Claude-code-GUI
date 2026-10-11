@@ -189,6 +189,7 @@ const pluginAssetPath = (pluginName: string, assetFile: string) =>
 export const api = {
   // Auth endpoints (no token required)
   auth: {
+    desktopSession: () => window.cloudcliDesktopSession?.getSession(),
     status: () => fetch('/api/auth/status'),
     login: (username: string, password: string) => fetch('/api/auth/login', {
       method: 'POST',

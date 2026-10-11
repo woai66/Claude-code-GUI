@@ -22,6 +22,7 @@ const authService = createAuthService({
     hasUsers: () => userDb.hasUsers(),
     createUser: (username, passwordHash) => userDb.createUser(username, passwordHash),
     getUserByUsername: (username) => userDb.getUserByUsername(username),
+    getFirstUser: () => userDb.getFirstUser(),
     updateLastLogin: (userId) => userDb.updateLastLogin(userId),
   },
   transaction: {
@@ -32,6 +33,9 @@ const authService = createAuthService({
   hashPassword: (password) => bcrypt.hash(password, 12),
   comparePassword: (password, passwordHash) => bcrypt.compare(password, passwordHash),
   generateToken,
+  desktopSessionSecret: process.env.HOST === '127.0.0.1'
+    ? process.env.CLOUDCLI_DESKTOP_SESSION_SECRET
+    : undefined,
 });
 
 /** Auth router assembled for the server entrypoint. */
