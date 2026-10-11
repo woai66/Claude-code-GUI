@@ -1269,6 +1269,16 @@ export type ExistingPrdFile = {
 
 //----------------- PROJECT CREATION WIZARD ------------
 
+/** 桌面目录验证结果；仅已有目录返回路径，错误码由界面翻译后展示。 */
+export type DesktopDirectoryResult = { path: string; error?: never }
+  | { error: 'single-folder' | 'not-directory' | 'unavailable'; path?: never };
+
+/** Electron preload 提供的原生选目录与拖入目录能力，仅在本地桌面窗口可用。 */
+export type DesktopDirectoryBridge = {
+  chooseDirectory(defaultPath?: string): Promise<string | null>;
+  getDroppedDirectory(files: File[]): Promise<DesktopDirectoryResult>;
+};
+
 /** The one-based index of the step currently shown by the project-creation wizard: 1 configures the workspace, 2 reviews it before creation. */
 export type WizardStep = 1 | 2;
 
@@ -1289,7 +1299,7 @@ export type GithubTokenCredential = {
   is_active: boolean;
 };
 
-/** The full set of user-entered values carried across the project-creation wizard's steps, owned by ProjectCreationWizard and passed down to each step. */
+/** 新建项目弹窗保存的目录及可选克隆配置，由父组件传给配置区并提交给项目接口。 */
 export type WizardFormState = {
   workspacePath: string;
   githubUrl: string;

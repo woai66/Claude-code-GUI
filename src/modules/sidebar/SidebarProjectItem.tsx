@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef } from 'react';
-import { Check, ChevronDown, ChevronRight, Edit3, Folder, MoreHorizontal, Plus, Star, Trash2, X } from 'lucide-react';
+import { Check, CheckSquare, ChevronDown, ChevronRight, Edit3, Folder, MoreHorizontal, Plus, Star, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { ActionMenu, Button } from '@/shared/ui';
@@ -145,6 +145,19 @@ function SidebarProjectItem({
       label: isStarred ? t('tooltips.removeFromFavorites') : t('tooltips.addToFavorites'),
       icon: Star,
       onSelect: () => onToggleStarProject(project.projectId),
+    },
+    {
+      key: 'select-sessions',
+      label: t('sessions.select'),
+      icon: CheckSquare,
+      disabled: !initialSessionsLoaded || !sessions.some((session) =>
+        !activeSessions.has(session.id) || backgroundSessionIds.has(session.id)),
+      onSelect: () => {
+        if (!isExpanded) {
+          selectAndToggleProject();
+        }
+        onSetSessionSelection({ projectId: project.projectId, sessionIds: new Set() });
+      },
     },
     {
       key: 'delete',

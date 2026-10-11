@@ -51,9 +51,11 @@ function NewSessionAction({ projects, selectedProject, onNewSession, onCreatePro
         items={projectChoices}
         variant="ghost"
         align="left"
+        portal
+        menuWidth={340}
         className="min-w-0 flex-1"
         triggerClassName="h-9 w-full justify-start gap-2 rounded-lg bg-accent/60 px-3 font-normal hover:bg-accent [&>span]:flex-1 [&>span]:text-left"
-        menuClassName="max-h-72 max-w-[calc(100vw-2rem)] overflow-y-auto"
+        menuClassName="max-h-72"
         header={<p className="px-3 py-2 text-xs text-muted-foreground">{pickerLabel}</p>}
       />
     );
@@ -77,10 +79,12 @@ function NewSessionAction({ projects, selectedProject, onNewSession, onCreatePro
           label={pickerLabel}
           icon={ChevronDown}
           iconOnly
+          portal
+          menuWidth={340}
           items={projectChoices}
           variant="ghost"
           triggerClassName="h-9 w-8 rounded-lg p-0 text-muted-foreground hover:bg-accent"
-          menuClassName="max-h-72 max-w-[calc(100vw-2rem)] overflow-y-auto"
+          menuClassName="max-h-72"
           header={<p className="px-3 py-2 text-xs text-muted-foreground">{pickerLabel}</p>}
         />
       )}

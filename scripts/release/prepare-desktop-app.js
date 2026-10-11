@@ -134,6 +134,7 @@ function buildDesktopPackageJson() {
         'electron/main.js',
         'electron/preload.cjs',
         'electron/localServer.js',
+        'electron/directoryAccess.js',
         'electron/serverInstaller.js',
         'electron/assets/**',
         'public/**',

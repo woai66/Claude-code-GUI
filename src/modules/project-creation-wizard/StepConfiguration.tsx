@@ -7,6 +7,8 @@ import GithubAuthenticationCard from '@/modules/project-creation-wizard/GithubAu
 import WorkspacePathField from '@/modules/project-creation-wizard/WorkspacePathField';
 
 type StepConfigurationProps = {
+  projectName: string;
+  onProjectNameChange: (name: string) => void;
   workspacePath: string;
   githubUrl: string;
   tokenMode: TokenMode;
@@ -21,11 +23,12 @@ type StepConfigurationProps = {
   onTokenModeChange: (tokenMode: TokenMode) => void;
   onSelectedGithubTokenChange: (tokenId: string) => void;
   onNewGithubTokenChange: (tokenValue: string) => void;
-  onAdvanceToConfirm: () => void;
 };
 
-/** Rendered by ProjectCreationWizard as step 1, collecting the workspace path, clone URL and GitHub authentication. */
+/** 单页新建项目弹窗用它展示名称、目录和折叠的 GitHub 克隆选项。 */
 export default function StepConfiguration({
+  projectName,
+  onProjectNameChange,
   workspacePath,
   githubUrl,
   tokenMode,
@@ -40,60 +43,76 @@ export default function StepConfiguration({
   onTokenModeChange,
   onSelectedGithubTokenChange,
   onNewGithubTokenChange,
-  onAdvanceToConfirm,
 }: StepConfigurationProps) {
   const { t } = useTranslation();
   const showGithubAuth = shouldShowGithubAuthentication(githubUrl);
 
   return (
     <div className="space-y-4">
+      {!githubUrl.trim() && (
+        <div>
+          <label htmlFor="new-project-name" className="mb-2 block text-sm font-medium">
+            {t('projectWizard.projectName', 'Project name')}
+          </label>
+          <Input id="new-project-name" value={projectName} className="h-10 rounded-lg"
+            placeholder={t('projectWizard.namePlaceholder', 'Defaults to the folder name')}
+            onChange={(event) => onProjectNameChange(event.target.value)} disabled={isCreating} />
+        </div>
+      )}
       <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          {t('projectWizard.step2.newPath')}
-        </label>
+        <p className="mb-2 text-sm font-medium">
+          {githubUrl.trim()
+            ? t('projectWizard.folders.cloneDestination', 'Clone into')
+            : t('projectWizard.folders.source', 'Project folder')}
+        </p>
 
         <WorkspacePathField
           value={workspacePath}
           disabled={isCreating}
           onChange={onWorkspacePathChange}
-          onAdvanceToConfirm={onAdvanceToConfirm}
         />
 
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {t('projectWizard.step2.newHelp')}
-        </p>
+        {githubUrl.trim() && <p className="mt-1 text-xs text-muted-foreground">
+          {t('projectWizard.folders.cloneHelp', 'The repository will be cloned into a new subfolder here.')}
+        </p>}
       </div>
 
-      <div>
-        <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
-          {t('projectWizard.step2.githubUrl')}
-        </label>
-        <Input
-          type="text"
-          value={githubUrl}
-          onChange={(event) => onGithubUrlChange(event.target.value)}
-          placeholder="https://github.com/username/repository"
-          className="w-full"
-          disabled={isCreating}
-        />
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {t('projectWizard.step2.githubHelp')}
-        </p>
-      </div>
+      <details onToggle={(event) => {
+        if (!event.currentTarget.open && !isCreating) onGithubUrlChange('');
+      }}>
+        <summary className="cursor-pointer rounded text-xs text-muted-foreground hover:text-foreground"
+          onClick={(event) => { if (isCreating) event.preventDefault(); }}>
+          {t('projectWizard.cloneRepository', 'Clone from GitHub (optional)')}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <label htmlFor="new-project-github-url" className="block text-sm font-medium">
+            {t('projectWizard.step2.githubUrl')}
+          </label>
+          <Input
+            id="new-project-github-url"
+            type="text"
+            value={githubUrl}
+            onChange={(event) => onGithubUrlChange(event.target.value)}
+            placeholder="https://github.com/username/repository"
+            className="w-full rounded-lg"
+            disabled={isCreating}
+          />
 
-      {showGithubAuth && (
-        <GithubAuthenticationCard
-          tokenMode={tokenMode}
-          selectedGithubToken={selectedGithubToken}
-          newGithubToken={newGithubToken}
-          availableTokens={availableTokens}
-          loadingTokens={loadingTokens}
-          tokenLoadError={tokenLoadError}
-          onTokenModeChange={onTokenModeChange}
-          onSelectedGithubTokenChange={onSelectedGithubTokenChange}
-          onNewGithubTokenChange={onNewGithubTokenChange}
-        />
-      )}
+          {showGithubAuth && (
+            <GithubAuthenticationCard
+              tokenMode={tokenMode}
+              selectedGithubToken={selectedGithubToken}
+              newGithubToken={newGithubToken}
+              availableTokens={availableTokens}
+              loadingTokens={loadingTokens}
+              tokenLoadError={tokenLoadError}
+              onTokenModeChange={onTokenModeChange}
+              onSelectedGithubTokenChange={onSelectedGithubTokenChange}
+              onNewGithubTokenChange={onNewGithubTokenChange}
+            />
+          )}
+        </div>
+      </details>
     </div>
   );
 }

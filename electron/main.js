@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { LocalServerController } from './localServer.js';
+import { registerDirectoryHandlers } from './directoryAccess.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_NAME = 'Claude GUI';
@@ -26,6 +27,14 @@ function isLocalNavigation(url) {
     return new URL(url).origin === localOrigin;
   } catch {
     return false;
+  }
+}
+
+function assertLocalPage(event) {
+  if (event.sender !== mainWindow?.webContents
+    || event.senderFrame !== event.sender.mainFrame
+    || !isLocalNavigation(event.senderFrame.url)) {
+    throw new Error('Local desktop access is unavailable to this page.');
   }
 }
 
@@ -126,13 +135,11 @@ if (!app.requestSingleInstanceLock()) {
 
     ipcMain.handle('cloudcli-desktop:get-local-session', (event) => {
       // Only the top-level page of this window may obtain the local credential.
-      if (event.sender !== mainWindow?.webContents
-        || event.senderFrame !== event.sender.mainFrame
-        || !isLocalNavigation(event.senderFrame.url)) {
-        throw new Error('Local desktop session is unavailable to this page.');
-      }
+      assertLocalPage(event);
       return localServer.getDesktopSession();
     });
+
+    registerDirectoryHandlers({ ipcMain, dialog, getWindow: () => mainWindow, assertLocalPage });
 
     await createWindow();
   }).catch(showStartupError);

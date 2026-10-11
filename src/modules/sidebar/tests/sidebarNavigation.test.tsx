@@ -132,3 +132,24 @@ test('the project menu preserves rename, favorite and removal actions', () => {
   fireEvent.click(view.getByRole('menuitem', { name: 'Remove project' }));
   assert.deepEqual(onDeleteProject.mock.calls, [[PROJECT_A]]);
 });
+
+test('selection starts from the project menu and expands a collapsed project', () => {
+  const onToggleProject = vi.fn();
+  const onSetSessionSelection = vi.fn();
+  const view = renderProject({ isExpanded: false, onToggleProject, onSetSessionSelection });
+  assert.equal(view.queryByText('sessions.select'), null);
+  fireEvent.click(view.getByRole('button', { name: 'Project options · Alpha' }));
+  fireEvent.click(view.getByRole('menuitem', { name: 'sessions.select' }));
+  assert.deepEqual(onToggleProject.mock.calls, [['a']]);
+  assert.deepEqual(onSetSessionSelection.mock.calls, [[{ projectId: 'a', sessionIds: new Set() }]]);
+});
+
+test('selection stays unavailable while all sessions are running', () => {
+  const onSetSessionSelection = vi.fn();
+  const view = renderProject({ activeSessions: new Set(['a1']), onSetSessionSelection });
+  fireEvent.click(view.getByRole('button', { name: 'Project options · Alpha' }));
+  const item = view.getByRole('menuitem', { name: 'sessions.select' }) as HTMLButtonElement;
+  assert.equal(item.disabled, true);
+  fireEvent.click(item);
+  assert.equal(onSetSessionSelection.mock.calls.length, 0);
+});
