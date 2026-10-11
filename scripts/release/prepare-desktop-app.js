@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rebuild } from '@electron/rebuild';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..', '..');
@@ -46,44 +48,69 @@ async function copyRequired(relativePath) {
   await fs.cp(from, to, { recursive: true });
 }
 
-async function copyIfExists(relativePath) {
-  const from = path.join(rootDir, relativePath);
-  if (!(await pathExists(from))) return false;
-  await fs.cp(from, path.join(stageDir, relativePath), { recursive: true });
-  return true;
+function run(command, args, options = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      cwd: stageDir,
+      stdio: 'inherit',
+      shell: process.platform === 'win32',
+      ...options,
+    });
+
+    child.once('error', reject);
+    child.once('exit', (code) => {
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      reject(new Error(`${command} ${args.join(' ')} exited with code ${code}`));
+    });
+  });
 }
 
-async function copyNodeModule(packageName) {
-  const parts = packageName.split('/');
-  const source = path.join(rootDir, 'node_modules', ...parts);
-  if (!(await pathExists(source))) return false;
+async function hasNodePtyPrebuild() {
+  const prebuildDir = path.join(stageDir, 'node_modules', 'node-pty', 'prebuilds', `${process.platform}-${process.arch}`);
+  const requiredFiles = process.platform === 'win32'
+    ? ['conpty.node', 'conpty_console_list.node', 'conpty/conpty.dll', 'conpty/OpenConsole.exe']
+    : process.platform === 'darwin' ? ['pty.node', 'spawn-helper'] : ['pty.node'];
 
-  const target = path.join(stageDir, 'node_modules', ...parts);
-  await fs.mkdir(path.dirname(target), { recursive: true });
-  await fs.cp(source, target, { recursive: true });
-  return true;
+  try {
+    for (const file of requiredFiles) {
+      await fs.access(path.join(prebuildDir, file));
+    }
+    if (process.platform === 'darwin') {
+      await fs.chmod(path.join(prebuildDir, 'spawn-helper'), 0o755);
+    }
+    return true;
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+    return false;
+  }
 }
 
-function buildDesktopPackageJson(copiedOptionalDependencies) {
+function buildDesktopPackageJson() {
   return {
     name: `${packageJson.name}-desktop`,
     version: packageJson.version,
     productName: packageJson.productName,
-    description: `${packageJson.productName} desktop shell`,
+    description: `${packageJson.productName} desktop app with bundled local server`,
     author: packageJson.author,
     license: packageJson.license,
     type: 'module',
     main: 'electron/main.js',
-    dependencies: {
-      ws: packageJson.dependencies.ws,
-    },
-    optionalDependencies: copiedOptionalDependencies,
+    dependencies: packageJson.dependencies,
+    optionalDependencies: packageJson.optionalDependencies,
     build: {
       appId: packageJson.build.appId,
       productName: packageJson.build.productName,
       asar: packageJson.build.asar,
       artifactName: packageJson.build.artifactName,
       electronVersion: getElectronVersion(),
+      // Staging rebuilds native dependencies before electron-builder collects them.
+      npmRebuild: false,
       directories: {
         output: '../../release/desktop',
       },
@@ -92,6 +119,7 @@ function buildDesktopPackageJson(copiedOptionalDependencies) {
       },
       files: [
         'electron/**',
+        '!electron/tests/**',
         'public/**',
         'dist/**',
         'dist-server/**',
@@ -111,42 +139,36 @@ await fs.mkdir(stageDir, { recursive: true });
 
 await copyRequired('electron');
 await copyRequired('dist');
+await copyRequired('dist-server');
 await copyRequired('public');
-
-const copiedRuntimeDependencies = [];
-if (await copyNodeModule('ws')) {
-  copiedRuntimeDependencies.push('ws');
-} else {
-  throw new Error('Required desktop dependency is missing from node_modules: ws');
-}
-
-const copiedOptionalDependencies = {};
-for (const [name, version] of Object.entries(packageJson.optionalDependencies || {})) {
-  if (await copyNodeModule(name)) {
-    copiedOptionalDependencies[name] = version;
-  }
-}
-
-for (const name of [
-  '@nut-tree-fork/default-clipboard-provider',
-  '@nut-tree-fork/libnut',
-  '@nut-tree-fork/provider-interfaces',
-  '@nut-tree-fork/shared',
-  'jimp',
-  'node-abort-controller',
-  'temp',
-]) {
-  await copyNodeModule(name);
-}
+await copyRequired('package-lock.json');
 
 await fs.writeFile(
   path.join(stageDir, 'package.json'),
-  `${JSON.stringify(buildDesktopPackageJson(copiedOptionalDependencies), null, 2)}\n`,
+  `${JSON.stringify(buildDesktopPackageJson(), null, 2)}\n`,
   'utf8',
 );
 
-console.log(`Prepared thin desktop app at ${path.relative(rootDir, stageDir)}`);
-console.log(`Runtime dependencies: ${copiedRuntimeDependencies.join(', ')}`);
-if (Object.keys(copiedOptionalDependencies).length) {
-  console.log(`Optional dependencies: ${Object.keys(copiedOptionalDependencies).join(', ')}`);
-}
+// Root lifecycle scripts are omitted; dependency scripts supply native binaries and ripgrep.
+console.log('Installing production desktop dependencies...');
+await run('npm', ['ci', '--omit=dev'], {
+  env: {
+    ...process.env,
+    npm_config_audit: 'false',
+    npm_config_fund: 'false',
+  },
+});
+
+const useNodePtyPrebuild = await hasNodePtyPrebuild();
+// node-pty ships Node-API binaries; electron-rebuild does not recognize their filenames.
+console.log(`Preparing native dependencies for Electron ${getElectronVersion()} (${process.arch})...`);
+await rebuild({
+  buildPath: stageDir,
+  electronVersion: getElectronVersion(),
+  platform: process.platform,
+  arch: process.arch,
+  mode: 'sequential',
+  ignoreModules: useNodePtyPrebuild ? ['node-pty'] : [],
+});
+
+console.log(`Prepared self-contained desktop app at ${path.relative(rootDir, stageDir)}`);

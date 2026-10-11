@@ -449,7 +449,10 @@ export class LocalServerController {
     const defaultUrl = `http://${HOST}:${DEFAULT_PORT}`;
     const defaultDisplayUrl = `http://${DISPLAY_HOST}:${DEFAULT_PORT}`;
     const devUrl = process.env.ELECTRON_DEV_URL;
-    const forceOwnServer = process.env.ELECTRON_FORCE_OWN_SERVER === '1';
+    // Packaged builds must run their own backend instead of an older npm/dev server.
+    const hasBundledServer = this.isPackaged
+      && await pathExists(path.join(this.appRoot, 'dist-server', 'server', 'index.js'));
+    const forceOwnServer = process.env.ELECTRON_FORCE_OWN_SERVER === '1' || hasBundledServer;
 
     if (devUrl) {
       const ready = await waitForCloudCliServer(defaultUrl, SERVER_START_TIMEOUT_MS);
