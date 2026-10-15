@@ -9,6 +9,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import os from 'node:os';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +21,7 @@ import type {
   AnyRecord,
   ApiSuccessShape,
   AppErrorOptions,
+  CliPathResolutionOptions,
   LLMProvider,
   NormalizedMessage,
   ProviderCurrentActiveModel,
@@ -1346,4 +1348,125 @@ export function findApplicationRoot(startDirectory: string): string {
   return path.basename(parentDirectory) === 'dist-server'
     ? path.dirname(parentDirectory)
     : parentDirectory;
+}
+
+// ---------------------------
+//----------------- WINDOWS CLI ENTRY POINTS ------------
+function cliPathDirectories(env: NodeJS.ProcessEnv): string[] {
+  const value = Object.entries(env).find(([key]) => key.toLowerCase() === 'path')?.[1] ?? '';
+  // Do not search the selected workspace or relative PATH entries for executables.
+  return value.split(';').map((entry) => entry.trim().replace(/^"(.*)"$/, '$1'))
+    .filter((entry) => path.win32.isAbsolute(entry));
+}
+
+function listCliVersionDirectories(directory: string): string[] {
+  try {
+    return fs.readdirSync(directory, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Resolves Cursor's native Windows entry point for model discovery, auth and runs.
+ * Honors the first installed CLI on absolute PATH entries, including custom
+ * install roots, then checks LOCALAPPDATA. Direct Node execution bypasses the
+ * official cmd/PowerShell wrappers that can create a second visible terminal.
+ * Returns null on other hosts or for an unknown wrapper layout so the caller
+ * can retain its normal CLI lookup. This does not start a process.
+ */
+export function resolveCursorCliLaunch(
+  options: CliPathResolutionOptions = {},
+): { command: string; args: string[] } | null {
+  if ((options.platform ?? process.platform) !== 'win32') return null;
+  const env = options.env ?? process.env;
+  const exists = options.exists ?? fs.existsSync;
+  const directories = options.readDirectories ?? listCliVersionDirectories;
+  let installRoot: string | undefined;
+  for (const directory of cliPathDirectories(env)) {
+    for (const name of ['cursor-agent.exe', 'cursor-agent.cmd', 'cursor-agent.ps1', 'cursor-agent']) {
+      const candidate = path.win32.join(directory, name);
+      if (!exists(candidate)) continue;
+      if (name.endsWith('.exe')) return { command: candidate, args: [] };
+      installRoot = directory;
+      break;
+    }
+    if (installRoot) break;
+  }
+  installRoot ??= path.win32.join(env.LOCALAPPDATA ?? path.win32.join(os.homedir(), 'AppData', 'Local'), 'cursor-agent');
+  const entryAt = (root: string) => {
+    const command = path.win32.join(root, 'node.exe');
+    const script = path.win32.join(root, 'index.js');
+    return exists(command) && exists(script) ? { command, args: [script] } : null;
+  };
+  const direct = entryAt(installRoot);
+  if (direct) return direct;
+  const versionsRoot = path.win32.join(installRoot, 'versions');
+  const versionKey = (name: string) => name.split('-').slice(0, -1).join('.').split('.')
+    .map((part) => part.padStart(2, '0')).join('.');
+  const versions = directories(versionsRoot)
+    .filter((name) => /^\d{4}\.\d{1,2}\.\d{1,2}(?:-\d{2}-\d{2}-\d{2})?-[a-f0-9]+$/i.test(name))
+    .sort((left, right) => versionKey(right).localeCompare(versionKey(left)));
+  for (const version of versions) {
+    const launch = entryAt(path.win32.join(versionsRoot, version));
+    if (launch) return launch;
+  }
+  return null;
+}
+
+function codexBinaryFromLauncher(launcher: string, arch: string, exists: (filePath: string) => boolean) {
+  if (arch !== 'x64' && arch !== 'arm64') return undefined;
+  const packageRoot = path.win32.resolve(path.win32.dirname(launcher), '..');
+  const vendorRoots: string[] = [];
+  try {
+    const platformPackage = createRequire(launcher).resolve(`@openai/codex-win32-${arch}/package.json`);
+    vendorRoots.push(path.win32.join(path.win32.dirname(platformPackage), 'vendor'));
+  } catch {
+    // Older CLI packages kept the native executable inside the main package.
+  }
+  vendorRoots.push(path.win32.join(path.win32.dirname(packageRoot), `codex-win32-${arch}`, 'vendor'));
+  vendorRoots.push(path.win32.join(packageRoot, 'vendor'));
+  const target = arch === 'x64' ? 'x86_64-pc-windows-msvc' : 'aarch64-pc-windows-msvc';
+  return vendorRoots.map((root) => path.win32.join(root, target, 'bin', 'codex.exe')).find(exists);
+}
+
+/**
+ * Resolves the same Windows Codex binary for model discovery, auth and SDK runs.
+ * Prefers an installed native CLI or a known npm shim on PATH, then the standard
+ * global npm install, and finally this application's bundled CLI. The bundled
+ * shim is skipped during PATH lookup so npm-run's injected node_modules/.bin
+ * does not mask a newer user install. Never executes a shell or searches cwd.
+ * Non-Windows callers retain their existing SDK/package entry point.
+ */
+export function resolveCodexExecutablePath(options: CliPathResolutionOptions = {}): string | undefined {
+  if ((options.platform ?? process.platform) !== 'win32') return undefined;
+  const env = options.env ?? process.env;
+  const exists = options.exists ?? fs.existsSync;
+  const arch = options.arch ?? process.arch;
+  let launcher = options.bundledCodexLauncher;
+  if (launcher === undefined) {
+    try {
+      launcher = createRequire(import.meta.url).resolve('@openai/codex/bin/codex.js');
+    } catch {
+      launcher = null;
+    }
+  }
+  const bundled = launcher ? codexBinaryFromLauncher(launcher, arch, exists) : undefined;
+  const directories = cliPathDirectories(env);
+  directories.push(path.win32.join(env.APPDATA ?? path.win32.join(os.homedir(), 'AppData', 'Roaming'), 'npm'));
+  for (const directory of [...new Set(directories)]) {
+    for (const name of ['codex.exe', 'codex.cmd', 'codex.ps1', 'codex']) {
+      const entry = path.win32.join(directory, name);
+      if (!exists(entry)) continue;
+      const candidates = name.endsWith('.exe') ? [entry] : [
+        path.win32.join(directory, 'node_modules', '@openai', 'codex', 'bin', 'codex.js'),
+        path.win32.join(directory, '..', '@openai', 'codex', 'bin', 'codex.js'),
+      ].filter(exists).map((script) => codexBinaryFromLauncher(script, arch, exists));
+      for (const candidate of candidates) {
+        if (candidate && candidate.toLowerCase() !== bundled?.toLowerCase()) return candidate;
+      }
+    }
+  }
+  return bundled;
 }

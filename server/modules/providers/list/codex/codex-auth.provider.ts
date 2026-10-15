@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import spawn from 'cross-spawn';
 
+import { resolveCodexExecutablePath } from '@/shared/index.js';
 import type { IProviderAuth } from '@/shared/interfaces.js';
 import type { ProviderAuthStatus } from '@/shared/types.js';
 import { readObjectRecord, readOptionalString } from '@/shared/utils.js';
@@ -21,8 +22,10 @@ export class CodexProviderAuth implements IProviderAuth {
    */
   private checkInstalled(): boolean {
     try {
-      spawn.sync('codex', ['--version'], { stdio: 'ignore', timeout: 5000 });
-      return true;
+      const result = spawn.sync(resolveCodexExecutablePath() ?? 'codex', ['--version'], {
+        stdio: 'ignore', timeout: 5000, windowsHide: true,
+      });
+      return result.status === 0;
     } catch {
       return false;
     }

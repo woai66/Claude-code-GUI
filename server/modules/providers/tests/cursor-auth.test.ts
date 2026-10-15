@@ -124,12 +124,16 @@ const withFakeCursorAgent = async (statusOutput: string, fn: (fake: FakeCursorAg
   }
 };
 
+// These tests install a temporary PATH shim. Keep that fixture path so the test
+// does not accidentally invoke the real user's Cursor installation on Windows.
+const createTestAuth = () => new CursorProviderAuth({ resolveLaunch: () => null });
+
 test('getStatus waits for a logged-in `cursor-agent status` that takes longer than 5 s (#551)', async () => {
   await withFakeCursorAgent(LOGGED_IN_OUTPUT, async (fake) => {
     // getStatus() arms its timeout before it spawns `status`, so it must see the mocked setTimeout.
     mock.timers.enable({ apis: ['setTimeout'] });
     try {
-      const pending = new CursorProviderAuth().getStatus();
+      const pending = createTestAuth().getStatus();
       // Move the clock only once `status` runs, i.e. once the timeout is armed.
       await fake.waitForStatusStart();
 
@@ -152,7 +156,7 @@ test('getStatus still gives up on, and kills, a `cursor-agent status` that never
   await withFakeCursorAgent(LOGGED_IN_OUTPUT, async (fake) => {
     mock.timers.enable({ apis: ['setTimeout'] });
     try {
-      const pending = new CursorProviderAuth().getStatus();
+      const pending = createTestAuth().getStatus();
       await fake.waitForStatusStart();
 
       mock.timers.tick(60_000);
@@ -177,7 +181,7 @@ test('getStatus reports no email when `cursor-agent status` could not fetch the 
   await withFakeCursorAgent(output, async (fake) => {
     await fake.releaseStatus();
 
-    const status = await new CursorProviderAuth().getStatus();
+    const status = await createTestAuth().getStatus();
     assert.equal(status.error, undefined);
     assert.equal(status.authenticated, true);
     // The old 'Logged in' placeholder made the Settings card read "Logged in as Logged in".

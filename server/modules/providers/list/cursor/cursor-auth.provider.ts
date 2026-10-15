@@ -2,6 +2,11 @@ import spawn from 'cross-spawn';
 
 import type { IProviderAuth } from '@/shared/interfaces.js';
 import type { ProviderAuthStatus } from '@/shared/types.js';
+import { resolveCursorCliLaunch } from '@/shared/index.js';
+
+type CursorAuthDependencies = {
+  resolveLaunch?: typeof resolveCursorCliLaunch;
+};
 
 type CursorLoginStatus = {
   authenticated: boolean;
@@ -17,13 +22,22 @@ type CursorLoginStatus = {
 const STATUS_TIMEOUT_MS = 20_000;
 
 export class CursorProviderAuth implements IProviderAuth {
+  constructor(private readonly dependencies: CursorAuthDependencies = {}) {}
+
+  private resolveLaunch() {
+    return (this.dependencies.resolveLaunch ?? resolveCursorCliLaunch)();
+  }
+
   /**
    * Checks whether the cursor-agent CLI is available on this host.
    */
   private checkInstalled(): boolean {
     try {
-      spawn.sync('cursor-agent', ['--version'], { stdio: 'ignore', timeout: 5000 });
-      return true;
+      const launch = this.resolveLaunch();
+      const result = spawn.sync(launch?.command ?? 'cursor-agent', [...(launch?.args ?? []), '--version'], {
+        stdio: 'ignore', timeout: 5000, windowsHide: true,
+      });
+      return result.status === 0;
     } catch {
       return false;
     }
@@ -80,7 +94,10 @@ export class CursorProviderAuth implements IProviderAuth {
       }, STATUS_TIMEOUT_MS);
 
       try {
-        childProcess = spawn('cursor-agent', ['status']);
+        const launch = this.resolveLaunch();
+        childProcess = spawn(launch?.command ?? 'cursor-agent', [...(launch?.args ?? []), 'status'], {
+          windowsHide: true,
+        });
       } catch {
         clearTimeout(timeout);
         processCompleted = true;

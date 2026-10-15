@@ -316,6 +316,20 @@
     "dismiss": "关闭失败提示"
   },
   "modelLibrary": {
+    "title": "模型库",
+    "description": "从 CLI 获取模型，也可以补充自定义模型。",
+    "cliModels": "CLI 模型",
+    "providerModels": "提供商模型",
+    "fetchModels": "获取模型列表",
+    "fetching": "正在获取…",
+    "fetched": "已更新模型列表，共 {{count}} 个 CLI 模型。",
+    "fetchFailed": "获取失败，请检查 CLI 登录状态后重试。",
+    "updatedAt": "上次更新：{{time}}",
+    "notFetched": "获取当前已登录 CLI 中可用的模型。",
+    "cliHint": "从 CLI 同步，所有模型选择器均可使用。",
+    "providerHint": "由提供商集成提供的模型。",
+    "customHint": "刷新 CLI 列表时会保留你添加的模型。",
+    "emptyCli": "尚未获取模型，点击“获取模型列表”即可添加。",
     "effortLevels": "推理级别",
     "effortLevelsHint": "选择此模型支持的推理强度级别。若未选择任何级别，将无法在输入框中为此模型选择级别。",
     "effortSummary": "推理：{{levels}}"

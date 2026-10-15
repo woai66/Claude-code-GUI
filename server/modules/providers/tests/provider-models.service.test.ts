@@ -149,6 +149,117 @@ test('provider catalogs merge source-controlled defaults with custom persistence
   assert.deepEqual(catalog.rows.get('codex'), undefined);
 });
 
+const createDiscoveryService = (
+  discover: (cwd?: string) => Promise<ProviderModelsDefinition>,
+  stored = new Map<string, string>(),
+  customCatalog = createCatalogStore(),
+) => {
+  const service = createProviderModelsService({
+    catalog: customCatalog,
+    sessions: createSessionStore(),
+    modelCache: {
+      get: (key) => stored.get(key) ?? null,
+      set: (key, value) => { stored.set(key, value); },
+    },
+    resolveProvider: () => ({ models: {
+      getSupportedModels: async () => ({ OPTIONS: [], DEFAULT: '' }),
+      refreshSupportedModels: discover,
+      getCurrentActiveModel: async () => ({ model: '' }),
+    } }),
+  });
+  return { service, stored, customCatalog };
+};
+
+test('discovered models survive service restarts without querying the CLI again', async () => {
+  let calls = 0;
+  const first = createDiscoveryService(async () => { calls += 1; return createModels('live-model'); });
+  const initial = await first.service.getProviderModels('cursor');
+  assert.equal(initial.DISCOVERY?.source, 'cli');
+  assert.ok(initial.DISCOVERY?.updatedAt);
+  const restarted = createDiscoveryService(async () => { throw new Error('must not run'); }, first.stored);
+  const restored = await restarted.service.getProviderModels('cursor');
+  assert.equal(restored.OPTIONS[0].value, 'live-model');
+  assert.equal(restored.DISCOVERY?.source, 'cache');
+  assert.equal(restored.DISCOVERY?.updatedAt, initial.DISCOVERY?.updatedAt);
+  assert.equal(calls, 1);
+});
+
+test('refresh replaces obsolete CLI choices while retaining custom models without duplicate IDs', async () => {
+  let model = 'old-model';
+  const { service, customCatalog } = createDiscoveryService(async () => createModels(model));
+  await service.getProviderModels('codex');
+  customCatalog.createCustomProviderModel('codex', { id: 'new-model', model: 'My model' });
+  customCatalog.createCustomProviderModel('codex', { id: 'manual-model', model: 'Manual' });
+  model = 'new-model';
+  const refreshed = await service.refreshProviderModels('codex');
+  assert.deepEqual(refreshed.OPTIONS.map((option) => option.value), ['new-model', 'manual-model']);
+  assert.equal(refreshed.OPTIONS[0].label, 'My model');
+  assert.equal(refreshed.OPTIONS[0].isCustom, true);
+  assert.equal(refreshed.DEFAULT, 'new-model');
+  await assert.rejects(service.createCustomModel('codex', { id: 'new-model', model: 'Duplicate' }), /already exists/);
+  const edited = await service.updateCustomModel('codex', refreshed.OPTIONS[0].recordId!, {
+    id: 'new-model', model: 'Renamed custom model', effort: { values: ['high'] },
+  });
+  assert.equal(edited.model.label, 'Renamed custom model');
+  assert.deepEqual(edited.model.effort?.values, [{ value: 'high' }]);
+});
+
+test('failed or empty refresh never overwrites the last successful catalog', async () => {
+  let fail = false;
+  let empty = false;
+  const { service } = createDiscoveryService(async () => {
+    if (fail) throw new Error('CLI offline');
+    return empty ? { OPTIONS: [], DEFAULT: '' } : createModels('good-model');
+  });
+  await service.getProviderModels('cursor');
+  fail = true;
+  await assert.rejects(service.refreshProviderModels('cursor'), /CLI offline/);
+  fail = false;
+  empty = true;
+  await assert.rejects(service.refreshProviderModels('cursor'), /usable model list/);
+  assert.equal((await service.getProviderModels('cursor')).OPTIONS[0].value, 'good-model');
+});
+
+test('first discovery failure leaves the CLI list empty, keeps manual models and allows retry', async () => {
+  let failed = true;
+  const { service, customCatalog } = createDiscoveryService(async () => {
+    if (failed) throw new Error('Sign in required');
+    return createModels('cli-model');
+  });
+  customCatalog.createCustomProviderModel('cursor', { id: 'manual', model: 'Manual' });
+  const initial = await service.getProviderModels('cursor');
+  assert.equal(initial.DISCOVERY?.source, 'empty');
+  assert.match(initial.DISCOVERY?.error ?? '', /Sign in required/);
+  assert.deepEqual(initial.OPTIONS.map((option) => option.value), ['manual']);
+  assert.equal(initial.DEFAULT, 'manual');
+  failed = false;
+  const retried = await service.refreshProviderModels('cursor');
+  assert.deepEqual(retried.OPTIONS.map((option) => option.value), ['cli-model', 'manual']);
+  assert.equal(retried.DISCOVERY?.error, undefined);
+});
+
+test('simultaneous model requests share discovery and workspace catalogs stay separate', async () => {
+  let calls = 0;
+  const { service } = createDiscoveryService(async (cwd) => {
+    calls += 1;
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    return createModels(cwd?.endsWith('other') ? 'other-model' : 'shared-model');
+  });
+  await Promise.all([service.getProviderModels('codex', 'workspace'), service.refreshProviderModels('codex', 'workspace')]);
+  assert.equal(calls, 1);
+  assert.equal((await service.getProviderModels('codex', 'other')).DEFAULT, 'other-model');
+  assert.equal((await service.getProviderModels('codex', 'workspace')).DEFAULT, 'shared-model');
+  assert.equal(calls, 2);
+});
+
+test('invalid stored catalogs are rediscovered instead of breaking model menus', async () => {
+  const { service, stored } = createDiscoveryService(async () => createModels('valid-model'));
+  await service.getProviderModels('codex');
+  const key = [...stored.keys()][0];
+  stored.set(key, '{"OPTIONS":[null],"DEFAULT":"invalid"}');
+  assert.equal((await service.getProviderModels('codex')).DEFAULT, 'valid-model');
+});
+
 test('custom models can be created, edited, and deleted', async () => {
   const { service } = createTestService();
   const created = await service.createCustomModel('claude', {

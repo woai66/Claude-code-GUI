@@ -7,6 +7,7 @@ import {
   LockKeyhole,
   Pencil,
   Plus,
+  RefreshCw,
   Trash2,
   X,
 } from 'lucide-react';
@@ -61,6 +62,8 @@ export default function ModelLibraryPanel({
   const [confirmDeleteRecordId, setConfirmDeleteRecordId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Prevents duplicate CLI discovery and keeps its result attached to the provider being refreshed.
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     setSelectedProvider(initialProvider);
@@ -84,6 +87,23 @@ export default function ModelLibraryPanel({
   // providers this machine has connected (OpenCode). Empty for providers
   // without effort support, which hides the section entirely.
   const providerEffortLevels = providerModelCatalog[selectedProvider]?.EFFORT_LEVELS ?? [];
+  const discovery = providerModelCatalog[selectedProvider]?.DISCOVERY;
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const models = await actions.refresh(selectedProvider);
+      setNotice(t('chat:modelLibrary.fetched', {
+        count: models.OPTIONS.filter((option) => !option.isCustom).length,
+      }));
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : t('chat:modelLibrary.fetchFailed'));
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const resetForm = () => {
     setEditing(null);
@@ -210,9 +230,9 @@ export default function ModelLibraryPanel({
               <Plus className="h-4 w-4" />
             </span>
             <div>
-              <p className="text-base font-semibold tracking-tight text-foreground">Model library</p>
+              <p className="text-base font-semibold tracking-tight text-foreground">{t('chat:modelLibrary.title')}</p>
               <p className="text-xs leading-5 text-muted-foreground">
-                Add model IDs supported by your provider. Built-in models stay locked.
+                {t('chat:modelLibrary.description')}
               </p>
             </div>
           </div>
@@ -233,6 +253,7 @@ export default function ModelLibraryPanel({
               key={provider.id}
               type="button"
               onClick={() => selectProvider(provider.id)}
+              disabled={refreshing}
               aria-pressed={selected}
               className={`flex min-w-fit flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition-all ${
                 selected
@@ -246,6 +267,42 @@ export default function ModelLibraryPanel({
           );
         })}
       </div>
+
+      {discovery && (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">{t('chat:modelLibrary.cliModels')}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {discovery.updatedAt
+                ? t('chat:modelLibrary.updatedAt', { time: new Date(discovery.updatedAt).toLocaleString() })
+                : t('chat:modelLibrary.notFetched')}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={refreshing || saving || deletingRecordId !== null}
+            onClick={() => void handleRefresh()}
+            className="shrink-0 rounded-xl"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            {t(refreshing ? 'chat:modelLibrary.fetching' : 'chat:modelLibrary.fetchModels')}
+          </Button>
+        </div>
+      )}
+
+      {(error || discovery?.error) && (
+        <div role="alert" className="shrink-0 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error || discovery?.error}
+        </div>
+      )}
+      {notice && !error && (
+        <div role="status" className="flex shrink-0 items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
+          <Check className="h-3.5 w-3.5" />
+          {notice}
+        </div>
+      )}
 
       <div className="scrollbar-thin grid min-h-0 flex-1 items-start gap-4 overflow-y-auto pr-1 lg:grid-cols-[minmax(16rem,0.8fr)_minmax(20rem,1.2fr)]">
         <form
@@ -336,19 +393,7 @@ export default function ModelLibraryPanel({
             </fieldset>
           )}
 
-          {error && (
-            <div role="alert" className="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              {error}
-            </div>
-          )}
-          {notice && !error && (
-            <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300">
-              <Check className="h-3.5 w-3.5" />
-              {notice}
-            </div>
-          )}
-
-          <Button type="submit" disabled={saving} className="mt-4 w-full rounded-xl">
+          <Button type="submit" disabled={saving || refreshing} className="mt-4 w-full rounded-xl">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : editing ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
             {saving ? 'Saving…' : editing ? 'Save changes' : 'Add model'}
           </Button>
@@ -359,7 +404,7 @@ export default function ModelLibraryPanel({
             <div className="mb-2 flex items-center justify-between gap-3 px-1">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Your models</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">Editable and stored in auth.db</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">{t('chat:modelLibrary.customHint')}</p>
               </div>
               <Badge variant="secondary" className="rounded-full text-[10px]">{customModels.length}</Badge>
             </div>
@@ -440,15 +485,26 @@ export default function ModelLibraryPanel({
           <section>
             <div className="mb-2 flex items-center justify-between gap-3 px-1">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">Built-in models</p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">Maintained by Claude GUI and read-only</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
+                  {t(discovery ? 'chat:modelLibrary.cliModels' : 'chat:modelLibrary.providerModels')}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {t(discovery ? 'chat:modelLibrary.cliHint' : 'chat:modelLibrary.providerHint')}
+                </p>
               </div>
               <Badge variant="secondary" className="rounded-full text-[10px]">{predefinedModels.length}</Badge>
             </div>
+            {predefinedModels.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border px-4 py-7 text-center text-xs text-muted-foreground">
+                {t('chat:modelLibrary.emptyCli')}
+              </div>
+            )}
             <div className="overflow-hidden rounded-2xl border border-border/70 bg-background/70">
               {predefinedModels.map((option) => (
                 <div key={option.recordId ?? option.value} className="flex items-center gap-3 border-b border-border/60 px-3 py-2.5 last:border-b-0">
-                  <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                  {discovery
+                    ? <Check className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                    : <LockKeyhole className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium text-foreground">{option.label}</p>
                     <p className="truncate font-mono text-[10px] text-muted-foreground">{option.value}</p>

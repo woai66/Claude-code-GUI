@@ -628,11 +628,20 @@ router.get(
 );
 
 router.post(
+  '/:provider/models/refresh',
+  asyncHandler(async (req: Request, res: Response) => {
+    const provider = parseProvider(req.params.provider);
+    const models = await providerModelsService.refreshProviderModels(provider, readOptionalQueryString(req.query.cwd));
+    res.json(createApiSuccessResponse({ provider, models }));
+  }),
+);
+
+router.post(
   '/:provider/models',
   asyncHandler(async (req: Request, res: Response) => {
     const provider = parseProvider(req.params.provider);
     const input = parseCustomProviderModelPayload(req.body);
-    const result = await providerModelsService.createCustomModel(provider, input);
+    const result = await providerModelsService.createCustomModel(provider, input, readOptionalQueryString(req.query.cwd));
     res.status(201).json(createApiSuccessResponse({ provider, ...result }));
   }),
 );
@@ -643,7 +652,9 @@ router.patch(
     const provider = parseProvider(req.params.provider);
     const recordId = parseModelRecordId(req.params.recordId);
     const input = parseCustomProviderModelPayload(req.body);
-    const result = await providerModelsService.updateCustomModel(provider, recordId, input);
+    const result = await providerModelsService.updateCustomModel(
+      provider, recordId, input, readOptionalQueryString(req.query.cwd),
+    );
     res.json(createApiSuccessResponse({ provider, ...result }));
   }),
 );
@@ -653,7 +664,7 @@ router.delete(
   asyncHandler(async (req: Request, res: Response) => {
     const provider = parseProvider(req.params.provider);
     const recordId = parseModelRecordId(req.params.recordId);
-    const result = await providerModelsService.deleteCustomModel(provider, recordId);
+    const result = await providerModelsService.deleteCustomModel(provider, recordId, readOptionalQueryString(req.query.cwd));
     res.json(createApiSuccessResponse({ provider, ...result }));
   }),
 );

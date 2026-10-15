@@ -98,6 +98,7 @@ const createActions = () => {
   const created: Array<{ provider: LLMProvider; input: CustomProviderModelInput }> = [];
   const updated: Array<{ provider: LLMProvider; input: CustomProviderModelInput }> = [];
   const actions: ProviderModelActions = {
+    refresh: async (provider) => CATALOG[provider]!,
     create: async (provider, input) => {
       created.push({ provider, input });
     },

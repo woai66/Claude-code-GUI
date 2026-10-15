@@ -26,6 +26,13 @@ async function withProviderServer(
   await writeFile(process.env.DATABASE_PATH, '');
   await initializeDatabase();
 
+  // Model route tests exercise our transport and persistence, not the host's live Codex account.
+  const codexModels = providerRegistry.resolveProvider('codex').models;
+  const originalDiscovery = codexModels.refreshSupportedModels;
+  codexModels.refreshSupportedModels = async () => ({
+    OPTIONS: [{ value: 'codex-cli-model', label: 'CLI model' }], DEFAULT: 'codex-cli-model',
+  });
+
   const app = express().use(express.json()).use('/api/providers', providerRouter);
   app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (error instanceof AppError) {
@@ -48,6 +55,7 @@ async function withProviderServer(
       server.close((error) => error ? reject(error) : resolve());
     });
     closeConnection();
+    codexModels.refreshSupportedModels = originalDiscovery;
     if (previousDatabasePath === undefined) {
       delete process.env.DATABASE_PATH;
     } else {
@@ -201,7 +209,7 @@ test('active Claude session model includes the permission mode recorded by Claud
   });
 });
 
-test('model routes expose immutable defaults and full custom model CRUD', async () => {
+test('model routes expose discovered choices and full custom model CRUD', async () => {
   await withProviderServer(async (baseUrl) => {
     const initialResponse = await fetch(`${baseUrl}/api/providers/codex/models`);
     const initialPayload = await initialResponse.json() as {
@@ -269,6 +277,40 @@ test('model routes expose immutable defaults and full custom model CRUD', async 
       deletePayload.data.models.OPTIONS.some((option) => option.recordId === customRecordId),
       false,
     );
+  });
+});
+
+test('model refresh persists CLI choices, forwards cwd, and preserves the catalog after failure', async () => {
+  await withProviderServer(async (baseUrl, workspacePath) => {
+    const adapter = providerRegistry.resolveProvider('codex').models;
+    const previous = adapter.refreshSupportedModels;
+    let failed = false;
+    let queriedCwd: string | undefined;
+    adapter.refreshSupportedModels = async (cwd) => {
+      queriedCwd = cwd;
+      if (failed) throw new AppError('CLI offline', { code: 'DISCOVERY_FAILED', statusCode: 502 });
+      return { OPTIONS: [{ value: 'new-cli-model', label: 'New CLI model' }], DEFAULT: 'new-cli-model' };
+    };
+    try {
+      const url = `${baseUrl}/api/providers/codex/models`;
+      const refreshUrl = `${url}/refresh?cwd=${encodeURIComponent(workspacePath)}`;
+      const refreshed = await fetch(refreshUrl, { method: 'POST' });
+      assert.equal(refreshed.status, 200);
+      assert.equal(queriedCwd, workspacePath);
+      const payload = await refreshed.json() as { data: { models: { DEFAULT: string } } };
+      assert.equal(payload.data.models.DEFAULT, 'new-cli-model');
+      failed = true;
+      assert.equal((await fetch(refreshUrl, { method: 'POST' })).status, 502);
+      const restored = await fetch(`${url}?cwd=${encodeURIComponent(workspacePath)}`);
+      const saved = await restored.json() as {
+        data: { models: { DEFAULT: string; DISCOVERY: { source: string } } };
+      };
+      assert.equal(saved.data.models.DEFAULT, 'new-cli-model');
+      assert.equal(saved.data.models.DISCOVERY.source, 'cache');
+      assert.equal((await fetch(`${baseUrl}/api/providers/unknown/models/refresh`, { method: 'POST' })).status, 400);
+    } finally {
+      adapter.refreshSupportedModels = previous;
+    }
   });
 });
 

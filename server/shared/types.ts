@@ -1,6 +1,23 @@
 import type { IncomingMessage } from 'node:http';
 import type { Readable } from 'node:stream';
 
+//----------------- CLI EXECUTABLE RESOLUTION ------------
+/**
+ * Optional host and filesystem overrides for the Cursor and Codex path resolvers.
+ * Providers use the current process environment by default; tests supply an
+ * isolated PATH and filesystem without executing or changing installed CLIs.
+ * A null bundled launcher explicitly disables the Codex package fallback.
+ */
+export type CliPathResolutionOptions = {
+  platform?: NodeJS.Platform;
+  arch?: string;
+  env?: NodeJS.ProcessEnv;
+  exists?: (filePath: string) => boolean;
+  readDirectories?: (directoryPath: string) => string[];
+  bundledCodexLauncher?: string | null;
+};
+
+// ---------------------------
 //----------------- HTTP RESPONSE SHAPES ------------
 /**
  * Canonical success envelope used by backend APIs that return a structured payload.
@@ -103,6 +120,12 @@ export type ProviderModelsDefinition = {
    * library offers the same levels on every machine. Adapter catalogs omit it.
    */
   EFFORT_LEVELS?: string[];
+  /** Discovery status used by Providers and the model library; absent for adapters without explicit refresh. */
+  DISCOVERY?: {
+    source: 'cli' | 'cache' | 'empty';
+    updatedAt?: string;
+    error?: string;
+  };
 };
 
 /**

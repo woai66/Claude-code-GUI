@@ -20,6 +20,7 @@ import {
   normalizeImageDescriptors,
   createCompleteMessage,
   createNormalizedMessage,
+  resolveCodexExecutablePath,
 } from '@/shared/index.js';
 import { notifyRunFailed, notifyRunStopped } from '@/modules/notifications/index.js';
 import type { AnyRecord, ProviderRuntimeContext, ProviderRuntimeWriter } from '@/shared/index.js';
@@ -308,7 +309,7 @@ async function queryCodex(
   const sessionKey = () => sessionId || capturedSessionId || null;
 
   try {
-    codex = new Codex();
+    codex = new Codex({ codexPathOverride: resolveCodexExecutablePath() });
 
     const threadOptions: ThreadOptions = {
       workingDirectory,

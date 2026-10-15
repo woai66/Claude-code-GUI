@@ -1,4 +1,6 @@
-import { providerModelsDb, sessionsDb } from '@/modules/database/index.js';
+import path from 'node:path';
+
+import { appConfigDb, providerModelsDb, sessionsDb } from '@/modules/database/index.js';
 import { providerRegistry } from '@/modules/providers/provider.registry.js';
 import { providerCapabilitiesService } from '@/modules/providers/services/provider-capabilities.service.js';
 import type { IProvider } from '@/shared/interfaces.js';
@@ -35,6 +37,7 @@ type ProviderModelsServiceDependencies = {
   resolveProvider?: (provider: LLMProvider) => Pick<IProvider, 'models'>;
   catalog?: ProviderModelsCatalogStore;
   sessions?: ProviderModelsSessionStore;
+  modelCache?: Pick<typeof appConfigDb, 'get' | 'set'>;
 };
 
 /**
@@ -82,12 +85,17 @@ const mergeProviderModels = (
   predefined: ProviderModelsDefinition,
   custom: CustomProviderModelRecord[],
 ): ProviderModelsDefinition => {
+  const customIds = new Set(custom.map((model) => model.modelId));
+  const options = [
+    ...predefined.OPTIONS.filter((option) => !customIds.has(option.value))
+      .map((option) => ({ ...option, isCustom: false })),
+    ...custom.map(toCustomProviderModelOption),
+  ];
   return {
-    OPTIONS: [
-      ...predefined.OPTIONS.map((option) => ({ ...option, isCustom: false })),
-      ...custom.map(toCustomProviderModelOption),
-    ],
-    DEFAULT: predefined.DEFAULT,
+    ...predefined,
+    OPTIONS: options,
+    DEFAULT: options.some((option) => option.value === predefined.DEFAULT)
+      ? predefined.DEFAULT : options[0]?.value ?? predefined.DEFAULT,
     // Copied so no caller can mutate the shared capability matrix.
     EFFORT_LEVELS: [...readCustomModelEffortLevels(provider)],
   };
@@ -140,20 +148,98 @@ const isUniqueConstraintError = (error: unknown): boolean => (
  * Creates the provider model application service used by Providers routes,
  * Commands, and provider runtimes.
  *
- * Adapter definitions, including CLI-discovered catalogues, are merged at read
- * time with custom SQLite rows. Discovery and caching belong to each adapter;
- * this service does not persist predefined models. Tests inject a custom-model
- * store through the same boundary.
+ * CLI-discovered catalogs are saved separately from custom models and reused
+ * until an explicit refresh. This avoids launching CLI processes on every
+ * project change and preserves the last successful list across restarts.
  */
 export const createProviderModelsService = (dependencies: ProviderModelsServiceDependencies = {}) => {
   const resolveProvider = dependencies.resolveProvider ?? providerRegistry.resolveProvider;
   const catalog = dependencies.catalog ?? providerModelsDb;
   const sessions = dependencies.sessions ?? sessionsDb;
+  const modelCache = dependencies.modelCache ?? appConfigDb;
+  const pendingDiscovery = new Map<string, Promise<ProviderModelsDefinition>>();
+  const failedDiscovery = new Map<string, { models: ProviderModelsDefinition; retryAt: number }>();
+
+  const catalogCacheKey = (provider: LLMProvider, cwd?: string) => (
+    `provider-model-catalog:${provider}:${path.resolve(cwd || process.cwd())}`
+  );
+
+  const readCachedCatalog = (key: string): ProviderModelsDefinition | null => {
+    try {
+      const value = modelCache.get(key);
+      if (!value) return null;
+      const cached = JSON.parse(value) as ProviderModelsDefinition;
+      if (!cached || !Array.isArray(cached.OPTIONS) || !cached.OPTIONS.length
+        || typeof cached.DEFAULT !== 'string'
+        || !cached.OPTIONS.every((option) => option && typeof option.value === 'string' && option.value.trim()
+          && typeof option.label === 'string')
+        || !cached.OPTIONS.some((option) => option.value === cached.DEFAULT)) return null;
+      return { ...cached, DISCOVERY: { ...cached.DISCOVERY, source: 'cache' } };
+    } catch {
+      return null;
+    }
+  };
+
+  const refreshCatalog = (provider: LLMProvider, cwd?: string): Promise<ProviderModelsDefinition> => {
+    const key = catalogCacheKey(provider, cwd);
+    const pending = pendingDiscovery.get(key);
+    if (pending) return pending;
+    const adapter = resolveProvider(provider).models;
+    const request = (async () => {
+      if (!adapter.refreshSupportedModels) {
+        throw new AppError('This provider does not support explicit model discovery.', {
+          code: 'MODEL_DISCOVERY_UNSUPPORTED', statusCode: 400,
+        });
+      }
+      const models = await adapter.refreshSupportedModels(cwd);
+      if (!models.OPTIONS.length || !models.OPTIONS.some((option) => option.value === models.DEFAULT)) {
+        throw new AppError('The CLI did not return a usable model list.', {
+          code: 'EMPTY_MODEL_CATALOG', statusCode: 502,
+        });
+      }
+      const discovered: ProviderModelsDefinition = {
+        ...models,
+        DISCOVERY: { source: 'cli', updatedAt: new Date().toISOString() },
+      };
+      modelCache.set(key, JSON.stringify(discovered));
+      failedDiscovery.delete(key);
+      return discovered;
+    })().finally(() => pendingDiscovery.delete(key));
+    pendingDiscovery.set(key, request);
+    return request;
+  };
+
+  const getBaseModels = async (provider: LLMProvider, cwd?: string): Promise<ProviderModelsDefinition> => {
+    const adapter = resolveProvider(provider).models;
+    if (!adapter.refreshSupportedModels) return adapter.getSupportedModels(cwd);
+    const key = catalogCacheKey(provider, cwd);
+    const cached = readCachedCatalog(key);
+    if (cached) return cached;
+    const failed = failedDiscovery.get(key);
+    if (failed && failed.retryAt > Date.now()) return failed.models;
+    try {
+      return await refreshCatalog(provider, cwd);
+    } catch (error) {
+      const models: ProviderModelsDefinition = {
+        ...await adapter.getSupportedModels(cwd),
+        DISCOVERY: {
+          source: 'empty',
+          error: error instanceof Error ? error.message : 'Unable to fetch models from the CLI.',
+        },
+      };
+      failedDiscovery.set(key, { models, retryAt: Date.now() + 15_000 });
+      return models;
+    }
+  };
 
   const getProviderModels = async (provider: LLMProvider, cwd?: string): Promise<ProviderModelsDefinition> => {
-    const predefined = await resolveProvider(provider).models.getSupportedModels(cwd);
+    const predefined = await getBaseModels(provider, cwd);
     return mergeProviderModels(provider, predefined, catalog.listCustomProviderModels(provider));
   };
+
+  const refreshProviderModels = async (provider: LLMProvider, cwd?: string): Promise<ProviderModelsDefinition> => (
+    mergeProviderModels(provider, await refreshCatalog(provider, cwd), catalog.listCustomProviderModels(provider))
+  );
 
   const getCurrentActiveModel = async (
     provider: LLMProvider,
@@ -181,14 +267,16 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
     modelId: string,
     currentRecordId?: number,
   ): void => {
-    if (predefined.OPTIONS.some((option) => option.value === modelId)) {
+    const duplicate = catalog.findCustomProviderModelByModelId(provider, modelId);
+    // CLI refresh may discover an ID the user had already added; that row stays editable.
+    if (predefined.OPTIONS.some((option) => option.value === modelId)
+      && (!duplicate || duplicate.recordId !== currentRecordId)) {
       throw new AppError(`A ${provider} model with this ID already exists.`, {
         code: 'MODEL_ID_ALREADY_EXISTS',
         statusCode: 409,
       });
     }
 
-    const duplicate = catalog.findCustomProviderModelByModelId(provider, modelId);
     if (duplicate && duplicate.recordId !== currentRecordId) {
       throw new AppError(`A ${provider} model with this ID already exists.`, {
         code: 'MODEL_ID_ALREADY_EXISTS',
@@ -200,8 +288,9 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
   const createCustomModel = async (
     provider: LLMProvider,
     input: CustomProviderModelInput,
+    cwd?: string,
   ): Promise<{ model: ProviderModelOption; models: ProviderModelsDefinition }> => {
-    const predefined = await resolveProvider(provider).models.getSupportedModels();
+    const predefined = await getBaseModels(provider, cwd);
     const normalized = normalizeCustomModelInput(input);
     assertModelIdAvailable(provider, predefined, normalized.id);
     assertEffortLevelsSupported(provider, normalized);
@@ -227,8 +316,9 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
     provider: LLMProvider,
     recordId: number,
     input: CustomProviderModelInput,
+    cwd?: string,
   ): Promise<{ model: ProviderModelOption; models: ProviderModelsDefinition }> => {
-    const predefined = await resolveProvider(provider).models.getSupportedModels();
+    const predefined = await getBaseModels(provider, cwd);
     readCustomModel(provider, recordId);
     const normalized = normalizeCustomModelInput(input);
     assertModelIdAvailable(provider, predefined, normalized.id, recordId);
@@ -261,8 +351,9 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
   const deleteCustomModel = async (
     provider: LLMProvider,
     recordId: number,
+    cwd?: string,
   ): Promise<{ model: ProviderModelOption; models: ProviderModelsDefinition }> => {
-    const predefined = await resolveProvider(provider).models.getSupportedModels();
+    const predefined = await getBaseModels(provider, cwd);
     readCustomModel(provider, recordId);
     const removed = catalog.deleteCustomProviderModel(provider, recordId, predefined.DEFAULT);
     if (!removed) {
@@ -454,6 +545,7 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
 
   return {
     getProviderModels,
+    refreshProviderModels,
     createCustomModel,
     updateCustomModel,
     deleteCustomModel,

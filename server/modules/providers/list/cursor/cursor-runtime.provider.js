@@ -7,6 +7,7 @@ import {
 } from '@/shared/image-attachments.js';
 import { notifyRunFailed, notifyRunStopped } from '@/modules/notifications/index.js';
 import { createCompleteMessage, createNormalizedMessage, flattenPromptForWindowsShell, stripAnsiSequences } from '@/shared/utils.js';
+import { resolveCursorCliLaunch } from '@/shared/index.js';
 
 // cross-spawn resolves .cmd shims/PATHEXT on Windows and delegates to
 // child_process.spawn everywhere else.
@@ -156,9 +157,11 @@ async function spawnCursor(command, options = {}, ws, context) {
         console.log('Retrying Cursor CLI with --trust after workspace trust prompt');
       }
 
-      const cursorProcess = spawnFunction('cursor-agent', args, {
+      const launch = resolveCursorCliLaunch();
+      const cursorProcess = spawnFunction(launch?.command || 'cursor-agent', [...(launch?.args || []), ...args], {
         cwd: workingDir,
         stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
         env: { ...process.env } // Inherit all environment variables
       });
 

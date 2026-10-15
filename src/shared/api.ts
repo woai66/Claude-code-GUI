@@ -420,12 +420,14 @@ export const api = {
     claudeSettingsPermissions: () => get('/api/providers/claude/settings-permissions'),
 
     models: (provider: string, cwd?: string) => get(`/api/providers/${provider}/models${query({ cwd })}`),
-    createModel: (provider: string, input: unknown) =>
-      post(`/api/providers/${provider}/models`, input),
-    updateModel: (provider: string, recordId: string | number, input: unknown) =>
-      patch(`/api/providers/${provider}/models/${recordId}`, input),
-    deleteModel: (provider: string, recordId: string | number) =>
-      del(`/api/providers/${provider}/models/${recordId}`),
+    refreshModels: (provider: string, cwd?: string) =>
+      post(`/api/providers/${provider}/models/refresh${query({ cwd })}`, {}),
+    createModel: (provider: string, input: unknown, cwd?: string) =>
+      post(`/api/providers/${provider}/models${query({ cwd })}`, input),
+    updateModel: (provider: string, recordId: string | number, input: unknown, cwd?: string) =>
+      patch(`/api/providers/${provider}/models/${recordId}${query({ cwd })}`, input),
+    deleteModel: (provider: string, recordId: string | number, cwd?: string) =>
+      del(`/api/providers/${provider}/models/${recordId}${query({ cwd })}`),
 
     createSession: (payload: {
       provider: string;

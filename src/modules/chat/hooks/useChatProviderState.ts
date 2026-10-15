@@ -31,8 +31,8 @@ const toProviderEffortOptions = (
 
 const FALLBACK_DEFAULT_MODEL: Record<LLMProvider, string> = {
   claude: 'default',
-  cursor: 'gpt-5.3-codex',
-  codex: 'gpt-5.4',
+  cursor: 'auto',
+  codex: '',
   opencode: 'anthropic/claude-sonnet-4-5',
 };
 
@@ -85,6 +85,7 @@ type ProviderModelsApiResponse = {
   data?: {
     models?: ProviderModelsDefinition;
   };
+  error?: { message?: string };
 };
 
 type ProviderModelMutationApiResponse = {
@@ -170,6 +171,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
   const [providerModelsLoading, setProviderModelsLoading] = useState(true);
 
   const providerModelsRequestIdRef = useRef(0);
+  // A late initial load must not replace a model catalog that the user just refreshed or edited.
+  const catalogMutationVersionRef = useRef<Partial<Record<LLMProvider, number>>>({});
   const sessionSelectionLoadRequestIdRef = useRef(0);
   const sessionModelMutationIdRef = useRef(0);
   const sessionEffortMutationIdRef = useRef(0);
@@ -196,13 +199,14 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     const requestId = providerModelsRequestIdRef.current + 1;
     providerModelsRequestIdRef.current = requestId;
     setProviderModelsLoading(true);
+    const mutationVersions = { ...catalogMutationVersionRef.current };
 
     try {
-      const results = await Promise.all(
+      const results = await Promise.allSettled(
         PROVIDERS.map(async (p) => {
           const response = await api.providers.models(p, selectedProject?.fullPath || selectedProject?.path);
           const body = (await response.json()) as ProviderModelsApiResponse;
-          if (!body.success || !body.data?.models) {
+          if (!response.ok || !body.success || !body.data?.models) {
             return null;
           }
 
@@ -214,18 +218,17 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
         return;
       }
 
-      const nextCatalog: Partial<Record<LLMProvider, ProviderModelsDefinition>> = {};
-
-      PROVIDERS.forEach((p, i) => {
-        const entry = results[i];
-        if (!entry) {
-          return;
-        }
-
-        nextCatalog[p] = entry;
+      setProviderModelCatalog((previous) => {
+        const nextCatalog = { ...previous };
+        PROVIDERS.forEach((p, i) => {
+          const result = results[i];
+          if (result.status === 'fulfilled' && result.value
+            && mutationVersions[p] === catalogMutationVersionRef.current[p]) {
+            nextCatalog[p] = result.value;
+          }
+        });
+        return nextCatalog;
       });
-
-      setProviderModelCatalog(nextCatalog);
     } catch (error) {
       console.error('Error loading provider models:', error);
     } finally {
@@ -741,11 +744,28 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     targetProvider: LLMProvider,
     models: ProviderModelsDefinition,
   ) => {
+    catalogMutationVersionRef.current[targetProvider] = (catalogMutationVersionRef.current[targetProvider] ?? 0) + 1;
     setProviderModelCatalog((previous) => ({
       ...previous,
       [targetProvider]: models,
     }));
   }, []);
+
+  const refreshProviderModels = useCallback(async (targetProvider: LLMProvider) => {
+    const projectRequestId = providerModelsRequestIdRef.current;
+    const version = (catalogMutationVersionRef.current[targetProvider] ?? 0) + 1;
+    catalogMutationVersionRef.current[targetProvider] = version;
+    const response = await api.providers.refreshModels(targetProvider, selectedProject?.fullPath || selectedProject?.path);
+    const body = (await response.json()) as ProviderModelsApiResponse;
+    if (!response.ok || !body.success || !body.data?.models) {
+      throw new Error(body.error?.message || 'Unable to fetch models from the CLI.');
+    }
+    if (catalogMutationVersionRef.current[targetProvider] === version
+      && providerModelsRequestIdRef.current === projectRequestId) {
+      applyProviderCatalog(targetProvider, body.data.models);
+    }
+    return body.data.models;
+  }, [applyProviderCatalog, selectedProject?.fullPath, selectedProject?.path]);
 
   const readModelMutationResponse = useCallback(async (
     response: Response,
@@ -765,10 +785,10 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     targetProvider: LLMProvider,
     input: CustomProviderModelInput,
   ) => {
-    const response = await api.providers.createModel(targetProvider, input);
+    const response = await api.providers.createModel(targetProvider, input, selectedProject?.fullPath || selectedProject?.path);
     const result = await readModelMutationResponse(response);
     applyProviderCatalog(targetProvider, result.models);
-  }, [applyProviderCatalog, readModelMutationResponse]);
+  }, [applyProviderCatalog, readModelMutationResponse, selectedProject?.fullPath, selectedProject?.path]);
 
   const updateCustomModel = useCallback(async (
     targetProvider: LLMProvider,
@@ -779,7 +799,9 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       throw new Error('This model cannot be edited.');
     }
 
-    const response = await api.providers.updateModel(targetProvider, existing.recordId, input);
+    const response = await api.providers.updateModel(
+      targetProvider, existing.recordId, input, selectedProject?.fullPath || selectedProject?.path,
+    );
     const result = await readModelMutationResponse(response);
     applyProviderCatalog(targetProvider, result.models);
 
@@ -797,6 +819,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     provider,
     providerModels,
     readModelMutationResponse,
+    selectedProject?.fullPath,
+    selectedProject?.path,
     sessionModel,
     setStoredProviderModel,
   ]);
@@ -809,7 +833,9 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       throw new Error('This model cannot be deleted.');
     }
 
-    const response = await api.providers.deleteModel(targetProvider, existing.recordId);
+    const response = await api.providers.deleteModel(
+      targetProvider, existing.recordId, selectedProject?.fullPath || selectedProject?.path,
+    );
     const result = await readModelMutationResponse(response);
     applyProviderCatalog(targetProvider, result.models);
 
@@ -827,15 +853,18 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     provider,
     providerModels,
     readModelMutationResponse,
+    selectedProject?.fullPath,
+    selectedProject?.path,
     sessionModel,
     setStoredProviderModel,
   ]);
 
   const providerModelActions = useMemo<ProviderModelActions>(() => ({
+    refresh: refreshProviderModels,
     create: createCustomModel,
     update: updateCustomModel,
     remove: removeCustomModel,
-  }), [createCustomModel, removeCustomModel, updateCustomModel]);
+  }), [createCustomModel, refreshProviderModels, removeCustomModel, updateCustomModel]);
 
   return {
     provider,

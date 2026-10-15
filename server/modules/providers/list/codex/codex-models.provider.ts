@@ -4,167 +4,75 @@ import path from 'node:path';
 
 import TOML from '@iarna/toml';
 
+import { codexAppServer } from '@/modules/providers/list/codex/codex-app-server.client.js';
 import type { IProviderModels } from '@/shared/interfaces.js';
 import type {
   ProviderCurrentActiveModel,
+  ProviderModelOption,
   ProviderModelsDefinition,
 } from '@/shared/types.js';
-import {
-  buildDefaultProviderCurrentActiveModel,
-  readObjectRecord,
-  readOptionalString,
-} from '@/shared/utils.js';
+import { AppError, readObjectRecord, readOptionalString } from '@/shared/utils.js';
 
-/** Curated Codex catalog shipped as immutable CloudCLI defaults. */
-export const CODEX_PREDEFINED_MODELS: ProviderModelsDefinition = {
-  OPTIONS: [
-    {
-      value: 'gpt-6-astra',
-      label: 'GPT-6 Astra',
-      description: 'Our most capable model for complex, demanding work.',
-      effort: {
-        default: 'low',
-        values: [
-          { value: 'low' },
-          { value: 'medium' },
-          { value: 'high' },
-          { value: 'xhigh' },
-          { value: 'max' },
-          { value: 'ultra' },
-        ],
-      },
-    },
-    {
-      value: 'gpt-6-sol',
-      label: 'GPT-6 Sol',
-      description: 'Workhorse model for coding and everyday work.',
-      effort: {
-        default: 'medium',
-        values: [
-          { value: 'low' },
-          { value: 'medium' },
-          { value: 'high' },
-          { value: 'xhigh' },
-          { value: 'max' },
-          { value: 'ultra' },
-        ],
-      },
-    },
-    {
-      value: 'gpt-6-luna',
-      label: 'GPT-6 Luna',
-      description: 'Fast and affordable model for easier tasks.',
-      effort: {
-        default: 'medium',
-        values: [
-          { value: 'low' },
-          { value: 'medium' },
-          { value: 'high' },
-          { value: 'xhigh' },
-          { value: 'max' },
-        ],
-      },
-    },
-    {
-      value: 'gpt-5.6-sol',
-      label: 'GPT-5.6 Sol',
-      description: 'Latest frontier agentic coding model.',
-      effort: {
-        default: 'low',
-        values: [
-          { value: 'low' },
-          { value: 'medium' },
-          { value: 'high' },
-          { value: 'xhigh' },
-          { value: 'max' },
-          { value: 'ultra' },
-        ],
-      },
-    },
-    {
-      value: 'gpt-5.6-terra',
-      label: 'GPT-5.6 Terra',
-      description: 'Balanced agentic coding model for everyday work.',
-      effort: {
-        default: 'medium',
-        values: [
-          { value: 'low' },
-          { value: 'medium' },
-          { value: 'high' },
-          { value: 'xhigh' },
-          { value: 'max' },
-          { value: 'ultra' },
-        ],
-      },
-    },
-    {
-      value: 'gpt-5.6-luna',
-      label: 'GPT-5.6 Luna',
-      description: 'Fast and affordable agentic coding model.',
-      effort: {
-        default: 'medium',
-        values: [
-          { value: 'low' },
-          { value: 'medium' },
-          { value: 'high' },
-          { value: 'xhigh' },
-          { value: 'max' },
-        ],
-      },
-    },
-    {
-      value: 'gpt-5.5',
-      label: 'GPT-5.5',
-      description: 'Frontier model for complex coding, research, and real-world work.',
-      effort: {
-        default: 'medium',
-        values: [{ value: 'low' }, { value: 'medium' }, { value: 'high' }, { value: 'xhigh' }],
-      },
-    },
-    {
-      value: 'gpt-5.4',
-      label: 'GPT-5.4',
-      description: 'Strong model for everyday coding.',
-      effort: {
-        default: 'medium',
-        values: [{ value: 'low' }, { value: 'medium' }, { value: 'high' }, { value: 'xhigh' }],
-      },
-    },
-    {
-      value: 'gpt-5.4-mini',
-      label: 'GPT-5.4 Mini',
-      description: 'Small, fast, and cost-efficient model for simpler coding tasks.',
-      effort: {
-        default: 'medium',
-        values: [{ value: 'low' }, { value: 'medium' }, { value: 'high' }, { value: 'xhigh' }],
-      },
-    },
-  ],
-  DEFAULT: 'gpt-5.6-sol',
+type CodexModelsDependencies = {
+  listModels?: (cwd?: string) => Promise<unknown[]>;
+  configPath?: string;
 };
 
-const CODEX_CONFIG_PATH = path.join(os.homedir(), '.codex', 'config.toml');
-
-/** Provider registry model adapter for Codex predefined models and active config. */
+/** Used by the provider registry to read Codex's model catalog and active configuration. */
 export class CodexProviderModels implements IProviderModels {
+  constructor(private readonly dependencies: CodexModelsDependencies = {}) {}
+
   async getSupportedModels(): Promise<ProviderModelsDefinition> {
-    return CODEX_PREDEFINED_MODELS;
+    return { OPTIONS: [], DEFAULT: '' };
+  }
+
+  async refreshSupportedModels(cwd?: string): Promise<ProviderModelsDefinition> {
+    const models = await (this.dependencies.listModels ?? codexAppServer.listModels)(cwd);
+    const options: ProviderModelOption[] = [];
+    const seen = new Set<string>();
+    let defaultModel = '';
+    for (const entry of models) {
+      const model = readObjectRecord(entry);
+      const value = readOptionalString(model?.model) ?? readOptionalString(model?.id);
+      if (!value || model?.hidden === true || seen.has(value)) continue;
+      seen.add(value);
+      const levels = Array.isArray(model?.supportedReasoningEfforts)
+        ? model.supportedReasoningEfforts.flatMap((entry) => {
+          const effort = readObjectRecord(entry);
+          const value = readOptionalString(effort?.reasoningEffort);
+          return value ? [{ value, description: readOptionalString(effort?.description) }] : [];
+        })
+        : [];
+      const defaultEffort = readOptionalString(model?.defaultReasoningEffort);
+      options.push({
+        value,
+        label: readOptionalString(model?.displayName) ?? value,
+        description: readOptionalString(model?.description),
+        ...(levels.length ? {
+          effort: {
+            values: levels,
+            ...(levels.some((level) => level.value === defaultEffort) ? { default: defaultEffort } : {}),
+          },
+        } : {}),
+      });
+      if (model?.isDefault === true) defaultModel ||= value;
+    }
+    if (!options.length) {
+      throw new AppError('Codex returned no models. Check the Codex CLI login and configuration, then try again.', {
+        code: 'EMPTY_MODEL_CATALOG', statusCode: 502,
+      });
+    }
+    return { OPTIONS: options, DEFAULT: defaultModel || options[0].value };
   }
 
   async getCurrentActiveModel(): Promise<ProviderCurrentActiveModel> {
     try {
-      const raw = await readFile(CODEX_CONFIG_PATH, 'utf8');
-      const parsed = readObjectRecord(TOML.parse(raw));
-      const model = readOptionalString(parsed?.model);
-      if (!model) {
-        return buildDefaultProviderCurrentActiveModel(await this.getSupportedModels());
-      }
-
-      return {
-        model,
-      };
+      const configPath = this.dependencies.configPath
+        ?? path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'config.toml');
+      const parsed = readObjectRecord(TOML.parse(await readFile(configPath, 'utf8')));
+      return { model: readOptionalString(parsed?.model) ?? '' };
     } catch {
-      return buildDefaultProviderCurrentActiveModel(await this.getSupportedModels());
+      return { model: '' };
     }
   }
 }

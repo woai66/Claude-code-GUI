@@ -37,6 +37,12 @@ export type ProviderModelsDefinition = {
   OPTIONS: ProviderModelOption[];
   DEFAULT: string;
   EFFORT_LEVELS?: string[];
+  /** CLI synchronization status for the model library; cached choices survive application restarts. */
+  DISCOVERY?: {
+    source: 'cli' | 'cache' | 'empty';
+    updatedAt?: string;
+    error?: string;
+  };
 };
 
 /**
@@ -55,6 +61,7 @@ export type CustomProviderModelInput = {
 
 /** Mutation callbacks a model menu calls to persist custom provider models. */
 export type ProviderModelActions = {
+  refresh(provider: LLMProvider): Promise<ProviderModelsDefinition>;
   create(provider: LLMProvider, input: CustomProviderModelInput): Promise<void>;
   update(
     provider: LLMProvider,

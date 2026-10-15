@@ -4,6 +4,7 @@ import { createRequire } from 'node:module';
 import readline from 'node:readline';
 
 import { AppError } from '@/shared/utils.js';
+import { resolveCodexExecutablePath } from '@/shared/index.js';
 
 /**
  * Minimal JSON-RPC client for `codex app-server`.
@@ -43,18 +44,21 @@ export type CodexThreadFork = {
 };
 
 /**
- * Resolves the `codex` launcher shipped in node_modules.
- *
- * Deliberately not the `codex` on PATH: a machine can have a second, older
- * install, and the protocol this speaks is only guaranteed against the
- * version this package depends on.
+ * Uses the installed Windows CLI shared with SDK runs, with the bundled
+ * package as a fallback. Other hosts retain the package launcher.
  */
-function resolveCodexLauncher(): string {
+function resolveCodexLaunch(): { command: string; args: string[] } {
   const require_ = createRequire(import.meta.url);
   try {
-    return require_.resolve('@openai/codex/bin/codex.js');
+    if (process.platform !== 'win32') {
+      const launcher = require_.resolve('@openai/codex/bin/codex.js');
+      return { command: process.execPath, args: [launcher, 'app-server'] };
+    }
+    const command = resolveCodexExecutablePath();
+    if (!command) throw new Error('Codex executable is missing');
+    return { command, args: ['app-server'] };
   } catch {
-    throw new AppError('The Codex CLI package is not installed, so Codex conversations cannot be branched.', {
+    throw new AppError('Cannot find Codex CLI. Install Codex or reinstall Claude GUI, then try again.', {
       code: 'CODEX_APP_SERVER_UNAVAILABLE',
       statusCode: 501,
     });
@@ -72,10 +76,13 @@ function resolveCodexLauncher(): string {
  */
 async function withAppServer<T>(
   run: (call: (method: string, params: unknown) => Promise<unknown>) => Promise<T>,
+  cwd?: string,
 ): Promise<T> {
-  const launcher = resolveCodexLauncher();
-  const child = spawn(process.execPath, [launcher, 'app-server'], {
+  const launch = resolveCodexLaunch();
+  const child = spawn(launch.command, launch.args, {
     env: process.env,
+    cwd,
+    windowsHide: true,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
@@ -191,7 +198,37 @@ async function withAppServer<T>(
   }
 }
 
+/** Used by Codex session branching and model discovery to access CLI-only RPC methods. */
 export const codexAppServer = {
+  /** Reads every visible model page from the same Codex binary used by the SDK runtime. */
+  async listModels(cwd?: string): Promise<unknown[]> {
+    return withAppServer(async (call) => {
+      const models: unknown[] = [];
+      const visitedCursors = new Set<string>();
+      let cursor: string | undefined;
+      do {
+        const result = await call('model/list', {
+          limit: 100,
+          includeHidden: false,
+          ...(cursor ? { cursor } : {}),
+        }) as { data?: unknown; nextCursor?: unknown } | undefined;
+        if (!Array.isArray(result?.data)) {
+          throw new AppError('Codex returned an invalid model list.', {
+            code: 'INVALID_MODEL_CATALOG', statusCode: 502,
+          });
+        }
+        models.push(...result.data);
+        cursor = typeof result.nextCursor === 'string' && result.nextCursor ? result.nextCursor : undefined;
+        if (cursor && (visitedCursors.has(cursor) || visitedCursors.size >= 50)) {
+          throw new AppError('Codex model list pagination did not finish.', {
+            code: 'INVALID_MODEL_CATALOG', statusCode: 502,
+          });
+        }
+        if (cursor) visitedCursors.add(cursor);
+      } while (cursor);
+      return models;
+    }, cwd);
+  },
   /**
    * Copies a thread into a new one that ends at `lastTurnId`, or copies the
    * whole thread when it is omitted.

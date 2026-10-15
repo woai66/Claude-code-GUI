@@ -409,6 +409,20 @@
     "close": "Close"
   },
   "modelLibrary": {
+    "title": "Model library",
+    "description": "Fetch models from your CLI or add a custom model.",
+    "cliModels": "CLI models",
+    "providerModels": "Provider models",
+    "fetchModels": "Fetch model list",
+    "fetching": "Fetching…",
+    "fetched": "Updated the model list with {{count}} CLI models.",
+    "fetchFailed": "Unable to fetch models. Check the CLI login and try again.",
+    "updatedAt": "Last updated: {{time}}",
+    "notFetched": "Fetch the models available in your signed-in CLI.",
+    "cliHint": "Synced from your CLI and available in every model picker.",
+    "providerHint": "Models supplied by the provider integration.",
+    "customHint": "Your additions are kept when the CLI list is refreshed.",
+    "emptyCli": "No models fetched yet. Use Fetch model list to populate the list.",
     "effortLevels": "Reasoning levels",
     "effortLevelsHint": "Select the reasoning-effort levels this model accepts. If none are selected, no effort level can be chosen for this model in the composer.",
     "effortSummary": "Reasoning: {{levels}}"
