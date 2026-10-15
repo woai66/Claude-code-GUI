@@ -1,12 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import {
-  access,
-  lstat,
   mkdir,
   readFile,
   readdir,
-  readlink,
   realpath,
   stat,
   writeFile,
@@ -130,10 +127,11 @@ export function getGitErrorDetails(error: unknown): string {
 // ---------------------------
 //----------------- WORKSPACE PATH VALIDATION UTILITIES ------------
 /**
- * Root directory that all workspace/project paths must stay under.
+ * Default directory for the workspace browser and containment root for server deployments.
  *
  * This is resolved from `WORKSPACES_ROOT` when configured; otherwise it falls
- * back to the current user's home directory.
+ * back to the current user's home directory. The private local desktop backend
+ * may register projects outside this root, including on another Windows drive.
  */
 export const WORKSPACES_ROOT = process.env.WORKSPACES_ROOT || os.homedir();
 
@@ -309,8 +307,10 @@ export function normalizeProjectPath(inputPath: string): string {
  * Validates that a user-supplied workspace path is safe to use.
  *
  * Call this before any filesystem mutation that creates or registers projects.
- * The function resolves symlinks, enforces `WORKSPACES_ROOT` containment, and
- * blocks known system directories.
+ * The function resolves symlinks and blocks known system directories. Server
+ * deployments enforce `WORKSPACES_ROOT` containment; the loopback backend with
+ * an Electron-generated desktop session secret accepts local project folders
+ * outside that root. Request data cannot change this policy.
  */
 export async function validateWorkspacePath(requestedPath: string): Promise<WorkspacePathValidationResult> {
   try {
@@ -322,91 +322,50 @@ export async function validateWorkspacePath(requestedPath: string): Promise<Work
       };
     }
 
-    const absolutePath = path.resolve(normalizedRequestedPath);
-    const normalizedPath = normalizeProjectPath(absolutePath);
-
-    if (FORBIDDEN_WORKSPACE_PATHS.includes(normalizedPath) || normalizedPath === '/') {
-      return {
-        valid: false,
-        error: 'Cannot use system-critical directories as workspace locations',
-      };
+    const isLocalDesktop = process.env.HOST === '127.0.0.1'
+      && /^[a-f0-9]{64}$/i.test(process.env.CLOUDCLI_DESKTOP_SESSION_SECRET ?? '');
+    if (isLocalDesktop && !path.isAbsolute(normalizedRequestedPath)) {
+      return { valid: false, error: 'Workspace path must be absolute' };
     }
 
-    for (const forbiddenPath of FORBIDDEN_WORKSPACE_PATHS) {
-      const normalizedForbiddenPath = normalizeProjectPath(forbiddenPath);
-      if (
-        normalizedPath === normalizedForbiddenPath
-        || normalizedPath.startsWith(`${normalizedForbiddenPath}${path.sep}`)
-      ) {
-        // Allow specific user-writable folders under /var.
-        if (
-          normalizedForbiddenPath === '/var'
-          && (normalizedPath.startsWith('/var/tmp') || normalizedPath.startsWith('/var/folders'))
-        ) {
-          continue;
-        }
+    const absolutePath = path.resolve(normalizedRequestedPath);
+    const requestedSystemError = getWorkspaceSystemDirectoryError(normalizeProjectPath(absolutePath));
+    if (requestedSystemError) {
+      return { valid: false, error: requestedSystemError };
+    }
 
+    let existingPath = absolutePath;
+    const missingSegments: string[] = [];
+    let resolvedPath: string;
+    // 创建多级新目录前先解析最近的已有父目录，避免漏掉父目录的 junction/symlink。
+    while (true) {
+      try {
+        resolvedPath = normalizeProjectPath(path.join(await realpath(existingPath), ...missingSegments));
+        break;
+      } catch (error) {
+        const fileError = error as NodeJS.ErrnoException;
+        const parentPath = path.dirname(existingPath);
+        if (fileError.code !== 'ENOENT' || parentPath === existingPath) {
+          throw fileError;
+        }
+        missingSegments.unshift(path.basename(existingPath));
+        existingPath = parentPath;
+      }
+    }
+
+    const resolvedSystemError = getWorkspaceSystemDirectoryError(resolvedPath);
+    if (resolvedSystemError) {
+      return { valid: false, error: resolvedSystemError };
+    }
+
+    if (!isLocalDesktop) {
+      const resolvedWorkspaceRoot = normalizeProjectPath(await realpath(WORKSPACES_ROOT));
+      const relativePath = path.relative(resolvedWorkspaceRoot, resolvedPath);
+      if (relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath)) {
         return {
           valid: false,
-          error: `Cannot create workspace in system directory: ${forbiddenPath}`,
+          error: `Workspace path must be within the allowed workspace root: ${WORKSPACES_ROOT}`,
         };
-      }
-    }
-
-    let resolvedPath = normalizeProjectPath(absolutePath);
-    try {
-      await access(absolutePath);
-      resolvedPath = normalizeProjectPath(await realpath(absolutePath));
-    } catch (error) {
-      const fileError = error as NodeJS.ErrnoException;
-      if (fileError.code !== 'ENOENT') {
-        throw fileError;
-      }
-
-      const parentPath = path.dirname(absolutePath);
-      try {
-        const parentRealPath = await realpath(parentPath);
-        resolvedPath = normalizeProjectPath(path.join(parentRealPath, path.basename(absolutePath)));
-      } catch (parentError) {
-        const parentFileError = parentError as NodeJS.ErrnoException;
-        if (parentFileError.code !== 'ENOENT') {
-          throw parentFileError;
-        }
-      }
-    }
-
-    const resolvedWorkspaceRoot = normalizeProjectPath(await realpath(WORKSPACES_ROOT));
-    if (
-      !resolvedPath.startsWith(`${resolvedWorkspaceRoot}${path.sep}`)
-      && resolvedPath !== resolvedWorkspaceRoot
-    ) {
-      return {
-        valid: false,
-        error: `Workspace path must be within the allowed workspace root: ${WORKSPACES_ROOT}`,
-      };
-    }
-
-    try {
-      await access(absolutePath);
-      const pathStats = await lstat(absolutePath);
-      if (pathStats.isSymbolicLink()) {
-        const symlinkTarget = await readlink(absolutePath);
-        const resolvedSymlinkPath = path.resolve(path.dirname(absolutePath), symlinkTarget);
-        const realSymlinkPath = await realpath(resolvedSymlinkPath);
-        if (
-          !realSymlinkPath.startsWith(`${resolvedWorkspaceRoot}${path.sep}`)
-          && realSymlinkPath !== resolvedWorkspaceRoot
-        ) {
-          return {
-            valid: false,
-            error: 'Symlink target is outside the allowed workspace root',
-          };
-        }
-      }
-    } catch (error) {
-      const fileError = error as NodeJS.ErrnoException;
-      if (fileError.code !== 'ENOENT') {
-        throw fileError;
       }
     }
 
@@ -420,6 +379,30 @@ export async function validateWorkspacePath(requestedPath: string): Promise<Work
       error: `Path validation failed: ${(error as Error).message}`,
     };
   }
+}
+
+function getWorkspaceSystemDirectoryError(workspacePath: string): string | null {
+  const comparisonPath = process.platform === 'win32' ? workspacePath.toLowerCase() : workspacePath;
+  if (comparisonPath === path.parse(comparisonPath).root) {
+    return 'Cannot use system-critical directories as workspace locations';
+  }
+  for (const forbiddenPath of FORBIDDEN_WORKSPACE_PATHS) {
+    const normalizedForbiddenPath = normalizeProjectPath(forbiddenPath);
+    const comparisonForbiddenPath = process.platform === 'win32'
+      ? normalizedForbiddenPath.toLowerCase()
+      : normalizedForbiddenPath;
+    if (comparisonPath !== comparisonForbiddenPath
+      && !comparisonPath.startsWith(`${comparisonForbiddenPath}${path.sep}`)) {
+      continue;
+    }
+    // 保留 /var 下已有的用户目录例外。
+    if (comparisonForbiddenPath === '/var' && ['/var/tmp', '/var/folders'].some((allowedPath) =>
+      comparisonPath === allowedPath || comparisonPath.startsWith(`${allowedPath}/`))) {
+      continue;
+    }
+    return `Cannot create workspace in system directory: ${forbiddenPath}`;
+  }
+  return null;
 }
 
 // ---------------------------
