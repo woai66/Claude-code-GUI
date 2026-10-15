@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import type { SpawnOptions } from 'node:child_process';
 import { EventEmitter, once } from 'node:events';
 import type { AddressInfo } from 'node:net';
 import { PassThrough } from 'node:stream';
@@ -10,7 +11,8 @@ import { createGitRouter } from '@/modules/git/git.routes.js';
 
 test('git init does not run when repository validation fails for an execution error', async () => {
   const commands: string[][] = [];
-  const spawnProcess = ((_command: string, args: string[]) => {
+  const spawnProcess = ((_command: string, args: string[], options: SpawnOptions) => {
+    assert.equal(options.windowsHide, true);
     commands.push(args);
     const child = new EventEmitter() as EventEmitter & { stdout: PassThrough; stderr: PassThrough };
     child.stdout = new PassThrough();

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import test from 'node:test';
+import test, { mock } from 'node:test';
 
 import { ClaudeProviderAuth } from '@/modules/providers/list/claude/claude-auth.provider.js';
 import type { ProviderAuthStatus, ProviderAuthSubscriptionOverride } from '@/shared/types.js';
@@ -70,16 +70,11 @@ const withEnv = async (
 
 const withTempHome = async (fn: (homeDir: string) => Promise<void>) => {
   const homeDir = await mkdtemp(path.join(os.tmpdir(), 'claude-auth-test-'));
-  const originalHome = process.env.HOME;
-  process.env.HOME = homeDir;
+  const homedir = mock.method(os, 'homedir', () => homeDir);
   try {
     await fn(homeDir);
   } finally {
-    if (originalHome === undefined) {
-      delete process.env.HOME;
-    } else {
-      process.env.HOME = originalHome;
-    }
+    homedir.mock.restore();
     await rm(homeDir, { recursive: true, force: true });
   }
 };
