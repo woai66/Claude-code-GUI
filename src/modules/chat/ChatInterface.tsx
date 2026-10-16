@@ -11,6 +11,7 @@ import { TranscriptSessionContext } from '@/modules/chat/context/TranscriptSessi
 import { api } from '@/shared/api';
 import type {
   ChatMessage,
+  CodexSpeed,
   Project,
   ProjectSession,
   SessionEstablishedContext,
@@ -107,6 +108,8 @@ function ChatInterface({
     providerModels,
     setStoredProviderModel,
     currentProviderEffort,
+    currentProviderSpeed,
+    selectCodexSpeed,
     currentProviderEffortOptions,
     currentProviderModel,
     currentProviderModelOptions,
@@ -245,6 +248,7 @@ function ChatInterface({
     cyclePermissionMode,
     currentProviderModel,
     currentProviderEffort,
+    currentProviderSpeed,
     isLoading: isProcessing,
     processingSessions,
     canAbortSession,
@@ -384,12 +388,13 @@ function ChatInterface({
     const scheduled = await scheduleMessage({
       content,
       scheduledFor,
-      options: { model: currentProviderModel, effort: currentProviderEffort, permissionMode },
+      options: { model: currentProviderModel, effort: currentProviderEffort, permissionMode,
+        ...(provider === 'codex' ? { speed: currentProviderSpeed } : {}) },
     });
     if (scheduled) {
       setInput('');
     }
-  }, [currentProviderEffort, currentProviderModel, input, permissionMode, scheduleMessage, setInput]);
+  }, [currentProviderEffort, currentProviderModel, currentProviderSpeed, provider, input, permissionMode, scheduleMessage, setInput]);
 
   const permissionContextValue = useMemo(() => ({
     pendingPermissionRequests,
@@ -421,6 +426,14 @@ function ChatInterface({
       console.error('Error changing the active session reasoning effort:', error);
     }
   }, [currentSessionId, provider, selectProviderEffort, selectedSession?.id]);
+
+  const handleSelectCodexSpeed = useCallback(async (speed: CodexSpeed) => {
+    try {
+      await selectCodexSpeed(speed, currentSessionId || selectedSession?.id || null);
+    } catch (error) {
+      console.error('Error changing Codex speed:', error);
+    }
+  }, [currentSessionId, selectCodexSpeed, selectedSession?.id]);
 
   // Mirrors ChatComposer's own visibility check so the message pane can
   // reserve enough bottom space to keep the floating status tab from
@@ -544,6 +557,8 @@ function ChatInterface({
           provider={provider}
           providerLabel={selectedProviderLabel}
           effort={currentProviderEffort}
+          speed={currentProviderSpeed}
+          onSelectSpeed={handleSelectCodexSpeed}
           availableEffortOptions={currentProviderEffortOptions}
           onSelectEffort={handleSelectComposerEffort}
           model={currentProviderModel}

@@ -13,6 +13,7 @@ import { useDropzone } from 'react-dropzone';
 import { useTranslation } from 'react-i18next';
 
 import { api } from '@/shared/api';
+import type { CodexSpeed } from '@/shared/types';
 import { PROVIDER_PERMISSION_PREFERENCE_KEYS } from '@/shared/constants';
 import { readUserPreference } from '@/shared/userSettings';
 import type { CommandModalPayload, CostCommandData, HelpCommandData, MarkSessionProcessing, ModelCommandData, QueuedDraft, SessionActivityMap, StatusCommandData,QueuedSendOptions,ChatAttachment,ChatMessage,PendingPermissionRequest,PermissionMode,SessionEstablishedContext,Project,ProjectSession,LLMProvider,SlashCommand } from '@/shared/types';
@@ -46,6 +47,7 @@ type UseChatComposerStateArgs = {
    */
   currentProviderModel: string;
   currentProviderEffort: string;
+  currentProviderSpeed?: CodexSpeed;
   isLoading: boolean;
   processingSessions?: SessionActivityMap;
   canAbortSession: boolean;
@@ -177,6 +179,7 @@ export function useChatComposerState({
   resolvePermissionModeForProvider,
   currentProviderModel,
   currentProviderEffort,
+  currentProviderSpeed,
   isLoading,
   processingSessions,
   canAbortSession,
@@ -641,6 +644,7 @@ export function useChatComposerState({
     return {
       model: currentProviderModel,
       effort: currentProviderEffort,
+      ...(provider === 'codex' ? { speed: currentProviderSpeed ?? 'default' } : {}),
       permissionMode: resolvePermissionModeForProvider(provider, permissionMode),
       toolsSettings,
       skipPermissions: toolsSettings?.skipPermissions || false,
@@ -648,6 +652,7 @@ export function useChatComposerState({
     };
   }, [
     currentProviderEffort,
+    currentProviderSpeed,
     currentProviderModel,
     permissionMode,
     provider,

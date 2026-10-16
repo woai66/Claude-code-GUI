@@ -9,6 +9,7 @@ import type { PendingPermissionRequest, PermissionMode,
   ProviderModelActions,
   ProviderModelOption,
   ProviderModelsDefinition } from '@/shared/types';
+import type { CodexSpeed } from '@/shared/types';
 import { DEFAULT_EFFORT_VALUE } from '@/shared/constants';
 import { findProviderModelOption } from '@/shared/utils';
 import { readSelectedProvider, writeSelectedProvider } from '@/shared/selectedProvider';
@@ -107,6 +108,7 @@ type SessionSelectionApiResponse = {
     model?: string | null;
     effort?: string | null;
     permissionMode?: string | null;
+    speed?: CodexSpeed;
     /**
      * `session` and `provider` are real answers for this session; `default`
      * means the backend had nothing recorded and returned the catalog default,
@@ -122,6 +124,7 @@ type SessionProviderSelection = {
   model: string | null;
   effort: string | null;
   permissionMode: string | null;
+  speed?: CodexSpeed;
 };
 
 const getSessionSelectionKey = (provider: LLMProvider, sessionId: string): string => (
@@ -133,6 +136,11 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
   const [pendingPermissionRequests, setPendingPermissionRequests] = useState<PendingPermissionRequest[]>([]);
   /** Session-specific provider settings restore model, effort and permission mode when a conversation is reopened. */
   const [sessionSelection, setSessionSelection] = useState<SessionProviderSelection | null>(null);
+  // New chats remember the explicit speed preference; existing chats restore their own override.
+  const [defaultCodexSpeed, setDefaultCodexSpeed] = useState<CodexSpeed>(() => {
+    const stored = localStorage.getItem('codex-speed');
+    return stored === 'fast' || stored === 'standard' ? stored : 'default';
+  });
   // The provider the composer sends under. Held here rather than read from
   // storage per render because switching it has to reset the model menu, the
   // permission mode and the session in one commit.
@@ -176,6 +184,7 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
   const sessionSelectionLoadRequestIdRef = useRef(0);
   const sessionModelMutationIdRef = useRef(0);
   const sessionEffortMutationIdRef = useRef(0);
+  const sessionSpeedMutationIdRef = useRef(0);
 
   const setStoredProviderModel = useCallback((targetProvider: LLMProvider, model: string) => {
     setProviderModels((previous) => (
@@ -534,6 +543,7 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     let cancelled = false;
     const targetProvider = selectedSessionProvider;
     const targetSessionKey = getSessionSelectionKey(targetProvider, selectedSessionId);
+    const speedVersion = sessionSpeedMutationIdRef.current;
 
     const loadSessionSelection = async () => {
       try {
@@ -549,15 +559,18 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
 
         const resolvedModel = body.data?.model?.trim();
         const resolvedEffort = body.data?.effort?.trim() || null;
-        setSessionSelection({
+        setSessionSelection((current) => ({
           provider: targetProvider,
           sessionId: selectedSessionId,
           model: body.success && resolvedModel && body.data?.source !== 'default' ? resolvedModel : null,
           effort: body.success ? resolvedEffort : null,
+          speed: sessionSpeedMutationIdRef.current !== speedVersion
+            && current?.sessionId === selectedSessionId && current.provider === targetProvider
+            ? current.speed : body.data?.speed ?? 'default',
           permissionMode: body.success && typeof body.data?.permissionMode === 'string'
             ? body.data.permissionMode
             : null,
-        });
+        }));
       } catch (error) {
         if (
           !cancelled
@@ -634,6 +647,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
         permissionMode: current?.provider === targetProvider && current.sessionId === normalizedSessionId
           ? current.permissionMode
           : null,
+        speed: current?.provider === targetProvider && current.sessionId === normalizedSessionId
+          ? current.speed : body.data?.speed,
       }));
     }
     return { scope: 'session' as const, model: storedModel };
@@ -671,6 +686,7 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       model: previousSelection?.model ?? null,
       effort,
       permissionMode: previousSelection?.permissionMode ?? null,
+      speed: previousSelection?.speed,
     });
 
     try {
@@ -696,6 +712,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
             ? current.model
             : previousSelection?.model ?? null,
           effort: storedEffort,
+          speed: current?.provider === targetProvider && current.sessionId === normalizedSessionId
+            ? current.speed : previousSelection?.speed,
           permissionMode: current?.provider === targetProvider && current.sessionId === normalizedSessionId
             ? current.permissionMode
             : previousSelection?.permissionMode ?? null,
@@ -719,6 +737,38 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       throw error;
     }
   }, [sessionSelection, setStoredProviderEffort]);
+
+  const currentProviderSpeed: CodexSpeed = selectedSessionId
+    ? activeSessionSelection?.speed ?? 'default'
+    : defaultCodexSpeed;
+
+  const selectCodexSpeed = useCallback(async (speed: CodexSpeed, sessionId?: string | null) => {
+    const previousDefault = defaultCodexSpeed;
+    setDefaultCodexSpeed(speed);
+    localStorage.setItem('codex-speed', speed);
+    if (!sessionId) return;
+    const targetKey = getSessionSelectionKey('codex', sessionId);
+    const mutationId = ++sessionSpeedMutationIdRef.current;
+    const previousSpeed = sessionSelection?.speed;
+    setSessionSelection((current) => ({
+      provider: 'codex', sessionId, model: null, effort: null, permissionMode: null,
+      ...(current?.provider === 'codex' && current.sessionId === sessionId ? current : {}), speed,
+    }));
+    try {
+      const response = await api.providers.setSessionActiveSpeed('codex', sessionId, speed);
+      if (!response.ok) throw new Error('Unable to change Codex speed.');
+    } catch (error) {
+      if (sessionSpeedMutationIdRef.current === mutationId) {
+        setDefaultCodexSpeed(previousDefault);
+        localStorage.setItem('codex-speed', previousDefault);
+        if (selectedSessionKeyRef.current === targetKey) {
+          setSessionSelection((current) => current?.sessionId === sessionId
+            ? { ...current, speed: previousSpeed } : current);
+        }
+      }
+      throw error;
+    }
+  }, [defaultCodexSpeed, sessionSelection?.speed]);
 
   // The open session's model wins over the per-provider default, so switching
   // sessions shows (and sends) what each session actually runs with.
@@ -872,6 +922,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     providerModels,
     setStoredProviderModel,
     currentProviderEffort,
+    currentProviderSpeed,
+    selectCodexSpeed,
     currentProviderEffortOptions,
     currentProviderModel,
     currentProviderModelOptions,

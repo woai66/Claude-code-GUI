@@ -451,6 +451,8 @@ export const api = {
       post(`/api/providers/${provider}/sessions/${encodeURIComponent(sessionId)}/active-effort`, {
         effort,
       }),
+    setSessionActiveSpeed: (provider: string, sessionId: string, speed: string) =>
+      post(`/api/providers/${provider}/sessions/${encodeURIComponent(sessionId)}/active-speed`, { speed }),
 
     mcpServers: (
       provider: string,

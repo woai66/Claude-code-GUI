@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-import type { Project, ProjectSession, ProviderModelOption, QuickSettingsTab, SlashCommand } from '@/shared/types';
+import type { CursorModelFamily, CursorModelVariant, Project, ProjectSession, ProviderModelOption, QuickSettingsTab, SlashCommand } from '@/shared/types';
 
 //----------------- PROVIDER MODEL LOOKUP ------------
 
@@ -11,6 +11,87 @@ export function findProviderModelOption(options: ProviderModelOption[], model: s
     ?? options.find((option) => option.value !== 'default' && option.resolvedModel === model)
     ?? options.find((option) => option.resolvedModel === model)
     ?? null;
+}
+
+/** Groups CLI-discovered Cursor variants for both pickers, preserving custom and unfamiliar IDs verbatim. */
+export function groupCursorModels(options: ProviderModelOption[]): CursorModelFamily[] {
+  const families = new Map<string, CursorModelFamily>();
+  for (const option of options) {
+    let base = option.value;
+    const variant: CursorModelVariant = { option, effort: 'default', context: '', thinking: false, fast: false };
+    const label = option.label.replace(/[\u200b-\u200d\ufeff]/g, '').trim();
+    let recognized = false;
+    const parameterized = option.isCustom ? null : base.match(/^([^\[\]]+)\[([^\[\]]+)\]$/);
+    const parameters = parameterized?.[2].split(',').map((pair) => pair.trim().split('='));
+    const validParameters = parameters?.every(([key, value, extra]) => !extra && (
+      (key === 'context' && /^\d+(?:\.\d+)?[km]$/i.test(value ?? ''))
+      || (key === 'effort' && /^(none|minimal|low|medium|high|xhigh|max)$/.test(value ?? ''))
+      || ((key === 'fast' || key === 'thinking') && /^(true|false)$/.test(value ?? ''))
+    ));
+    if (parameterized && validParameters) {
+      base = parameterized[1];
+      recognized = true;
+      for (const [key, value] of parameters!) {
+        if (key === 'context') variant.context = value.toLowerCase();
+        if (key === 'effort') variant.effort = value;
+        if (key === 'thinking') variant.thinking = value === 'true';
+        if (key === 'fast') variant.fast = value === 'true';
+      }
+    }
+    if (!option.isCustom && !base.includes('[')) {
+      // Strip only known parameter suffixes; version numbers and model names remain intact.
+      const suffix = /-(extra-high|xhigh|minimal|none|low|medium|high|max|thinking|fast|\d+(?:\.\d+)?[km])$/i;
+      let match: RegExpMatchArray | null;
+      while ((match = base.match(suffix))) {
+        const token = match[1].toLowerCase();
+        base = base.slice(0, -match[0].length);
+        recognized = true;
+        if (token === 'fast') variant.fast = true;
+        else if (token === 'thinking') variant.thinking = true;
+        else if (/^\d/.test(token)) variant.context = token;
+        else variant.effort = token === 'extra-high' ? 'xhigh' : token;
+      }
+      const context = label.match(/\b(\d+(?:\.\d+)?[KM])\b/i)?.[1];
+      variant.context ||= context?.toLowerCase() ?? '';
+    }
+    const key = option.isCustom ? `custom:${option.value}` : base.includes('[') ? `raw:${option.value}` : base;
+    const familyLabel = recognized
+      ? label.replace(/\b(?:No Thinking|Extra High|Thinking|Fast|Minimal|None|Low|Medium|High|Max|\d+(?:\.\d+)?[KM])\b/gi, '')
+        .replace(/\s+/g, ' ').trim()
+      : label;
+    const family = families.get(key);
+    if (family) family.variants.push(variant);
+    else families.set(key, { value: key, label: familyLabel || label, variants: [variant] });
+  }
+  return [...families.values()].map((family) => {
+    // Some Fast labels omit a context that every other variant in that family shares.
+    const contexts = [...new Set(family.variants.map((variant) => variant.context).filter(Boolean))];
+    if (contexts.length === 1) {
+      for (const variant of family.variants) variant.context ||= contexts[0];
+    }
+    return family.variants.length === 1
+      ? { ...family, label: family.variants[0].option.label }
+      : family;
+  });
+}
+
+/** Picks a real Cursor variant, preserving other settings where available; never constructs model IDs. */
+export function selectCursorVariant(
+  family: CursorModelFamily,
+  currentModel: string,
+  change: Partial<Omit<CursorModelVariant, 'option'>> = {},
+): CursorModelVariant {
+  const current = family.variants.find((variant) => variant.option.value === currentModel) ?? family.variants[0];
+  const desired = { ...current, ...change };
+  const candidates = family.variants.filter((variant) => Object.entries(change).every(
+    ([key, value]) => variant[key as keyof typeof change] === value,
+  ));
+  return (candidates.length ? candidates : [current]).reduce((best, candidate) => {
+    const score = (variant: CursorModelVariant) =>
+      Number(variant.context === desired.context) * 8 + Number(variant.thinking === desired.thinking) * 4
+      + Number(variant.effort === desired.effort) * 2 + Number(variant.fast === desired.fast);
+    return score(candidate) > score(best) ? candidate : best;
+  });
 }
 
 // ---------------------------

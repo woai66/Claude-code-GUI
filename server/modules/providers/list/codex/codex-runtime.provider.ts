@@ -270,6 +270,7 @@ async function queryCodex(
     projectPath,
     model,
     effort,
+    speed,
     images,
     files,
     permissionMode = 'default'
@@ -309,7 +310,15 @@ async function queryCodex(
   const sessionKey = () => sessionId || capturedSessionId || null;
 
   try {
-    codex = new Codex({ codexPathOverride: resolveCodexExecutablePath() });
+    codex = new Codex({
+      codexPathOverride: resolveCodexExecutablePath(),
+      ...(speed === 'fast' || speed === 'standard' ? {
+        config: {
+          service_tier: speed === 'fast' ? 'fast' : 'default',
+          features: { fast_mode: speed === 'fast' },
+        },
+      } : {}),
+    });
 
     const threadOptions: ThreadOptions = {
       workingDirectory,

@@ -34,6 +34,7 @@ vi.mock('@/shared/api', () => ({
       sessionActiveModel: () => okJson({ success: true, data: null }),
       setSessionActiveModel: () => okJson({ success: true, data: null }),
       setSessionActiveEffort: () => okJson({ success: true, data: null }),
+      setSessionActiveSpeed: () => okJson({ success: true, data: null }),
       createModel: () => okJson({ success: true, data: null }),
       updateModel: () => okJson({ success: true, data: null }),
       removeModel: () => okJson({ success: true, data: null }),
@@ -84,6 +85,37 @@ test('each provider gets its own model from its own storage key', async () => {
   assert.equal(result.current.providerModels.cursor, 'cursor-stored');
   assert.equal(result.current.providerModels.codex, 'codex-stored');
   assert.equal(result.current.providerModels.opencode, 'opencode-stored');
+});
+
+test('new Codex chats remember speed while existing sessions retain their own settings', async () => {
+  localStorage.setItem('codex-speed', 'fast');
+  const { api } = await import('@/shared/api');
+  vi.spyOn(api.providers, 'sessionActiveModel').mockImplementation(async () => okJson({
+    success: true, data: { model: 'session-model', speed: 'standard', source: 'session' },
+  }) as unknown as Response);
+  const { useChatProviderState } = await import('@/modules/chat/hooks/useChatProviderState');
+  const view = renderHook(({ session }: { session: ProjectSession | null }) =>
+    useChatProviderState({ selectedSession: session, selectedProject: null }),
+  { initialProps: { session: null as ProjectSession | null } });
+  assert.equal(view.result.current.currentProviderSpeed, 'fast');
+  view.rerender({ session: { id: 'existing', __provider: 'codex' } });
+  await waitFor(() => assert.equal(view.result.current.currentProviderModel, 'session-model'));
+  assert.equal(view.result.current.currentProviderSpeed, 'standard');
+});
+
+test('a late session read restores model without overwriting a newer speed click', async () => {
+  const { api } = await import('@/shared/api');
+  let finish: (value: Response) => void = () => {};
+  vi.spyOn(api.providers, 'sessionActiveModel').mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  const persist = vi.spyOn(api.providers, 'setSessionActiveSpeed');
+  const { result } = await renderProviderStateForSession({ id: 'pending-session', __provider: 'codex' });
+  await act(async () => { await result.current.selectCodexSpeed('fast', 'pending-session'); });
+  await act(async () => { finish(await okJson({ success: true, data: {
+    model: 'external-model', effort: 'high', speed: 'standard', source: 'provider',
+  } }) as Response); });
+  assert.equal(result.current.currentProviderModel, 'external-model');
+  assert.equal(result.current.currentProviderSpeed, 'fast');
+  assert.equal(persist.mock.calls[0]?.[2], 'fast');
 });
 
 test('canonical Claude IDs retain their stored selection and inherit the CLI alias effort capabilities', async () => {

@@ -6,6 +6,7 @@ import { providerCapabilitiesService } from '@/modules/providers/services/provid
 import type { IProvider } from '@/shared/interfaces.js';
 import type {
   CustomProviderModelInput,
+  CodexSpeed,
   CustomProviderModelRecord,
   LLMProvider,
   ProviderCurrentActiveModel,
@@ -159,6 +160,20 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
   const modelCache = dependencies.modelCache ?? appConfigDb;
   const pendingDiscovery = new Map<string, Promise<ProviderModelsDefinition>>();
   const failedDiscovery = new Map<string, { models: ProviderModelsDefinition; retryAt: number }>();
+
+  /** Persists speed separately from the model without changing externally managed CLI configuration. */
+  const setSessionSpeed = (provider: LLMProvider, sessionId: string, speed: CodexSpeed): void => {
+    if (provider !== 'codex') {
+      throw new AppError('Speed overrides are only supported for Codex.', { statusCode: 400 });
+    }
+    modelCache.set(`session-speed:${provider}:${sessionId}`, speed);
+  };
+
+  /** Unset sessions inherit their native CLI resume/config behavior instead of silently forcing Standard. */
+  const getSessionSpeed = (provider: LLMProvider, sessionId: string): CodexSpeed => {
+    const value = modelCache.get(`session-speed:${provider}:${sessionId}`);
+    return value === 'fast' || value === 'standard' ? value : 'default';
+  };
 
   const catalogCacheKey = (provider: LLMProvider, cwd?: string) => (
     `provider-model-catalog:${provider}:${path.resolve(cwd || process.cwd())}`
@@ -544,6 +559,8 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
   };
 
   return {
+    getSessionSpeed,
+    setSessionSpeed,
     getProviderModels,
     refreshProviderModels,
     createCustomModel,

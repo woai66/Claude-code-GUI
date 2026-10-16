@@ -685,7 +685,8 @@ router.get(
       requestedModel,
     });
     const permissionMode = await sessionsService.readPermissionMode(provider, sessionId);
-    res.json(createApiSuccessResponse({ ...result, permissionMode }));
+    const speed = providerModelsService.getSessionSpeed(provider, sessionId);
+    res.json(createApiSuccessResponse({ ...result, permissionMode, speed }));
   }),
 );
 
@@ -701,6 +702,21 @@ router.post(
     res.json(createApiSuccessResponse(
       stored ?? { provider, sessionId, model, effort: null, source: 'session' as const },
     ));
+  }),
+);
+
+/** Records a Codex speed override while leaving the user's CLI configuration intact. */
+router.post(
+  '/:provider/sessions/:sessionId/active-speed',
+  asyncHandler(async (req: Request, res: Response) => {
+    const provider = parseProvider(req.params.provider);
+    const sessionId = parseSessionId(req.params.sessionId);
+    const speed = req.body?.speed;
+    if (speed !== 'default' && speed !== 'standard' && speed !== 'fast') {
+      throw new AppError('Invalid speed. Use default, standard or fast.', { statusCode: 400 });
+    }
+    providerModelsService.setSessionSpeed(provider, sessionId, speed);
+    res.json(createApiSuccessResponse({ provider, sessionId, speed }));
   }),
 );
 

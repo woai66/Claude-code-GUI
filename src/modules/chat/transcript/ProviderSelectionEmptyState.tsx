@@ -25,6 +25,7 @@ import {
 import ModelGroupList, { type ModelGroup } from "@/modules/chat/composer/ModelGroupList";
 import ModelLibraryPanel from "@/modules/chat/modals/ModelLibraryPanel";
 import { writeSelectedProvider } from '@/shared/selectedProvider';
+import { groupCursorModels } from '@/shared/utils';
 
 const PROVIDER_META: { id: LLMProvider; name: string }[] = [
   { id: "claude", name: "Anthropic" },
@@ -140,6 +141,11 @@ export default function ProviderSelectionEmptyState({
 
   const currentModelLabel = useMemo(() => {
     const config = getModelConfig(provider, providerModelCatalog);
+    if (provider === 'cursor') {
+      const family = groupCursorModels(config.OPTIONS).find((entry) =>
+        entry.variants.some((variant) => variant.option.value === currentModel));
+      if (family) return family.label;
+    }
     const found = config.OPTIONS.find(
       (o: { value: string; label: string }) => o.value === currentModel,
     );

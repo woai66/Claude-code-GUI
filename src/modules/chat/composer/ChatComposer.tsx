@@ -35,6 +35,7 @@ import QueuedMessageCard from '@/modules/chat/composer/QueuedMessageCard';
 import { ScheduleMessagePopover } from '@/modules/chat/composer/ScheduleMessagePopover';
 import { ScheduledMessageList } from '@/modules/chat/composer/ScheduledMessageList';
 import ComposerModelMenu from '@/modules/chat/composer/ComposerModelMenu';
+import type { CodexSpeed } from '@/shared/types';
 import ComposerPermissionMenu from '@/modules/chat/composer/ComposerPermissionMenu';
 
 type MentionableFile = {
@@ -58,6 +59,8 @@ type ChatComposerProps = {
   provider: LLMProvider;
   providerLabel: string;
   effort: string;
+  speed?: CodexSpeed;
+  onSelectSpeed?: (speed: CodexSpeed) => void;
   availableEffortOptions: NonNullable<ProviderModelOption['effort']>['values'];
   onSelectEffort: (effort: string) => void;
   model: string;
@@ -134,6 +137,8 @@ export default function ChatComposer({
   provider,
   providerLabel,
   effort,
+  speed,
+  onSelectSpeed,
   availableEffortOptions,
   onSelectEffort,
   model,
@@ -481,6 +486,9 @@ export default function ChatComposer({
             />
 
             <ComposerModelMenu
+              provider={provider}
+              speed={speed}
+              onSelectSpeed={onSelectSpeed}
               effort={effort}
               effortOptions={availableEffortOptions}
               onSelectEffort={onSelectEffort}

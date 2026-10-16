@@ -181,6 +181,10 @@
     }
   },
   "composer": {
+    "context": "Context",
+    "cliDefault": "CLI default",
+    "followCli": "Follow CLI settings",
+    "fastUsage": "Uses more allowance",
     "reasoning": "Reasoning",
     "model": "Model",
     "effortDefault": "Default",

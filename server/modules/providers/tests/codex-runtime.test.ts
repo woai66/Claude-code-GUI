@@ -9,6 +9,37 @@ import { codexRuntime } from '@/modules/providers/list/codex/codex-runtime.provi
 import type { ProviderRuntimeContext } from '@/shared/index.js';
 
 for (const resumed of [false, true]) {
+  for (const speed of ['fast', 'standard', 'default', undefined]) {
+    test(`Codex ${resumed ? 'resume' : 'start'} applies speed ${speed ?? 'omitted'} independently of effort`, async (t) => {
+      let config: unknown;
+      const thread = { async runStreamed() {
+        return { events: (async function* () { yield { type: 'thread.started', thread_id: 'native' }; })() };
+      } } as unknown as Thread;
+      const capture = function (this: Codex, ...args: unknown[]) {
+        config = (this as unknown as { options: { config?: unknown } }).options.config;
+        const opts = args.at(-1) as ThreadOptions;
+        assert.equal(opts.modelReasoningEffort, 'high');
+        return thread;
+      };
+      t.mock.method(Codex.prototype, 'startThread', capture);
+      t.mock.method(Codex.prototype, 'resumeThread', capture);
+      const context: ProviderRuntimeContext = {
+        resolveProviderSessionId: () => resumed ? 'native' : null,
+        resolveResumeModel: async () => 'test-model',
+        getProviderModels: async () => ({ DEFAULT: 'test-model', OPTIONS: [{
+          value: 'test-model', label: 'Test', effort: { values: [{ value: 'high' }] },
+        }] }),
+        normalizeMessage: () => [], isProviderInstalled: async () => true,
+      };
+      await codexRuntime.run('test', { speed, effort: 'high' }, { send: () => {} }, context);
+      assert.deepEqual(config, speed === 'fast' || speed === 'standard' ? {
+        service_tier: speed === 'fast' ? 'fast' : 'default', features: { fast_mode: speed === 'fast' },
+      } : undefined);
+    });
+  }
+}
+
+for (const resumed of [false, true]) {
   for (const permissionMode of [undefined, 'default', 'unknown', 'acceptEdits', 'bypassPermissions']) {
     test(`Codex ${resumed ? 'resumes' : 'starts'} with supported permissions (${permissionMode ?? 'omitted'})`, async (t) => {
       let capturedOptions: ThreadOptions | undefined;

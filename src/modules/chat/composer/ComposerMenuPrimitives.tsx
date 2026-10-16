@@ -51,6 +51,23 @@ export function ComposerMenuSeparator() {
   return <div className="my-1 h-px bg-border" aria-hidden />;
 }
 
+/** Used by the Codex and Cursor composer settings for compact, keyboard-accessible switches. */
+export function ComposerMenuToggle({ label, checked, onChange, disabled = false }: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-4 text-xs">
+      {label}
+      <input type="checkbox" role="switch" aria-label={label} checked={checked} disabled={disabled}
+        onChange={(event) => onChange(event.target.checked)}
+        className="relative h-4 w-7 shrink-0 cursor-pointer appearance-none rounded-full bg-muted-foreground/30 transition-colors before:absolute before:left-0.5 before:top-0.5 before:h-3 before:w-3 before:rounded-full before:bg-white before:transition-transform before:content-[''] checked:bg-primary checked:before:translate-x-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default disabled:opacity-50" />
+    </label>
+  );
+}
+
 /** Used by chat's ComposerModelMenu and ComposerPermissionMenu to render one selectable row with its checked state. */
 export function ComposerMenuItem({
   label,

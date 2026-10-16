@@ -3,7 +3,7 @@ import { Check, ChevronDown, ChevronRight } from "lucide-react";
 
 import type { LLMProvider, ProviderModelOption } from "@/shared/types";
 import { Badge, CommandGroup, CommandItem, LLMProviderLogo } from "@/shared/ui";
-import { findProviderModelOption } from '@/shared/utils';
+import { findProviderModelOption, groupCursorModels, selectCursorVariant } from '@/shared/utils';
 
 /**
  * One branch of the model picker.
@@ -75,6 +75,12 @@ export default function ModelGroupList({
       {groups.map((group, index) => {
         const isCollapsed = collapsed.has(group.key) && !searching;
         const selectedModel = findProviderModelOption(group.models, currentModel);
+        const rows = group.provider === 'cursor' ? groupCursorModels(group.models).map((family) => ({
+          ...selectCursorVariant(family, currentModel).option,
+          label: family.label,
+          description: family.variants.map((variant) => variant.option.label).join(' '),
+          grouped: family.variants.length > 1,
+        })) : group.models.map((option) => ({ ...option, grouped: false }));
 
         return (
           <CommandGroup
@@ -99,7 +105,7 @@ export default function ModelGroupList({
                 <LLMProviderLogo provider={group.provider} className="h-3.5 w-3.5 shrink-0" />
                 {group.name}
                 <span className="ml-auto text-[10px] font-normal normal-case tracking-normal text-muted-foreground">
-                  {group.models.length}
+                  {rows.length}
                 </span>
               </button>
             }
@@ -121,11 +127,11 @@ export default function ModelGroupList({
                 onSelect={() => toggle(group.key)}
                 className="ml-4 border-l border-border/40 pl-4 text-[11px] text-muted-foreground"
               >
-                {group.models.length} hidden — click to show
+                {rows.length} hidden — click to show
               </CommandItem>
             ) : null}
 
-            {!isCollapsed && group.models.map((model) => {
+            {!isCollapsed && rows.map((model) => {
               const isSelected = provider === group.provider && selectedModel?.value === model.value;
 
               return (
@@ -142,7 +148,7 @@ export default function ModelGroupList({
                         <Badge className="h-4 shrink-0 rounded-full px-1.5 text-[8px]">Custom</Badge>
                       )}
                     </div>
-                    {model.label !== model.value && (
+                    {!model.grouped && model.label !== model.value && (
                       <div className="truncate font-mono text-[10px] text-muted-foreground">
                         {model.value}
                       </div>

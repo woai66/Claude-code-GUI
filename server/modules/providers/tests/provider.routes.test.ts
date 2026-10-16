@@ -183,6 +183,28 @@ test('reasoning effort is persisted and returned with the active session model',
   });
 });
 
+test('Codex speed persists per session and rejects invalid provider/values', async () => {
+  await withProviderServer(async (baseUrl, workspacePath) => {
+    sessionsDb.createAppSession('speed-session', 'codex', workspacePath);
+    const url = `${baseUrl}/api/providers/codex/sessions/speed-session`;
+    for (const speed of ['fast', 'standard', 'default']) {
+      const response = await fetch(`${url}/active-speed`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ speed }),
+      });
+      assert.equal(response.status, 200);
+      const read = await fetch(`${url}/active-model`);
+      const data = await read.json() as { data: { speed: string } };
+      assert.equal(data.data.speed, speed);
+    }
+    for (const [provider, speed] of [['codex', 'invalid'], ['cursor', 'fast']]) {
+      const response = await fetch(`${baseUrl}/api/providers/${provider}/sessions/speed-session/active-speed`, {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ speed }),
+      });
+      assert.equal(response.status, 400);
+    }
+  });
+});
+
 test('active Claude session model includes the permission mode recorded by Claude CLI', async () => {
   await withProviderServer(async (baseUrl, workspacePath) => {
     await mkdir(workspacePath, { recursive: true });

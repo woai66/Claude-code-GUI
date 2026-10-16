@@ -276,6 +276,11 @@
     "answeredBy": "由 {{model}} 回答"
   },
   "composer": {
+    "reasoning": "思考等级",
+    "context": "上下文",
+    "cliDefault": "CLI 默认",
+    "followCli": "跟随 CLI 设置",
+    "fastUsage": "开启后消耗更多额度",
     "editing": {
       "title": "正在替换先前的消息",
       "filesNotReverted": "已修改的文件不会被还原",

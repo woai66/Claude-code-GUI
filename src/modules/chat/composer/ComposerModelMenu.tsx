@@ -1,22 +1,27 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Zap } from 'lucide-react';
 
-import type { ProviderModelOption } from '@/shared/types';
+import type { CodexSpeed, LLMProvider, ProviderModelOption } from '@/shared/types';
 import { DEFAULT_EFFORT_VALUE } from '@/shared/constants';
-import { findProviderModelOption } from '@/shared/utils';
+import { findProviderModelOption, groupCursorModels, selectCursorVariant } from '@/shared/utils';
+import { CursorModelParameters } from '@/modules/chat/composer/CursorModelParameters';
 import { useComposerMenuAnchor } from '@/modules/chat/hooks/useComposerMenuAnchor';
 import {
   ComposerMenuHeading,
   ComposerMenuItem,
   ComposerMenuSeparator,
   ComposerMenuSurface,
+  ComposerMenuToggle,
 } from '@/modules/chat/composer/ComposerMenuPrimitives';
 
 type EffortOption = NonNullable<ProviderModelOption['effort']>['values'][number];
 
 type ComposerModelMenuProps = {
+  provider?: LLMProvider;
+  speed?: CodexSpeed;
+  onSelectSpeed?: (speed: CodexSpeed) => void;
   effort: string;
   /** Effort values the active provider/model actually accepts; empty hides the section. */
   effortOptions: EffortOption[];
@@ -33,6 +38,9 @@ type ComposerModelMenuProps = {
  * provider's model and reasoning effort for the next turn.
  */
 function ComposerModelMenu({
+  provider,
+  speed = 'default',
+  onSelectSpeed,
   effort,
   effortOptions,
   onSelectEffort,
@@ -42,7 +50,9 @@ function ComposerModelMenu({
   modelsLoading,
 }: ComposerModelMenuProps) {
   const { t } = useTranslation('chat');
+  // Menu visibility is local so typing in the composer does not reopen a dismissed popover.
   const [isOpen, setIsOpen] = useState(false);
+  // The long model list stays collapsed until the user explicitly opens it.
   const [isModelSectionOpen, setIsModelSectionOpen] = useState(false);
   const close = useCallback(() => setIsOpen(false), []);
   const { triggerRef, menuRef, anchor, updateAnchor } = useComposerMenuAnchor(isOpen, close);
@@ -66,11 +76,21 @@ function ComposerModelMenu({
     () => findProviderModelOption(modelOptions, model),
     [model, modelOptions],
   );
-  const modelLabel = selectedModelOption?.label || model;
+  const cursorFamilies = useMemo(() => provider === 'cursor' ? groupCursorModels(modelOptions) : [],
+    [provider, modelOptions]);
+  const cursorFamily = cursorFamilies.find((family) => family.variants.some((variant) => variant.option.value === model));
+  const cursorVariant = cursorFamily ? selectCursorVariant(cursorFamily, model) : null;
+  const modelLabel = cursorFamily?.label || selectedModelOption?.label || model;
+  const showSpeed = provider === 'codex' && Boolean(onSelectSpeed);
+  const fastEnabled = provider === 'cursor' ? cursorVariant?.fast : showSpeed && speed === 'fast';
+  const modelRows = cursorFamilies.length ? cursorFamilies.map((family) => ({
+    value: selectCursorVariant(family, model).option.value, label: family.label,
+    selected: family === cursorFamily,
+  })) : modelOptions.map((option) => ({ ...option, selected: option.value === selectedModelOption?.value }));
 
-  const hasEffortSection = resolvedEffortOptions.length > 0;
+  const hasEffortSection = provider !== 'cursor' && resolvedEffortOptions.length > 0;
   const hasModelSection = modelOptions.length > 0 || modelsLoading;
-  if (!hasEffortSection && !hasModelSection) {
+  if (!hasEffortSection && !hasModelSection && !showSpeed) {
     return null;
   }
 
@@ -95,6 +115,10 @@ function ComposerModelMenu({
         title={ariaLabel}
       >
         <span className="truncate">{triggerLabel}</span>
+        {cursorVariant && cursorFamily && cursorFamily.variants.length > 1 && cursorVariant.effort !== 'default' && (
+          <span className="hidden shrink-0 text-muted-foreground sm:inline">· {cursorVariant.effort}</span>
+        )}
+        {fastEnabled && <Zap className="h-3 w-3 shrink-0" aria-label="Fast" />}
         {hasModelSection && hasEffortSection && effort !== DEFAULT_EFFORT_VALUE && (
           <span className="hidden shrink-0 capitalize text-muted-foreground sm:inline">· {effortLabel}</span>
         )}
@@ -102,6 +126,21 @@ function ComposerModelMenu({
 
       {isOpen && anchor && createPortal(
         <ComposerMenuSurface anchor={anchor} menuRef={menuRef} ariaLabel={ariaLabel}>
+          {cursorFamily && cursorFamily.variants.length > 1 && (
+            <CursorModelParameters family={cursorFamily} model={model} onSelectModel={onSelectModel} />
+          )}
+          {showSpeed && (
+            <div className="space-y-2 px-2.5 py-2">
+              <ComposerMenuToggle label="Fast" checked={speed === 'fast'}
+                onChange={(checked) => onSelectSpeed?.(checked ? 'fast' : 'standard')} />
+              <p className="text-[11px] text-muted-foreground">
+                {t('composer.fastUsage', { defaultValue: 'Uses more allowance' })}
+              </p>
+              <ComposerMenuItem label={t('composer.followCli', { defaultValue: 'Follow CLI settings' })}
+                isSelected={speed === 'default'} onSelect={() => onSelectSpeed?.('default')} />
+              <ComposerMenuSeparator />
+            </div>
+          )}
           {hasEffortSection && (
             <>
               <ComposerMenuHeading>
@@ -149,11 +188,11 @@ function ComposerModelMenu({
                       {t('composer.loadingModels', { defaultValue: 'Loading models…' })}
                     </p>
                   )}
-                  {modelOptions.map((option) => (
+                  {modelRows.map((option) => (
                     <ComposerMenuItem
                       key={option.value}
                       label={option.label || option.value}
-                      isSelected={option.value === selectedModelOption?.value}
+                      isSelected={option.selected}
                       onSelect={() => {
                         onSelectModel(option.value);
                         setIsOpen(false);

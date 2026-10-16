@@ -252,6 +252,14 @@ async function dispatchRun(
   if (typeof clientOptions.effort === 'string' && clientOptions.effort.trim()) {
     providerModelsService.setSessionEffort(provider, sessionId, clientOptions.effort);
   }
+  if (provider === 'codex') {
+    const speed = clientOptions.speed;
+    if (speed === 'default' || speed === 'standard' || speed === 'fast') {
+      providerModelsService.setSessionSpeed(provider, sessionId, speed);
+    } else {
+      clientOptions.speed = providerModelsService.getSessionSpeed(provider, sessionId);
+    }
+  }
 
   const attachmentCandidates = [
     ...normalizeAttachmentDescriptors(clientOptions.images),

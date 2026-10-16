@@ -10,6 +10,25 @@ export type LLMProvider = 'claude' | 'cursor' | 'codex' | 'opencode';
 /** Agent restriction for sidebar lists and searches; "all" includes every provider. */
 export type SidebarProviderFilter = LLMProvider | 'all';
 
+/** Codex speed override; default delegates to the CLI configuration and resumed session. */
+export type CodexSpeed = 'default' | 'standard' | 'fast';
+
+/** A discovered Cursor variant retains its exact CLI ID and only parameters exposed by that entry. */
+export type CursorModelVariant = {
+  option: ProviderModelOption;
+  effort: string;
+  context: string;
+  thinking: boolean;
+  fast: boolean;
+};
+
+/** A display-only model family; selecting parameters must resolve to one of its real variants. */
+export type CursorModelFamily = {
+  value: string;
+  label: string;
+  variants: CursorModelVariant[];
+};
+
 /** One selectable model in a provider's model menu, including its optional reasoning-effort choices. */
 export type ProviderModelOption = {
   value: string;
