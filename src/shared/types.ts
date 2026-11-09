@@ -1431,9 +1431,6 @@ export type AgentProvider = LLMProvider;
 /** One category of per-agent configuration in the agents settings tab (account, permissions, MCP servers or skills); use it to key which panel the tab renders. */
 export type AgentCategory = 'account' | 'permissions' | 'mcp' | 'skills';
 
-/** How much Codex may do without asking, from prompting on every edit to bypassing permission checks entirely; persisted as the Codex agent's permission setting. */
-export type CodexPermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions';
-
 /** A project as the settings dialog needs it - a required identifier in `name` plus optional display name and paths - passed down to the MCP and skills panels so they can scope configuration to a project. */
 export type AgentSettingsProject = {
   name: string;

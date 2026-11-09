@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { AgentCategory, AgentContextByProvider, AgentProvider, AgentSettingsProject, ClaudePermissionsState, CodexPermissionMode, CursorPermissionsState, ProviderAuthStatus } from '@/shared/types';
+import type { AgentCategory, AgentContextByProvider, AgentProvider, AgentSettingsProject, ClaudePermissionsState, CursorPermissionsState, ProviderAuthStatus } from '@/shared/types';
 import AgentCategoryContentSection from '@/modules/settings/tabs/agents-settings/sections/AgentCategoryContentSection';
 import AgentCategoryTabsSection from '@/modules/settings/tabs/agents-settings/sections/AgentCategoryTabsSection';
 import AgentSelectorSection from '@/modules/settings/tabs/agents-settings/sections/AgentSelectorSection';
@@ -14,8 +14,6 @@ type AgentsSettingsTabProps = {
   onClaudePermissionsChange: (value: ClaudePermissionsState) => void;
   cursorPermissions: CursorPermissionsState;
   onCursorPermissionsChange: (value: CursorPermissionsState) => void;
-  codexPermissionMode: CodexPermissionMode;
-  onCodexPermissionModeChange: (value: CodexPermissionMode) => void;
   projects: AgentSettingsProject[];
 };
 
@@ -27,17 +25,16 @@ export default function AgentsSettingsTab({
   onClaudePermissionsChange,
   cursorPermissions,
   onCursorPermissionsChange,
-  codexPermissionMode,
-  onCodexPermissionModeChange,
   projects,
 }: AgentsSettingsTabProps) {
   const [selectedAgent, setSelectedAgent] = useState<AgentProvider>('claude');
   const [selectedCategory, setSelectedCategory] = useState<AgentCategory>('account');
-  const visibleCategories = useMemo<AgentCategory[]>(() => (
-    selectedAgent === 'opencode'
-      ? ['account', 'permissions', 'mcp']
-      : ['account', 'permissions', 'mcp', 'skills']
-  ), [selectedAgent]);
+  const visibleCategories = useMemo<AgentCategory[]>(() => {
+    if (selectedAgent === 'opencode') return ['account', 'permissions', 'mcp'];
+    // Codex runs under the mode picked beside the chat input; it has no permission settings here.
+    if (selectedAgent === 'codex') return ['account', 'mcp', 'skills'];
+    return ['account', 'permissions', 'mcp', 'skills'];
+  }, [selectedAgent]);
 
   const visibleAgents = useMemo<AgentProvider[]>(() => {
     return ['claude', 'cursor', 'codex', 'opencode'];
@@ -99,8 +96,6 @@ export default function AgentsSettingsTab({
           onClaudePermissionsChange={onClaudePermissionsChange}
           cursorPermissions={cursorPermissions}
           onCursorPermissionsChange={onCursorPermissionsChange}
-          codexPermissionMode={codexPermissionMode}
-          onCodexPermissionModeChange={onCodexPermissionModeChange}
           projects={projects}
         />
       </div>

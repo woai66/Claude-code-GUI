@@ -12,7 +12,7 @@ import {
   writeUserPreferences,
 } from '@/shared/userSettings';
 import { useProviderAuthStatus } from '@/modules/provider-auth';
-import type { AgentProvider, ClaudePermissionsState, CodeEditorSettingsState, CodexPermissionMode, CursorPermissionsState, NotificationPreferencesState, ProjectSortOrder, SettingsMainTab } from '@/shared/types';
+import type { AgentProvider, ClaudePermissionsState, CodeEditorSettingsState, CursorPermissionsState, NotificationPreferencesState, ProjectSortOrder, SettingsMainTab } from '@/shared/types';
 
 const DEFAULT_CURSOR_PERMISSIONS: CursorPermissionsState = {
   allowedCommands: [],
@@ -43,10 +43,6 @@ type CursorSettingsStorage = {
   skipPermissions?: boolean;
 };
 
-type CodexSettingsStorage = {
-  permissionMode?: CodexPermissionMode;
-};
-
 type NotificationPreferencesResponse = {
   success?: boolean;
   preferences?: NotificationPreferencesState;
@@ -63,14 +59,6 @@ const normalizeMainTab = (tab: string): SettingsMainTab => {
   }
 
   return KNOWN_MAIN_TABS.includes(tab as SettingsMainTab) ? (tab as SettingsMainTab) : 'agents';
-};
-
-const toCodexPermissionMode = (value: unknown): CodexPermissionMode => {
-  if (value === 'acceptEdits' || value === 'bypassPermissions') {
-    return value;
-  }
-
-  return 'default';
 };
 
 const toResponseJson = async <T>(response: Response): Promise<T> => response.json() as Promise<T>;
@@ -139,7 +127,6 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
   const [notificationPreferences, setNotificationPreferences] = useState<NotificationPreferencesState>(() => (
     createDefaultNotificationPreferences()
   ));
-  const [codexPermissionMode, setCodexPermissionMode] = useState<CodexPermissionMode>('default');
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginProvider, setLoginProvider] = useState<ActiveLoginProvider>('');
@@ -166,9 +153,6 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
         skipPermissions: Boolean(savedCursorSettings.skipPermissions),
       });
 
-      const savedCodexSettings = readUserPreference<CodexSettingsStorage>('codexPermissions', {});
-      setCodexPermissionMode(toCodexPermissionMode(savedCodexSettings.permissionMode));
-
       try {
         const notificationResponse = await api.settings.notificationPreferences();
         if (notificationResponse.ok) {
@@ -190,7 +174,6 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
       setClaudePermissions(createEmptyClaudePermissions());
       setCursorPermissions(createEmptyCursorPermissions());
       setNotificationPreferences(createDefaultNotificationPreferences());
-      setCodexPermissionMode('default');
       setProjectSortOrder('name');
     }
   }, []);
@@ -234,9 +217,6 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
           disallowedCommands: cursorPermissions.disallowedCommands,
           skipPermissions: cursorPermissions.skipPermissions,
         },
-        codexPermissions: {
-          permissionMode: codexPermissionMode,
-        },
       });
 
       const notificationResponse = await api.settings.saveNotificationPreferences(
@@ -255,7 +235,6 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
     claudePermissions.allowedTools,
     claudePermissions.disallowedTools,
     claudePermissions.skipPermissions,
-    codexPermissionMode,
     cursorPermissions.allowedCommands,
     cursorPermissions.disallowedCommands,
     cursorPermissions.skipPermissions,
@@ -366,8 +345,6 @@ export function useSettingsController({ isOpen, initialTab }: UseSettingsControl
     setCursorPermissions,
     notificationPreferences,
     setNotificationPreferences,
-    codexPermissionMode,
-    setCodexPermissionMode,
     providerAuthStatus,
     openLoginForProvider,
     showLoginModal,

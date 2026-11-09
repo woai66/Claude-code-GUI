@@ -1,4 +1,4 @@
-import type { AgentCategory, AgentContextByProvider, AgentProvider, AgentSettingsProject, ClaudePermissionsState, CodexPermissionMode, CursorPermissionsState, McpProject, SkillsProject } from '@/shared/types';
+import type { AgentCategory, AgentContextByProvider, AgentProvider, AgentSettingsProject, ClaudePermissionsState, CursorPermissionsState, McpProject, SkillsProject } from '@/shared/types';
 import { McpServers } from '@/modules/mcp';
 import { ProviderSkills } from '@/modules/skills';
 import AccountContent from '@/modules/settings/tabs/agents-settings/sections/content/AccountContent';
@@ -12,8 +12,6 @@ type AgentCategoryContentSectionProps = {
   onClaudePermissionsChange: (value: ClaudePermissionsState) => void;
   cursorPermissions: CursorPermissionsState;
   onCursorPermissionsChange: (value: CursorPermissionsState) => void;
-  codexPermissionMode: CodexPermissionMode;
-  onCodexPermissionModeChange: (value: CodexPermissionMode) => void;
   projects: AgentSettingsProject[];
 };
 
@@ -26,8 +24,6 @@ export default function AgentCategoryContentSection({
   onClaudePermissionsChange,
   cursorPermissions,
   onCursorPermissionsChange,
-  codexPermissionMode,
-  onCodexPermissionModeChange,
   projects,
 }: AgentCategoryContentSectionProps) {
   return (
@@ -73,14 +69,6 @@ export default function AgentCategoryContentSection({
           onDisallowedCommandsChange={(value) => {
             onCursorPermissionsChange({ ...cursorPermissions, disallowedCommands: value });
           }}
-        />
-      )}
-
-      {selectedCategory === 'permissions' && selectedAgent === 'codex' && (
-        <PermissionsContent
-          agent="codex"
-          permissionMode={codexPermissionMode}
-          onPermissionModeChange={onCodexPermissionModeChange}
         />
       )}
 
