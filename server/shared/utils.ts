@@ -1352,11 +1352,13 @@ export function findApplicationRoot(startDirectory: string): string {
 
 // ---------------------------
 //----------------- WINDOWS CLI ENTRY POINTS ------------
-function cliPathDirectories(env: NodeJS.ProcessEnv): string[] {
+function cliPathDirectories(env: NodeJS.ProcessEnv, platform: NodeJS.Platform = 'win32'): string[] {
   const value = Object.entries(env).find(([key]) => key.toLowerCase() === 'path')?.[1] ?? '';
   // Do not search the selected workspace or relative PATH entries for executables.
-  return value.split(';').map((entry) => entry.trim().replace(/^"(.*)"$/, '$1'))
-    .filter((entry) => path.win32.isAbsolute(entry));
+  const pathApi = platform === 'win32' ? path.win32 : path.posix;
+  return value.split(platform === 'win32' ? ';' : ':')
+    .map((entry) => entry.trim().replace(/^"(.*)"$/, '$1'))
+    .filter((entry) => pathApi.isAbsolute(entry));
 }
 
 function listCliVersionDirectories(directory: string): string[] {
@@ -1471,20 +1473,41 @@ export function resolveCodexExecutablePath(options: CliPathResolutionOptions = {
     }
   }
   const bundled = launcher ? codexBinaryFromLauncher(launcher, arch, exists) : undefined;
+  if (configured) {
+    if (!path.win32.isAbsolute(configured) || !exists(configured)) throw missing();
+    if (path.win32.extname(configured).toLowerCase() === '.exe') return configured;
+    const script = /\.[cm]?js$/i.test(configured) ? configured
+      : path.win32.join(path.win32.dirname(configured), 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
+    const binary = codexBinaryFromLauncher(script, arch, exists);
+    if (binary && binary.toLowerCase() !== bundled?.toLowerCase()) return binary;
+    throw missing();
+  }
   const directories = cliPathDirectories(env);
   directories.push(path.win32.join(env.APPDATA ?? path.win32.join(os.homedir(), 'AppData', 'Roaming'), 'npm'));
   for (const directory of [...new Set(directories)]) {
     for (const name of ['codex.exe', 'codex.cmd', 'codex.ps1', 'codex']) {
       const entry = path.win32.join(directory, name);
       if (!exists(entry)) continue;
-      const candidates = name.endsWith('.exe') ? [entry] : [
+      if (name.endsWith('.exe')) {
+        if (entry.toLowerCase() !== bundled?.toLowerCase()) return entry;
+        continue;
+      }
+      const scripts = [
         path.win32.join(directory, 'node_modules', '@openai', 'codex', 'bin', 'codex.js'),
         path.win32.join(directory, '..', '@openai', 'codex', 'bin', 'codex.js'),
-      ].filter(exists).map((script) => codexBinaryFromLauncher(script, arch, exists));
+      ];
+      // npm adds this app's shim to PATH even when desktop packaging omits its binary.
+      if (launcher && scripts.some((script) => script.toLowerCase() === path.win32.normalize(launcher).toLowerCase())) {
+        continue;
+      }
+      const candidates = scripts.filter(exists).map((script) => codexBinaryFromLauncher(script, arch, exists));
       for (const candidate of candidates) {
         if (candidate && candidate.toLowerCase() !== bundled?.toLowerCase()) return candidate;
       }
+      throw new AppError(`Cannot resolve your installed Codex CLI at ${entry}. Check this installation or set CODEX_CLI_PATH.`, {
+        code: 'CODEX_CLI_NOT_FOUND', statusCode: 503,
+      });
     }
   }
-  return bundled;
+  throw missing();
 }
