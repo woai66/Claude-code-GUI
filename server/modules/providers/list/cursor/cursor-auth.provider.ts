@@ -22,6 +22,7 @@ type CursorLoginStatus = {
 const STATUS_TIMEOUT_MS = 20_000;
 
 export class CursorProviderAuth implements IProviderAuth {
+  private cli: ProviderAuthStatus['cli'];
   constructor(private readonly dependencies: CursorAuthDependencies = {}) {}
 
   private resolveLaunch() {
@@ -32,11 +33,15 @@ export class CursorProviderAuth implements IProviderAuth {
    * Checks whether the cursor-agent CLI is available on this host.
    */
   private checkInstalled(): boolean {
+    this.cli = undefined;
     try {
       const launch = this.resolveLaunch();
       const result = spawn.sync(launch?.command ?? 'cursor-agent', [...(launch?.args ?? []), '--version'], {
-        stdio: 'ignore', timeout: 5000, windowsHide: true,
+        stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8', timeout: 5000, windowsHide: true,
       });
+      if (result.status === 0) this.cli = {
+        path: launch?.args?.[0] ?? launch?.command ?? 'cursor-agent', version: result.stdout?.trim() || '',
+      };
       return result.status === 0;
     } catch {
       return false;
@@ -66,6 +71,7 @@ export class CursorProviderAuth implements IProviderAuth {
       installed,
       provider: 'cursor',
       authenticated: login.authenticated,
+      ...(this.cli ? { cli: this.cli } : {}),
       email: login.email,
       method: login.method,
       error: login.authenticated ? undefined : login.error || 'Not logged in',

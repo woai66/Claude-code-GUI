@@ -153,6 +153,18 @@ export default function AccountContent({ agent, authStatus, onLogin }: AccountCo
             <SubscriptionOverrideNotice override={authStatus.subscriptionOverride} />
           )}
 
+          {!authStatus.loading && authStatus.cli && (
+            <div className="rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2 text-muted-foreground">
+                <span>{t('agents.localCli', { defaultValue: 'Local CLI' })}</span>
+                <span className="font-mono">{authStatus.cli.version}</span>
+              </div>
+              <div className="mt-1 break-all font-mono text-foreground" title={authStatus.cli.path}>
+                {authStatus.cli.path}
+              </div>
+            </div>
+          )}
+
           {authStatus.method !== 'api_key' && (
             <div className="border-t border-border/50 pt-4">
               <div className="flex items-center justify-between">

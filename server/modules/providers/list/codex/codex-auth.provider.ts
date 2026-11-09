@@ -17,14 +17,18 @@ type CodexCredentialsStatus = {
 };
 
 export class CodexProviderAuth implements IProviderAuth {
+  private cli: ProviderAuthStatus['cli'];
   /**
    * Checks whether Codex is available to the server runtime.
    */
   private checkInstalled(): boolean {
+    this.cli = undefined;
     try {
-      const result = spawn.sync(resolveCodexExecutablePath() ?? 'codex', ['--version'], {
-        stdio: 'ignore', timeout: 5000, windowsHide: true,
+      const cliPath = resolveCodexExecutablePath();
+      const result = spawn.sync(cliPath, ['--version'], {
+        stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8', timeout: 5000, windowsHide: true,
       });
+      if (result.status === 0) this.cli = { path: cliPath, version: result.stdout?.trim() || '' };
       return result.status === 0;
     } catch {
       return false;
@@ -36,11 +40,16 @@ export class CodexProviderAuth implements IProviderAuth {
    */
   async getStatus(): Promise<ProviderAuthStatus> {
     const installed = this.checkInstalled();
+    if (!installed) return {
+      installed: false, provider: 'codex', authenticated: false, email: null, method: null,
+      error: 'Cannot find your installed Codex CLI. Install Codex or set CODEX_CLI_PATH.',
+    };
     const credentials = await this.checkCredentials();
 
     return {
       installed,
       provider: 'codex',
+      ...(this.cli ? { cli: this.cli } : {}),
       authenticated: credentials.authenticated,
       email: credentials.email,
       method: credentials.method,
@@ -53,7 +62,7 @@ export class CodexProviderAuth implements IProviderAuth {
    */
   private async checkCredentials(): Promise<CodexCredentialsStatus> {
     try {
-      const authPath = path.join(os.homedir(), '.codex', 'auth.json');
+      const authPath = path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'auth.json');
       const content = await readFile(authPath, 'utf8');
       const auth = readObjectRecord(JSON.parse(content)) ?? {};
       const tokens = readObjectRecord(auth.tokens) ?? {};

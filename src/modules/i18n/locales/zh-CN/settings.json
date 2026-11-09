@@ -382,6 +382,7 @@
       }
     },
     "connectionStatus": "连接状态",
+    "localCli": "本机 CLI",
     "login": {
       "title": "登录",
       "reAuthenticate": "重新认证",

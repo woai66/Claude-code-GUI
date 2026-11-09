@@ -399,6 +399,7 @@
       }
     },
     "connectionStatus": "Connection Status",
+    "localCli": "Local CLI",
     "subscriptionOverride": {
       "title": "Your subscription login is not being used",
       "description": "{{variable}} is set in {{source}}, so Claude Code bills every request to that key as pay-as-you-go API usage instead of using your subscription login.",

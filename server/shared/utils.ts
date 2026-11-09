@@ -1425,6 +1425,7 @@ function codexBinaryFromLauncher(launcher: string, arch: string, exists: (filePa
   } catch {
     // Older CLI packages kept the native executable inside the main package.
   }
+  vendorRoots.push(path.win32.join(packageRoot, 'node_modules', '@openai', `codex-win32-${arch}`, 'vendor'));
   vendorRoots.push(path.win32.join(path.win32.dirname(packageRoot), `codex-win32-${arch}`, 'vendor'));
   vendorRoots.push(path.win32.join(packageRoot, 'vendor'));
   const target = arch === 'x64' ? 'x86_64-pc-windows-msvc' : 'aarch64-pc-windows-msvc';
@@ -1432,18 +1433,35 @@ function codexBinaryFromLauncher(launcher: string, arch: string, exists: (filePa
 }
 
 /**
- * Resolves the same Windows Codex binary for model discovery, auth and SDK runs.
+ * Resolves the same locally installed Codex for model discovery, auth and SDK runs.
  * Prefers an installed native CLI or a known npm shim on PATH, then the standard
- * global npm install, and finally this application's bundled CLI. The bundled
+ * global npm install. Missing installations produce an actionable error instead
+ * of allowing the SDK to silently run its bundled CLI. The bundled
  * shim is skipped during PATH lookup so npm-run's injected node_modules/.bin
  * does not mask a newer user install. Never executes a shell or searches cwd.
- * Non-Windows callers retain their existing SDK/package entry point.
+ * Non-Windows callers resolve an absolute PATH entry, excluding this app's package.
  */
-export function resolveCodexExecutablePath(options: CliPathResolutionOptions = {}): string | undefined {
-  if ((options.platform ?? process.platform) !== 'win32') return undefined;
+export function resolveCodexExecutablePath(options: CliPathResolutionOptions = {}): string {
+  const platform = options.platform ?? process.platform;
   const env = options.env ?? process.env;
   const exists = options.exists ?? fs.existsSync;
   const arch = options.arch ?? process.arch;
+  const missing = () => new AppError(
+    'Cannot find your installed Codex CLI. Install Codex or set CODEX_CLI_PATH to its executable, then try again.',
+    { code: 'CODEX_CLI_NOT_FOUND', statusCode: 503 },
+  );
+  const configured = env.CODEX_CLI_PATH?.trim().replace(/^"(.*)"$/, '$1');
+  if (platform !== 'win32') {
+    const appModules = path.join(findApplicationRoot(path.dirname(fileURLToPath(import.meta.url))), 'node_modules');
+    for (const candidate of configured ? [configured]
+      : cliPathDirectories(env, platform).map((directory) => path.posix.join(directory, 'codex'))) {
+      if (!path.posix.isAbsolute(candidate) || !exists(candidate)) continue;
+      let target = candidate;
+      try { target = fs.realpathSync(candidate); } catch { /* Isolated filesystem tests need no real symlink. */ }
+      if (target !== appModules && !target.startsWith(`${appModules}${path.sep}`)) return candidate;
+    }
+    throw missing();
+  }
   let launcher = options.bundledCodexLauncher;
   if (launcher === undefined) {
     try {

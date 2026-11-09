@@ -33,10 +33,23 @@ export function registerSessionResumeHandler({
     );
     // 单引号字面量配合编码参数，目录中的引号、空格和 $ 都不会成为 PowerShell 代码。
     const quotedPath = cwd.replaceAll("'", "''");
+    // 新窗口继承的仍是 Electron 启动时的 PATH，需补上安装器后来写入的目录。
     const command = [
       `Set-Location -LiteralPath '${quotedPath}'`,
       'try {',
-      `  & claude --resume '${sessionId}'`,
+      '  $pathEntries = @(',
+      '    $env:Path',
+      "    [Environment]::GetEnvironmentVariable('Path', 'Machine')",
+      "    [Environment]::GetEnvironmentVariable('Path', 'User')",
+      '  )',
+      "  if ($env:USERPROFILE) { $pathEntries += Join-Path $env:USERPROFILE '.local\\bin' }",
+      "  if ($env:APPDATA) { $pathEntries += Join-Path $env:APPDATA 'npm' }",
+      "  $env:Path = ($pathEntries | Where-Object { $_ }) -join ';'",
+      "  $claudeCommand = 'claude'",
+      '  if (-not [string]::IsNullOrWhiteSpace($env:CLAUDE_CLI_PATH)) {',
+      `    $claudeCommand = $env:CLAUDE_CLI_PATH.Trim().Trim('"').Trim("'")`,
+      '  }',
+      `  & $claudeCommand --resume '${sessionId}'`,
       '} catch {',
       '  Write-Host $_.Exception.Message -ForegroundColor Red',
       '}',

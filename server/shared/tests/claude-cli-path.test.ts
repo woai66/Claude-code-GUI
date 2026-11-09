@@ -60,22 +60,19 @@ test('resolveClaudeCodeExecutablePath keeps an explicitly configured command whe
   assert.equal(resolved, 'claude');
 });
 
-test('resolveClaudeCodeExecutablePath returns undefined on Windows when the default resolves to nothing', () => {
-  // The SDK spawns this path directly, so a bare `claude` would fail with
-  // "native binary not found at claude"; undefined means "use your own binary".
+test('resolveClaudeCodeExecutablePath refuses SDK fallback when no installed CLI exists', () => {
   const execFileSync = (() => {
     throw new Error('not found');
   }) as unknown as ResolveClaudeCodeExecutablePathDependencies['execFileSync'];
 
-  const resolved = resolveClaudeCodeExecutablePath(undefined, {
+  assert.throws(() => resolveClaudeCodeExecutablePath(undefined, {
     platform: 'win32',
     execFileSync,
-  });
-
-  assert.equal(resolved, undefined);
+    existsSync: () => false,
+  }), /installed Claude Code CLI/);
 });
 
-test('resolveClaudeCodeExecutablePath returns undefined when every wrapper on PATH is a JavaScript launcher', () => {
+test('resolveClaudeCodeExecutablePath reports unsupported wrappers instead of using the SDK runtime', () => {
   // An older global install ships cli.js and no bin/claude.exe, so nothing on
   // PATH maps to a native binary the SDK can spawn.
   const wrapperDir = 'C:\\Users\\dev\\AppData\\Roaming\\npm';
@@ -83,14 +80,12 @@ test('resolveClaudeCodeExecutablePath returns undefined when every wrapper on PA
     (() => `${wrapperDir}\\claude\r\n${wrapperDir}\\claude.cmd\r\n`) as unknown as ResolveClaudeCodeExecutablePathDependencies['execFileSync'];
   const readFileSync = (() => 'exec node "$basedir/node_modules/@anthropic-ai/claude-code/cli.js" "$@"') as unknown as ResolveClaudeCodeExecutablePathDependencies['readFileSync'];
 
-  const resolved = resolveClaudeCodeExecutablePath(undefined, {
+  assert.throws(() => resolveClaudeCodeExecutablePath(undefined, {
     platform: 'win32',
     execFileSync,
     existsSync: () => false,
     readFileSync,
-  });
-
-  assert.equal(resolved, undefined);
+  }), /installed Claude Code CLI/);
 });
 
 test('resolveClaudeCodeExecutablePath still resolves the native exe when both installs are on PATH', () => {
@@ -111,8 +106,11 @@ test('resolveClaudeCodeExecutablePath still resolves the native exe when both in
   assert.equal(resolved, nativePath);
 });
 
-test('resolveClaudeCodeExecutablePath leaves non-Windows platforms on the bare command', () => {
-  const resolved = resolveClaudeCodeExecutablePath(undefined, { platform: 'linux' });
+test('resolveClaudeCodeExecutablePath resolves an absolute local entry on non-Windows platforms', () => {
+  const resolved = resolveClaudeCodeExecutablePath(undefined, {
+    platform: 'linux', env: { PATH: '.:/usr/local/bin:/usr/bin' },
+    existsSync: (file) => file === '/usr/bin/claude',
+  });
 
-  assert.equal(resolved, 'claude');
+  assert.equal(resolved, '/usr/bin/claude');
 });

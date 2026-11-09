@@ -1,6 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+
+import { AppError } from '@/shared/utils.js';
 
 const DEFAULT_CLAUDE_COMMAND = 'claude';
 const CLAUDE_SCRIPT_EXTENSIONS = new Set(['.cjs', '.js', '.jsx', '.mjs', '.ts', '.tsx']);
@@ -11,6 +14,7 @@ export type ResolveClaudeCodeExecutablePathDependencies = {
   existsSync?: typeof fs.existsSync;
   platform?: NodeJS.Platform;
   readFileSync?: typeof fs.readFileSync;
+  env?: NodeJS.ProcessEnv;
 };
 
 function getPathApi(platform: NodeJS.Platform) {
@@ -42,6 +46,10 @@ function resolveClaudeWrapperBinary(
   if (deps.existsSync(directCandidate)) {
     return directCandidate;
   }
+  const scriptCandidate = pathApi.resolve(
+    pathApi.dirname(wrapperPath), 'node_modules', '@anthropic-ai', 'claude-code', 'cli.js',
+  );
+  if (deps.existsSync(scriptCandidate)) return scriptCandidate;
 
   let content: string;
   try {
@@ -73,8 +81,8 @@ function resolveClaudeWrapperBinary(
  * Windows has no PATH lookup to fall back on: the SDK spawns the path we hand
  * it with a raw `child_process.spawn`, which never consults PATH or PATHEXT.
  * A bare `claude` therefore fails with "native binary not found at claude"
- * even on a machine where the CLI is installed and on PATH, so an unresolved
- * default returns undefined and lets the SDK use its own bundled binary.
+ * even on a machine where the CLI is installed and on PATH. A missing default
+ * must fail explicitly rather than letting the SDK use its bundled runtime.
  */
 function resolveWindowsClaudeExecutablePath(
   configuredPath: string,
@@ -85,7 +93,7 @@ function resolveWindowsClaudeExecutablePath(
   const extension = pathApi.extname(configuredPath).toLowerCase();
   const explicitPath = isPathLike(configuredPath) || pathApi.isAbsolute(configuredPath);
   // An explicit CLAUDE_CLI_PATH is the operator's call even when we cannot
-  // verify it; only our own `claude` default defers to the SDK.
+  // verify it; the default must resolve to an installed executable.
   const unresolved = configuredExplicitly ? configuredPath : undefined;
 
   if (CLAUDE_SCRIPT_EXTENSIONS.has(extension)) {
@@ -124,17 +132,18 @@ function resolveWindowsClaudeExecutablePath(
       }
     }
   } catch {
-    return unresolved;
+    // The native installer may have updated the user PATH after Electron started.
   }
 
-  return unresolved;
+  if (configuredExplicitly) return unresolved;
+  const native = pathApi.join(deps.env.USERPROFILE ?? os.homedir(), '.local', 'bin', 'claude.exe');
+  return deps.existsSync(native) ? native : unresolved;
 }
 
 /**
  * Resolves the Claude Code executable to hand the SDK.
  *
- * Returns undefined when no real executable could be found and the caller did
- * not configure one, which means "let the SDK pick its own bundled binary".
+ * Throws when no local executable can be found, preventing implicit SDK fallback.
  */
 export function resolveClaudeCodeExecutablePath(
   configuredPath: string | undefined = process.env.CLAUDE_CLI_PATH,
@@ -145,13 +154,23 @@ export function resolveClaudeCodeExecutablePath(
     existsSync: dependencies.existsSync ?? fs.existsSync,
     platform: dependencies.platform ?? process.platform,
     readFileSync: dependencies.readFileSync ?? fs.readFileSync,
+    env: dependencies.env ?? process.env,
   };
 
   const configuredExplicitly = Boolean(stripWrappingQuotes(configuredPath || ''));
   const normalizedPath = stripWrappingQuotes(configuredPath || DEFAULT_CLAUDE_COMMAND);
   if (deps.platform !== 'win32') {
-    return normalizedPath;
+    if (isPathLike(normalizedPath)) return normalizedPath;
+    const candidate = (deps.env.PATH ?? '').split(':').filter((entry) => path.posix.isAbsolute(entry))
+      .map((entry) => path.posix.join(entry, normalizedPath)).find(deps.existsSync);
+    if (candidate) return candidate;
+  } else {
+    const resolved = resolveWindowsClaudeExecutablePath(normalizedPath, configuredExplicitly, deps);
+    if (resolved) return resolved;
   }
 
-  return resolveWindowsClaudeExecutablePath(normalizedPath, configuredExplicitly, deps);
+  throw new AppError(
+    'Cannot find your installed Claude Code CLI. Install Claude Code or set CLAUDE_CLI_PATH to its executable.',
+    { code: 'CLAUDE_CLI_NOT_FOUND', statusCode: 503 },
+  );
 }

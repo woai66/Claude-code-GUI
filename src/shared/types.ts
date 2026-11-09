@@ -1381,6 +1381,8 @@ export type ProviderAuthStatus = {
   method: string | null;
   error: string | null;
   loading: boolean;
+  /** Actual local CLI entry point/version, displayed in the agent account settings for troubleshooting. */
+  cli?: { path: string; version: string };
   subscriptionOverride?: ProviderAuthSubscriptionOverride;
 };
 

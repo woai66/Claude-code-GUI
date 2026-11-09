@@ -6,7 +6,8 @@ import type { Readable } from 'node:stream';
  * Optional host and filesystem overrides for the Cursor and Codex path resolvers.
  * Providers use the current process environment by default; tests supply an
  * isolated PATH and filesystem without executing or changing installed CLIs.
- * A null bundled launcher explicitly disables the Codex package fallback.
+ * The optional bundled launcher identifies app-local packages to exclude;
+ * it is never selected as a runtime fallback.
  */
 export type CliPathResolutionOptions = {
   platform?: NodeJS.Platform;
@@ -934,6 +935,8 @@ export type ProviderAuthStatus = {
   email: string | null;
   method: string | null;
   error?: string;
+  /** Exact local entry point and version probed by the same resolver used for conversations. */
+  cli?: { path: string; version: string };
   /**
    * Present only when `method` is `api_key` and a valid subscription login is
    * being bypassed; see ProviderAuthSubscriptionOverride. Omitted otherwise so

@@ -112,7 +112,8 @@ test('the generated script restores the exact ID and literal directory in real P
   const encodedCommand = launcher.match(/'-EncodedCommand', '([A-Za-z0-9+/=]+)'/)[1];
   const command = Buffer.from(encodedCommand, 'base64').toString('utf16le');
   // 用本地函数替代 Claude，仅记录参数，完全不调用订阅或真实会话。
-  const probe = `function claude {
+  const probe = `$env:CLAUDE_CLI_PATH = ''
+  function claude {
     $result = @{ cwd = (Get-Location).Path; arguments = @($args) }
     [IO.File]::WriteAllText('${resultFile}', ($result | ConvertTo-Json -Compress))
   }\n${command}`;
@@ -140,4 +141,79 @@ test('the generated script restores the exact ID and literal directory in real P
   assert.equal(launcherResult.directory, f.projectPath);
   assert.equal(launcherResult.style, 'Normal');
   assert.deepEqual(launcherResult.arguments, ['-NoLogo', '-NoExit', '-EncodedCommand', encodedCommand]);
+});
+
+for (const installation of ['native', 'npm', 'configured']) {
+  test(`finds the ${installation} CLI when the desktop inherited a stale PATH`, {
+    skip: process.platform !== 'win32',
+  }, async (t) => {
+    const f = await fixture(t);
+    await f.resume();
+    const launch = f.launches[0];
+    const launcher = Buffer.from(launch.args[4], 'base64').toString('utf16le');
+    const encodedCommand = launcher.match(/'-EncodedCommand', '([A-Za-z0-9+/=]+)'/)[1];
+    const home = path.join(f.root, "home O'Brien $profile");
+    const appData = path.join(home, 'AppData', 'Roaming');
+    const cliDirectory = installation === 'native' ? path.join(home, '.local', 'bin')
+      : installation === 'npm' ? path.join(appData, 'npm') : f.projectPath;
+    await fs.mkdir(cliDirectory, { recursive: true });
+    const cliPath = path.join(cliDirectory, 'claude-gui-resume-probe.cmd');
+    const probePath = path.join(f.root, 'probe.cjs');
+    const resultPath = path.join(f.root, 'cli-result.json');
+    await fs.writeFile(probePath, `require('node:fs').writeFileSync(
+      process.env.CLAUDE_GUI_RESUME_PROBE,
+      JSON.stringify({ cwd: process.cwd(), arguments: process.argv.slice(2) }),
+    );`);
+    await fs.writeFile(cliPath, `@echo off\r\n"${process.execPath}" "${probePath}" %*\r\n`);
+    const env = Object.fromEntries(Object.entries(launch.options.env)
+      .filter(([key]) => key.toLowerCase() !== 'path'));
+    Object.assign(env, {
+      Path: path.dirname(launch.executable),
+      USERPROFILE: home,
+      APPDATA: appData,
+      CLAUDE_CLI_PATH: installation === 'configured' ? `"${cliPath}"` : path.basename(cliPath),
+      CLAUDE_GUI_RESUME_PROBE: resultPath,
+    });
+    // 只运行记录参数的本地桩，不打开窗口或启动真实 Claude 会话。
+    const child = spawnSync(launch.executable, [
+      '-NoProfile', '-NonInteractive', '-EncodedCommand', encodedCommand,
+    ], { env, windowsHide: true, timeout: 15000, encoding: 'utf8' });
+    assert.equal(child.status, 0, child.stderr || child.error?.message);
+    assert.equal(await fs.access(resultPath).then(() => true, () => false), true, child.stdout || child.stderr);
+    const result = JSON.parse(await fs.readFile(resultPath, 'utf8'));
+    assert.equal(result.cwd, f.projectPath);
+    assert.deepEqual(result.arguments, ['--resume', SESSION_ID]);
+  });
+}
+
+test('refreshes the current Windows user and machine PATH inside the new terminal', {
+  skip: process.platform !== 'win32',
+}, async (t) => {
+  const f = await fixture(t);
+  await f.resume();
+  const launch = f.launches[0];
+  const launcher = Buffer.from(launch.args[4], 'base64').toString('utf16le');
+  const encodedCommand = launcher.match(/'-EncodedCommand', '([A-Za-z0-9+/=]+)'/)[1];
+  const command = Buffer.from(encodedCommand, 'base64').toString('utf16le');
+  const resultPath = path.join(f.root, 'path-result.json');
+  const probe = `$env:Path = '${f.root.replaceAll("'", "''")}'
+    $env:CLAUDE_CLI_PATH = ''
+    function claude {
+      $result = @{
+        path = $env:Path
+        machine = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+        user = [Environment]::GetEnvironmentVariable('Path', 'User')
+      }
+      [IO.File]::WriteAllText('${resultPath.replaceAll("'", "''")}', ($result | ConvertTo-Json -Compress))
+    }
+    ${command}`;
+  const child = spawnSync(launch.executable, [
+    '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(probe, 'utf16le').toString('base64'),
+  ], { windowsHide: true, timeout: 15000, encoding: 'utf8' });
+  assert.equal(child.status, 0, child.stderr || child.error?.message);
+  const result = JSON.parse(await fs.readFile(resultPath, 'utf8'));
+  assert.ok(result.path.split(';').includes(f.root), 'Keeps the inherited process PATH');
+  for (const value of [result.machine, result.user].filter(Boolean)) {
+    assert.ok(result.path.includes(value), 'Includes the current registered Windows PATH');
+  }
 });

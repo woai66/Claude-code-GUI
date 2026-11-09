@@ -66,11 +66,36 @@ test('Codex uses a native PATH install without requiring the bundled package', (
   }), win.normalize('C:/native/codex.exe'));
 });
 
-test('Codex falls back to its bundled native binary when no user CLI exists', () => {
+test('Codex resolves nested npm platform packages before a later native installation', () => {
+  const nestedBinary = 'C:/npm/node_modules/@openai/codex/node_modules/@openai/codex-win32-x64/vendor/x86_64-pc-windows-msvc/bin/codex.exe';
+  assert.equal(resolveCodexExecutablePath({
+    platform: 'win32', arch: 'x64', bundledCodexLauncher: null,
+    env: { PATH: 'C:/npm;C:/desktop' },
+    exists: hasFiles('C:/npm/codex.cmd', installedLauncher, nestedBinary, 'C:/desktop/codex.exe'),
+  }), win.normalize(nestedBinary));
+});
+
+test('Codex skips an app-local npm shim after bundled executables have been excluded', () => {
   assert.equal(resolveCodexExecutablePath({
     platform: 'win32', arch: 'x64', bundledCodexLauncher: bundledLauncher,
+    env: { PATH: 'C:/app/node_modules/.bin;C:/native' },
+    exists: hasFiles(bundledLauncher, 'C:/app/node_modules/.bin/codex.cmd', 'C:/native/codex.exe'),
+  }), win.normalize('C:/native/codex.exe'));
+});
+
+test('Codex reports a broken first installation instead of silently choosing another version', () => {
+  assert.throws(() => resolveCodexExecutablePath({
+    platform: 'win32', arch: 'x64', bundledCodexLauncher: null,
+    env: { PATH: 'C:/broken;C:/desktop' },
+    exists: hasFiles('C:/broken/codex.cmd', 'C:/desktop/codex.exe'),
+  }), /C:\\broken\\codex.cmd/);
+});
+
+test('Codex refuses the bundled binary when no user CLI exists', () => {
+  assert.throws(() => resolveCodexExecutablePath({
+    platform: 'win32', arch: 'x64', bundledCodexLauncher: bundledLauncher,
     env: { PATH: 'C:/empty', APPDATA: 'C:/empty' }, exists: hasFiles(bundledBinary),
-  }), win.normalize(bundledBinary));
+  }), /installed Codex CLI/);
 });
 
 test('Codex supports a global npm install outside PATH and the legacy ARM64 package layout', () => {
@@ -83,5 +108,17 @@ test('Codex supports a global npm install outside PATH and the legacy ARM64 pack
 
 test('non-Windows hosts keep normal CLI lookup', () => {
   assert.equal(resolveCursorCliLaunch({ platform: 'linux' }), null);
-  assert.equal(resolveCodexExecutablePath({ platform: 'linux' }), undefined);
+  assert.equal(resolveCodexExecutablePath({
+    platform: 'linux', env: { PATH: '.:/usr/local/bin:/usr/bin' }, exists: (file) => file === '/usr/bin/codex',
+  }), '/usr/bin/codex');
+});
+
+test('Codex honors an explicit executable and fails instead of choosing another installation', () => {
+  assert.equal(resolveCodexExecutablePath({
+    platform: 'win32', env: { CODEX_CLI_PATH: 'D:/custom/codex.exe' }, exists: hasFiles('D:/custom/codex.exe'),
+  }), 'D:/custom/codex.exe');
+  assert.throws(() => resolveCodexExecutablePath({
+    platform: 'win32', env: { CODEX_CLI_PATH: 'D:/missing/codex.exe', PATH: 'C:/native' },
+    exists: hasFiles('C:/native/codex.exe'),
+  }), /CODEX_CLI_PATH/);
 });

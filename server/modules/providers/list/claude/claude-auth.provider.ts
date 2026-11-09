@@ -31,16 +31,20 @@ const hasErrorCode = (error: unknown, code: string): boolean => (
 );
 
 export class ClaudeProviderAuth implements IProviderAuth {
+  private cli: ProviderAuthStatus['cli'];
   /**
    * Checks whether the Claude Code CLI is available on this host.
    */
   private checkInstalled(): boolean {
-    // cross-spawn resolves shims and PATHEXT itself, so the bare command is a
-    // usable fallback here even where the SDK's raw spawn could not use it.
-    const cliPath = resolveClaudeCodeExecutablePath(process.env.CLAUDE_CLI_PATH) ?? 'claude';
+    this.cli = undefined;
     try {
-      spawn.sync(cliPath, ['--version'], { stdio: 'ignore', timeout: 5000, windowsHide: true });
-      return true;
+      const cliPath = resolveClaudeCodeExecutablePath(process.env.CLAUDE_CLI_PATH);
+      if (!cliPath) return false;
+      const result = spawn.sync(cliPath, ['--version'], {
+        stdio: ['ignore', 'pipe', 'ignore'], encoding: 'utf8', timeout: 5000, windowsHide: true,
+      });
+      if (result.status === 0) this.cli = { path: cliPath, version: result.stdout?.trim() || '' };
+      return result.status === 0 && !result.error;
     } catch {
       return false;
     }
@@ -69,6 +73,7 @@ export class ClaudeProviderAuth implements IProviderAuth {
       installed,
       provider: 'claude',
       authenticated: credentials.authenticated,
+      ...(this.cli ? { cli: this.cli } : {}),
       email: credentials.authenticated ? credentials.email || 'Authenticated' : credentials.email,
       method: credentials.method,
       error: credentials.authenticated ? undefined : credentials.error || 'Not authenticated',

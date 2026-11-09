@@ -22,6 +22,7 @@ type ProviderAuthStatusPayload = {
   email?: string | null;
   method?: string | null;
   error?: string | null;
+  cli?: ProviderAuthStatus['cli'];
   subscriptionOverride?: ProviderAuthSubscriptionOverride | null;
 };
 
@@ -46,6 +47,7 @@ const toProviderAuthStatus = (
   method: payload.method ?? null,
   error: payload.error ?? fallbackError,
   loading: false,
+  ...(payload.cli ? { cli: payload.cli } : {}),
   // Only the Claude provider ever sends this, and only while a key is bypassing
   // a valid subscription login; keep the key absent otherwise so the shape
   // matches the initial/error statuses above.

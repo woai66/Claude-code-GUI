@@ -13,7 +13,7 @@ const stageDir = path.join(rootDir, '.desktop-build', 'desktop-app');
 // The frontend is already bundled into dist; only the local backend needs Node packages.
 const SERVER_DEPENDENCIES = [
   '@anthropic-ai/claude-agent-sdk', '@iarna/toml', '@octokit/rest',
-  '@openai/codex', '@openai/codex-sdk', '@vscode/ripgrep',
+  '@vscode/ripgrep',
   'bcrypt', 'better-sqlite3', 'chokidar', 'cors', 'cross-spawn', 'express',
   'gray-matter', 'ignore', 'jsonwebtoken', 'mime-types', 'multer',
   'node-pty', 'web-push', 'ws',
@@ -143,6 +143,10 @@ function buildDesktopPackageJson() {
         'dist-server/**',
         'node_modules/**',
         'package.json',
+        // SDKs remain protocol clients; agent executables come from the user's local installation.
+        '!**/node_modules/@anthropic-ai/claude-agent-sdk-{darwin,linux,win32}-*/**',
+        '!**/node_modules/@openai/codex-{darwin,linux,win32}-*/**',
+        '!**/node_modules/@openai/codex/vendor/**',
       ],
       mac: packageJson.build.mac,
       win: packageJson.build.win,

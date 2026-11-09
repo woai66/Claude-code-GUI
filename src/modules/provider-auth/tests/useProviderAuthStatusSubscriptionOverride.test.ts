@@ -22,6 +22,16 @@ vi.mock('@/shared/api', () => ({
 }));
 
 describe('useProviderAuthStatus subscription override', () => {
+  it('preserves the actual local CLI path and version for agent settings', async () => {
+    payloads.codex = {
+      authenticated: true, cli: { path: 'C:/tools/codex.exe', version: 'codex-cli 0.160.0' },
+    };
+    const { result } = renderHook(() => useProviderAuthStatus({ initialLoading: false }));
+    await act(async () => { await result.current.checkProviderAuthStatus('codex'); });
+    expect(result.current.providerAuthStatus.codex.cli).toEqual({
+      path: 'C:/tools/codex.exe', version: 'codex-cli 0.160.0',
+    });
+  });
   it('keeps the override the server reports for Claude', async () => {
     payloads.claude = {
       installed: true,
