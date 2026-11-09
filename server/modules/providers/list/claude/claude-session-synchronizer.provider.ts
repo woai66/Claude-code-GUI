@@ -24,6 +24,8 @@ type ParsedSession = {
 export class ClaudeSessionSynchronizer implements IProviderSessionSynchronizer {
   private readonly provider = 'claude' as const;
   private readonly claudeHome = path.join(os.homedir(), '.claude');
+  /** Indexed transcripts whose origin this process has already checked; each is read once. */
+  private readonly checkedOrigins = new Set<string>();
 
   /**
    * Returns true when a JSONL file is a subagent transcript or tool result
@@ -40,6 +42,38 @@ export class ClaudeSessionSynchronizer implements IProviderSessionSynchronizer {
   private isSubagentTranscript(filePath: string): boolean {
     const pathParts = path.normalize(filePath).split(path.sep);
     return pathParts.includes('subagents') || pathParts.includes('tool-results');
+  }
+
+  /**
+   * Returns true for a conversation from Claude's desktop app, which writes into the
+   * same projects folder tagged `entrypoint: "claude-desktop…"` (`claude-desktop-3p` on
+   * this machine). This GUI manages Claude Code sessions only, so those stay out of it.
+   * The first lines are titles and modes without an entrypoint; the first message has one.
+   */
+  private async isDesktopTranscript(filePath: string): Promise<boolean> {
+    const entrypoint = await extractFirstValidJsonlData(filePath, (rawData) => {
+      const value = (rawData as Record<string, unknown>).entrypoint;
+      return typeof value === 'string' ? value : null;
+    });
+    return entrypoint?.startsWith('claude-desktop') ?? false;
+  }
+
+  /**
+   * Drops index rows for desktop-app conversations indexed before they were excluded.
+   * Only the row goes; the transcript file is left alone. A scan only revisits changed
+   * files, so this checks every indexed Claude transcript once per process instead.
+   */
+  private async removeIndexedDesktopSessions(): Promise<void> {
+    const projectsRoot = path.join(this.claudeHome, 'projects') + path.sep;
+    for (const row of sessionsDb.getSessionsWithTranscriptPath()) {
+      if (!row.jsonl_path.startsWith(projectsRoot) || this.checkedOrigins.has(row.jsonl_path)) {
+        continue;
+      }
+      this.checkedOrigins.add(row.jsonl_path);
+      if (await this.isDesktopTranscript(row.jsonl_path)) {
+        sessionsDb.deleteSessionById(row.session_id);
+      }
+    }
   }
 
   /**
@@ -77,6 +111,7 @@ export class ClaudeSessionSynchronizer implements IProviderSessionSynchronizer {
       processed += 1;
     }
 
+    await this.removeIndexedDesktopSessions();
     return processed;
   }
 
@@ -116,6 +151,10 @@ export class ClaudeSessionSynchronizer implements IProviderSessionSynchronizer {
     filePath: string,
     nameMap: Map<string, string>
   ): Promise<ParsedSession | null> {
+    if (await this.isDesktopTranscript(filePath)) {
+      return null;
+    }
+
     const parsed = await extractFirstValidJsonlData(filePath, (rawData) => {
       const data = rawData as Record<string, unknown>;
       const sessionId = typeof data.sessionId === 'string' ? data.sessionId : undefined;
