@@ -1,4 +1,4 @@
-import { memo, useMemo, useRef } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitBranchIcon, PencilIcon } from 'lucide-react';
 
@@ -39,6 +39,8 @@ type MessageComponentProps = {
    * Absent when the provider cannot copy a transcript prefix.
    */
   onForkFromMessage?: (message: ChatMessage) => void;
+  /** Approves one retry of a Codex auto-review denial; absent for other providers. */
+  onApproveAutoReviewDenial?: (reviewId: string) => void;
 };
 
 const COPY_HIDDEN_TOOL_NAMES = new Set(['Bash', 'Edit', 'Write', 'ApplyPatch']);
@@ -47,7 +49,7 @@ const COPY_HIDDEN_TOOL_NAMES = new Set(['Bash', 'Edit', 'Write', 'ApplyPatch']);
  * Rendered by chat's ChatMessagesPane and ToolGroupContainer to draw one
  * transcript entry — user turn, assistant turn, or a tool call and its result.
  */
-const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, showRawParameters, showThinking, selectedProject, provider, onEditMessage, onForkFromMessage }: MessageComponentProps) => {
+const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, showRawParameters, showThinking, selectedProject, provider, onEditMessage, onForkFromMessage, onApproveAutoReviewDenial }: MessageComponentProps) => {
   const { t } = useTranslation('chat');
   const isGrouped = prevMessage && prevMessage.type === message.type &&
     ((prevMessage.type === 'assistant') ||
@@ -55,6 +57,7 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
       (prevMessage.type === 'tool') ||
       (prevMessage.type === 'error'));
   const messageRef = useRef<HTMLDivElement | null>(null);
+  const [retryApproved, setRetryApproved] = useState(false);
   const userCopyContent = String(message.content || '');
   const formattedMessageContent = useMemo(
     () => {
@@ -198,6 +201,19 @@ const MessageComponent = memo(({ message, prevMessage, createDiff, onFileOpen, s
           <div className="flex items-center gap-2 py-0.5">
             <span className={`inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full ${message.taskNotificationStatus === 'completed' ? 'bg-green-400 dark:bg-green-500' : 'bg-amber-400 dark:bg-amber-500'}`} />
             <span className="text-xs text-gray-500 dark:text-gray-400">{message.content}</span>
+            {message.autoReviewDenialId && onApproveAutoReviewDenial && !retryApproved && (
+              <button
+                type="button"
+                onClick={() => {
+                  // One approval per denial: Codex forgets it once the retry turn uses it.
+                  setRetryApproved(true);
+                  onApproveAutoReviewDenial(message.autoReviewDenialId!);
+                }}
+                className="shrink-0 rounded-md border border-amber-400/50 px-1.5 py-0.5 text-xs text-amber-700 transition-colors hover:bg-amber-400/10 dark:text-amber-300"
+              >
+                {t('autoReview.approveRetry', { defaultValue: 'Approve and retry' })}
+              </button>
+            )}
           </div>
         </div>
       ) : (

@@ -1,7 +1,7 @@
+import { resolveCodexExecutablePath } from '@/shared/index.js';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -317,6 +317,7 @@ test('a session detached by an edit reports no token usage of its own', { concur
         type: 'token_count',
         info: {
           total_token_usage: { input_tokens: 100_000, output_tokens: 25_000, total_tokens: 125_000 },
+          last_token_usage: { input_tokens: 100_000, output_tokens: 25_000, total_tokens: 125_000 },
           model_context_window: 200_000,
         },
       },
@@ -349,11 +350,10 @@ test('a session detached by an edit reports no token usage of its own', { concur
  * than a pointer at the original.
  */
 test('codex app-server forks a real thread at a turn', { concurrency: false }, async (t) => {
-  const require_ = createRequire(import.meta.url);
   try {
-    require_.resolve('@openai/codex/bin/codex.js');
+    resolveCodexExecutablePath();
   } catch {
-    t.skip('the Codex CLI package is not installed');
+    t.skip('a local Codex CLI is not installed');
     return;
   }
 

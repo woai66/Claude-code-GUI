@@ -224,3 +224,17 @@ describe('truncateAt', () => {
     );
   });
 });
+
+
+it('replaces native text, reasoning and tool snapshots in place while preserving row order', async () => {
+  const { result } = await loadedStore();
+  act(() => {
+    result.current.appendRealtime('session-1', { ...row('live', 'hello'), timestamp: '2026-01-01T01:00:00Z' });
+    result.current.appendRealtime('session-1', { ...row('reason', 'first thought'), kind: 'thinking', timestamp: '2026-01-01T01:00:01Z' });
+    result.current.appendRealtime('session-1', { ...row('live', 'hello world'), timestamp: '2026-01-01T01:00:02Z' });
+    result.current.appendRealtime('session-1', { ...row('reason', 'complete thought'), kind: 'thinking', timestamp: '2026-01-01T01:00:03Z' });
+  });
+  const rows = result.current.getMessages('session-1').filter((message) => message.id === 'live' || message.id === 'reason');
+  assert.deepEqual(rows.map((message) => [message.id, message.content]), [['live', 'hello world'], ['reason', 'complete thought']]);
+  assert.equal(rows[0].timestamp, '2026-01-01T01:00:00Z');
+});

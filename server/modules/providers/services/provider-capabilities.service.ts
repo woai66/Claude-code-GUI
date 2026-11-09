@@ -42,6 +42,11 @@ type ProviderCapabilities = {
    * Whether a session's transcript can be branched into an independent one.
    */
   supportsSessionForking: boolean;
+  /**
+   * Whether a message can be delivered into a running turn (chat.steer)
+   * instead of waiting for it to finish.
+   */
+  supportsSteering: boolean;
 };
 
 /**
@@ -66,6 +71,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     // `forkSession` copies a transcript prefix into a new session file.
     supportsMessageEditing: true,
     supportsSessionForking: true,
+    supportsSteering: false,
   },
   cursor: {
     provider: 'cursor',
@@ -80,10 +86,12 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     effortLevels: [],
     supportsMessageEditing: false,
     supportsSessionForking: false,
+    supportsSteering: false,
   },
   codex: {
     provider: 'codex',
-    permissionModes: ['default', 'acceptEdits', 'bypassPermissions'],
+    // `auto` maps to Codex's auto_review approvals reviewer ("Approve for me").
+    permissionModes: ['default', 'auto', 'acceptEdits', 'bypassPermissions'],
     defaultPermissionMode: 'default',
     supportsImages: true,
     supportsFiles: true,
@@ -98,6 +106,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     // which is how Codex's own IDE clients do it.
     supportsMessageEditing: true,
     supportsSessionForking: true,
+    supportsSteering: true,
   },
   opencode: {
     provider: 'opencode',
@@ -117,6 +126,7 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     effortLevels: ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'thinking'],
     supportsMessageEditing: false,
     supportsSessionForking: false,
+    supportsSteering: false,
   },
 };
 

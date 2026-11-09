@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import {
   mkdir,
+  open,
   readFile,
   readdir,
   realpath,
@@ -430,6 +431,29 @@ export function createNormalizedMessage(fields: NormalizedMessageInput): Normali
     sessionId: fields.sessionId || '',
     timestamp: fields.timestamp || new Date().toISOString(),
     provider: fields.provider,
+  };
+}
+
+/**
+ * Used by Codex live events, history and usage lookups to read the latest model request's context usage.
+ * Accepts native JSONL (snake_case) or app-server (camelCase) fields. Lifetime totals are deliberately
+ * excluded: summing repeated context across turns does not measure the current context window.
+ * Missing snapshots or capacities stay unknown rather than being replaced with model-name guesses.
+ */
+export function readCodexContextUsage(info: AnyRecord | null | undefined): {
+  used: number; total?: number; inputTokens: number; outputTokens: number;
+  breakdown: { input: number; output: number }; unsupported?: boolean; message?: string;
+} {
+  const last = info?.last ?? info?.last_token_usage;
+  const count = (value: unknown) => typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 0;
+  const inputTokens = count(last?.inputTokens ?? last?.input_tokens);
+  const outputTokens = count(last?.outputTokens ?? last?.output_tokens);
+  const capacity = count(info?.modelContextWindow ?? info?.model_context_window);
+  return {
+    used: count(last?.totalTokens ?? last?.total_tokens) || inputTokens + outputTokens,
+    ...(capacity > 0 ? { total: capacity } : {}), inputTokens, outputTokens,
+    breakdown: { input: inputTokens, output: outputTokens },
+    ...(!last ? { unsupported: true, message: 'Codex CLI has not reported current context usage.' } : {}),
   };
 }
 
@@ -1174,7 +1198,15 @@ export async function buildLookupMap(
         continue;
       }
 
-      const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      let parsed: Record<string, unknown>;
+      try {
+        parsed = JSON.parse(trimmed) as Record<string, unknown>;
+      } catch {
+        // A row can be half-written while the CLI is streaming into the file.
+        // Skip it rather than abandoning every later entry in the file.
+        continue;
+      }
+
       const key = parsed[keyField];
       const value = parsed[valueField];
 
@@ -1200,29 +1232,105 @@ export async function extractFirstValidJsonlData<T>(
   filePath: string,
   extractor: (parsedJson: unknown) => T | null | undefined
 ): Promise<T | null> {
-  try {
-    const fileStream = fs.createReadStream(filePath);
-    const lineReader = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
+  const fileStream = fs.createReadStream(filePath);
+  const lineReader = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
 
+  try {
     for await (const line of lineReader) {
       const trimmed = line.trim();
       if (!trimmed) {
         continue;
       }
 
-      const parsed = JSON.parse(trimmed);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(trimmed);
+      } catch {
+        // A row can be half-written while the CLI is streaming into the file.
+        // Skip it rather than giving up before a later valid row.
+        continue;
+      }
+
       const extracted = extractor(parsed);
       if (extracted) {
-        lineReader.close();
-        fileStream.close();
         return extracted;
       }
     }
   } catch {
     // Ignore malformed or missing artifacts so full scans keep progressing.
+  } finally {
+    // Close on every exit (match, no match, or stream error) so a malformed
+    // artifact cannot leak the file descriptor across repeated watcher scans.
+    lineReader.close();
+    fileStream.close();
   }
 
   return null;
+}
+
+/**
+ * Scans a JSONL file from its end and returns the first non-null value `pick`
+ * produces, so "latest settings" lookups never load a whole transcript.
+ *
+ * Lines are split on raw bytes before decoding, so a multi-byte character
+ * straddling a 64 KiB block boundary is never corrupted. `pick` receives each
+ * trimmed, non-empty line and must handle malformed JSON itself (a half-written
+ * last line is normal while a CLI is appending). A missing or unreadable file
+ * rejects, so callers decide whether that means "unknown" or an error.
+ *
+ * Used by the Codex models provider (latest model/effort) and the Codex
+ * sessions provider (latest permission mode).
+ */
+export async function findLastJsonlLine<T>(
+  filePath: string,
+  pick: (line: string) => T | null,
+): Promise<T | null> {
+  const handle = await open(filePath, 'r');
+  try {
+    let position = (await handle.stat()).size;
+    let remainder = Buffer.alloc(0);
+    const pickLine = (bytes: Buffer): T | null => {
+      const line = bytes.toString('utf8').trim();
+      return line ? pick(line) : null;
+    };
+    while (position > 0) {
+      const length = Math.min(position, 64 * 1024);
+      position -= length;
+      const block = Buffer.allocUnsafe(length);
+      const { bytesRead } = await handle.read(block, 0, length, position);
+      const data = Buffer.concat([block.subarray(0, bytesRead), remainder]);
+      let end = data.length;
+      for (let index = data.length - 1; index >= 0; index -= 1) {
+        if (data[index] !== 10) continue;
+        const picked = pickLine(data.subarray(index + 1, end));
+        if (picked !== null) return picked;
+        end = index;
+      }
+      remainder = data.subarray(0, end);
+    }
+    return pickLine(remainder);
+  } finally {
+    await handle.close();
+  }
+}
+
+// ---------------------------
+//----------------- CLAUDE TRANSCRIPT ROW UTILITIES ------------
+/**
+ * True for a Claude session JSONL row that holds a `message` without being a
+ * conversation turn.
+ *
+ * Only `user` and `assistant` rows are turns. The Claude CLI also logs the
+ * requests it sends to the API as `api-request-blob` rows, and each one holds a
+ * copy of a prompt, tool call or system block that is already recorded as its
+ * own turn. Those copies have no timestamp. A reader that recognizes a turn by
+ * `message.role` alone shows each copy a second time, stamped with the time the
+ * transcript was read. Use this check to skip such rows before reading
+ * `message`. A row with no `message` returns false, so callers keep their
+ * other records, such as `queue-operation`, `system` and `last-prompt`.
+ */
+export function isClaudeNonTurnMessageRow(row: AnyRecord): boolean {
+  return row.message != null && row.type !== 'user' && row.type !== 'assistant';
 }
 
 // ---------------------------

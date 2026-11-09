@@ -7,6 +7,8 @@ import { buildClaudeToolPermissionEntry, formatToolInputForDisplay } from '@/mod
 import { getClaudeSettings } from '@/modules/chat/utils/chatStorage';
 import { getPermissionPanel, registerPermissionPanel } from '@/modules/chat/tools/configs/permissionPanelRegistry';
 import { AskUserQuestionPanel } from '@/modules/chat/tools/InteractiveRenderers/AskUserQuestionPanel';
+import { McpElicitationPanel } from '@/modules/chat/tools/InteractiveRenderers/McpElicitationPanel';
+import { MCP_ELICITATION_TOOL_NAME } from '@/shared/constants';
 import {
   Confirmation,
   ConfirmationAction,
@@ -16,12 +18,13 @@ import {
 } from '@/modules/chat/composer/Confirmation';
 
 registerPermissionPanel('AskUserQuestion', AskUserQuestionPanel);
+registerPermissionPanel(MCP_ELICITATION_TOOL_NAME, McpElicitationPanel);
 
 type PermissionRequestsBannerProps = {
   pendingPermissionRequests: PendingPermissionRequest[];
   handlePermissionDecision: (
     requestIds: string | string[],
-    decision: { allow?: boolean; message?: string; rememberEntry?: string | null; updatedInput?: unknown },
+    decision: { allow?: boolean; message?: string; rememberEntry?: string | null; updatedInput?: unknown; scope?: 'session' },
   ) => void;
   handleGrantToolPermission: (suggestion: { entry: string; toolName: string }) => { success: boolean };
 };
@@ -60,7 +63,9 @@ export default function PermissionRequestsBanner({
         }
 
         const rawInput = formatToolInputForDisplay(request.input);
-        const permissionEntry = buildClaudeToolPermissionEntry(request.toolName, rawInput);
+        const nativeContext = request.context as { provider?: string; allowOnce?: boolean; allowSession?: boolean } | undefined;
+        const isCodex = nativeContext?.provider === 'codex';
+        const permissionEntry = isCodex ? null : buildClaudeToolPermissionEntry(request.toolName, rawInput);
         const settings = getClaudeSettings();
         const alreadyAllowed = permissionEntry ? settings.allowedTools.includes(permissionEntry) : false;
         const rememberLabel = alreadyAllowed ? 'Allow (saved)' : 'Allow & remember';
@@ -110,7 +115,7 @@ export default function PermissionRequestsBanner({
               >
                 Deny
               </ConfirmationAction>
-              <ConfirmationAction
+              {!isCodex && <ConfirmationAction
                 variant="outline"
                 onClick={() => {
                   if (permissionEntry && !alreadyAllowed) {
@@ -121,9 +126,20 @@ export default function PermissionRequestsBanner({
                 disabled={!permissionEntry}
               >
                 {rememberLabel}
-              </ConfirmationAction>
+              </ConfirmationAction>}
+              {isCodex && nativeContext?.allowSession && (
+                // Codex keeps this grant in the run's own process, so it ends with the run.
+                <ConfirmationAction
+                  variant="outline"
+                  title={t('chat:codexApproval.allowForTurnHint', { defaultValue: 'Codex will not ask again for the same action until this turn ends.' })}
+                  onClick={() => handlePermissionDecision(request.requestId, { allow: true, scope: 'session' })}
+                >
+                  {t('chat:codexApproval.allowForTurn', { defaultValue: 'Allow for this turn' })}
+                </ConfirmationAction>
+              )}
               <ConfirmationAction
                 variant="default"
+                disabled={nativeContext?.allowOnce === false}
                 onClick={() => handlePermissionDecision(request.requestId, { allow: true })}
               >
                 Allow once

@@ -103,6 +103,59 @@ test('new Codex chats remember speed while existing sessions retain their own se
   assert.equal(view.result.current.currentProviderSpeed, 'standard');
 });
 
+test('Codex native model and effort survive a stale catalog and refresh after returning from the CLI', async () => {
+  localStorage.setItem('codex-model', 'new-chat-model');
+  localStorage.setItem('codex-effort', 'low');
+  const { api } = await import('@/shared/api');
+  let selection = { model: 'native-model', effort: 'future-effort', source: 'provider' };
+  vi.spyOn(api.providers, 'sessionActiveModel').mockImplementation(async () => okJson({
+    success: true, data: selection,
+  }) as unknown as Response);
+  const { result } = await renderProviderStateForSession({ id: 'external-codex', __provider: 'codex' });
+  await waitFor(() => assert.equal(result.current.currentProviderModel, 'native-model'));
+  assert.equal(result.current.currentProviderEffort, 'future-effort');
+  assert.ok(result.current.currentProviderModelOptions.some((option) => option.value === 'native-model'));
+  assert.ok(result.current.currentProviderEffortOptions.some((option) => option.value === 'future-effort'));
+  selection = { model: 'changed-in-cli', effort: 'ultra', source: 'provider' };
+  act(() => window.dispatchEvent(new Event('focus')));
+  await waitFor(() => assert.equal(result.current.currentProviderModel, 'changed-in-cli'));
+  assert.equal(result.current.currentProviderEffort, 'ultra');
+});
+
+test('Codex never substitutes another chat defaults while native settings are loading or unavailable', async () => {
+  localStorage.setItem('codex-model', 'unrelated-default');
+  localStorage.setItem('codex-effort', 'max');
+  const { result } = await renderProviderStateForSession({ id: 'missing-codex', __provider: 'codex' });
+  await waitFor(() => assert.equal(result.current.providerModelsLoading, false));
+  assert.equal(result.current.currentProviderModel, '');
+  assert.equal(result.current.currentProviderEffort, 'default');
+});
+
+test('a resumed send waits for an effort click to persist and focus does not overwrite the pending choice', async () => {
+  const { api } = await import('@/shared/api');
+  vi.spyOn(api.providers, 'sessionActiveModel').mockImplementation(async () => okJson({
+    success: true, data: { model: 'native-model', effort: 'low', source: 'provider' },
+  }) as unknown as Response);
+  let finish: (value: Response) => void = () => {};
+  vi.spyOn(api.providers, 'setSessionActiveEffort').mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  const { result } = await renderProviderStateForSession({ id: 'persisting-codex', __provider: 'codex' });
+  await waitFor(() => assert.equal(result.current.currentProviderModel, 'native-model'));
+  let selection: Promise<unknown>;
+  act(() => { selection = result.current.selectProviderEffort('codex', 'max', 'persisting-codex'); });
+  let sendReady = false;
+  const ready = result.current.waitForSessionSelection('codex', 'persisting-codex').then(() => { sendReady = true; });
+  act(() => window.dispatchEvent(new Event('focus')));
+  assert.equal(result.current.currentProviderEffort, 'max');
+  assert.equal(sendReady, false);
+  await act(async () => {
+    finish(await okJson({ success: true, data: { effort: 'max' } }) as Response);
+    await selection!;
+    await ready;
+  });
+  assert.equal(sendReady, true);
+  assert.equal(result.current.currentProviderEffort, 'max');
+});
+
 test('a late session read restores model without overwriting a newer speed click', async () => {
   const { api } = await import('@/shared/api');
   let finish: (value: Response) => void = () => {};

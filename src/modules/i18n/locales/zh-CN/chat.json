@@ -94,11 +94,42 @@
   "usageLimit": {
     "resetAt": "Claude 使用限制已达到。您的限制将在 **{{time}} {{timezone}}** - {{date}} 重置"
   },
+  "mcpElicitation": {
+    "asks": "{{server}} 需要你提供信息",
+    "submit": "提交",
+    "decline": "拒绝",
+    "openLink": "打开链接",
+    "unsafeUrl": "这里只能打开 http 和 https 链接。",
+    "optional": "可选",
+    "choose": "请选择…",
+    "required": "必填",
+    "notANumber": "请输入数字",
+    "notAnInteger": "请输入整数",
+    "tooSmall": "不能小于 {{value}}",
+    "tooLarge": "不能大于 {{value}}",
+    "tooShort": "至少 {{count}} 个字符",
+    "tooLong": "最多 {{count}} 个字符",
+    "tooFew": "至少选择 {{count}} 项",
+    "tooMany": "最多选择 {{count}} 项",
+    "notAnEmail": "请输入邮箱地址",
+    "notAUri": "请输入完整地址，例如 https://example.com",
+    "notADate": "请输入日期",
+    "notADateTime": "请输入日期和时间",
+    "notTheFormat": "不是有效的 {{format}}"
+  },
+  "autoReview": {
+    "approveRetry": "批准并重试",
+    "retryMessage": "我已批准刚才被自动审核拒绝的操作，请重试。"
+  },
+  "codexApproval": {
+    "allowForTurn": "本轮内允许",
+    "allowForTurnHint": "这一轮结束前，Codex 对同样的操作不再询问。"
+  },
   "codex": {
     "permissionMode": "权限模式",
     "modes": {
       "default": "默认模式",
-      "auto": "Auto Mode",
+      "auto": "自动审批",
       "acceptEdits": "编辑模式",
       "bypassPermissions": "无限制模式",
       "plan": "计划模式",
@@ -106,13 +137,18 @@
     },
     "descriptions": {
       "default": "只有受信任的命令（ls、cat、grep、git status 等）自动运行。其他命令将被跳过。可以写入工作区。",
-      "auto": "A model classifier decides per tool call whether to approve or deny. Hands-off, but safer than Bypass — denials still happen.",
+      "auto": "命令在工作区沙箱内运行；需要越权的操作交给 Codex 自动审核，安全的代为批准，判定有风险的会被拒绝。",
       "acceptEdits": "工作区内的所有命令自动运行。完全自动模式，具有沙盒执行功能。",
       "bypassPermissions": "完全的系统访问，无限制。所有命令自动运行，具有完整的磁盘和网络访问权限。请谨慎使用。",
       "plan": "计划模式 - 不执行任何命令",
       "dontAsk": "不请求权限；未预先允许的工具调用会被拒绝。"
     },
     "technicalDetails": "技术细节"
+  },
+  "permissionOverrides": {
+    "codex": {
+      "default": "命令在工作区沙箱内运行；需要越权（如联网、写工作区外的文件）时会先请你批准。"
+    }
   },
   "claude": {
     "modes": {
@@ -160,11 +196,12 @@
     "scrollToBottom": "滚动到底部",
     "queue": {
       "sendNext": "排队发送下一条消息",
-      "update": "更新排队消息",
+      "update": "追加到排队消息",
       "label": "已排队",
       "willSend": "将在当前完成后发送",
       "edit": "编辑排队消息",
-      "delete": "删除排队消息"
+      "delete": "删除排队消息",
+      "steer": "立即插入当前回合"
     }
   },
   "providerSelection": {
@@ -281,6 +318,8 @@
     "cliDefault": "CLI 默认",
     "followCli": "跟随 CLI 设置",
     "fastUsage": "开启后消耗更多额度",
+    "effortDefault": "默认",
+    "permissionHeading": "{{provider}} 的操作如何审批？",
     "editing": {
       "title": "正在替换先前的消息",
       "filesNotReverted": "已修改的文件不会被还原",

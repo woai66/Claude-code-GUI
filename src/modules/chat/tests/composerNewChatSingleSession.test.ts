@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, test, vi } from 'vitest';
 
 import '@/modules/i18n';
@@ -47,20 +47,24 @@ const releaseCreates = async (status = 201) => {
 const createRequests = (fetchMock: ReturnType<typeof vi.fn>) => fetchMock.mock.calls
   .filter(([url, init]) => String(url) === '/api/providers/sessions' && (init as RequestInit | undefined)?.method === 'POST');
 
-const renderComposer = (initialSession: ProjectSession | null) => {
-  const sent: Array<{ type: string; sessionId?: string; content?: string }> = [];
+const renderComposer = (
+  initialSession: ProjectSession | null,
+  waitForSessionSelection?: Parameters<typeof useChatComposerState>[0]['waitForSessionSelection'],
+) => {
+  const sent: Array<{ type: string; sessionId?: string; content?: string; options?: Record<string, unknown> }> = [];
   const established: string[] = [];
   const view = renderHook(({ session }: { session: ProjectSession | null }) =>
     useChatComposerState({
       selectedProject: PROJECT,
       selectedSession: session,
       currentSessionId: session?.id ?? null,
-      provider: 'claude',
+      provider: session?.__provider ?? 'claude',
       permissionMode: 'default',
       cyclePermissionMode: () => undefined,
       resolvePermissionModeForProvider: () => 'default' as PermissionMode,
       currentProviderModel: 'test-model',
       currentProviderEffort: 'medium',
+      waitForSessionSelection,
       isLoading: false,
       canAbortSession: false,
       tokenBudget: null,
@@ -76,6 +80,35 @@ const renderComposer = (initialSession: ProjectSession | null) => {
 };
 
 const renderNewChat = () => renderComposer(null);
+
+test('a resumed Codex send waits for parameter persistence and a second click does not duplicate it', async () => {
+  let finish: () => void = () => {};
+  const persisted = new Promise<void>((resolve) => { finish = resolve; });
+  const wait = vi.fn(() => persisted);
+  const { view, chatSends } = renderComposer({ id: 'codex-native', __provider: 'codex' }, wait);
+  await act(async () => { view.result.current.setInput('continue'); });
+  await act(async () => {
+    void view.result.current.handleSubmit({ preventDefault: () => undefined } as never);
+    void view.result.current.handleSubmit({ preventDefault: () => undefined } as never);
+  });
+  assert.equal(chatSends().length, 0);
+  assert.equal(view.result.current.input, 'continue');
+  await act(async () => { finish(); await persisted; });
+  assert.equal(wait.mock.calls.length, 1);
+  assert.equal(chatSends().length, 1);
+  assert.equal(chatSends()[0].options?.inheritSessionSettings, true);
+});
+
+test('a failed parameter save preserves the Codex draft and permits retry', async () => {
+  const wait = vi.fn().mockRejectedValueOnce(new Error('save failed')).mockResolvedValue(undefined);
+  const { view, chatSends } = renderComposer({ id: 'codex-native', __provider: 'codex' }, wait);
+  await act(async () => { view.result.current.setInput('continue'); });
+  await act(async () => { await view.result.current.handleSubmit({ preventDefault: () => undefined } as never); });
+  assert.equal(chatSends().length, 0);
+  assert.equal(view.result.current.input, 'continue');
+  await act(async () => { await view.result.current.handleSubmit({ preventDefault: () => undefined } as never); });
+  assert.equal(chatSends().length, 1);
+});
 
 let fetchMock: ReturnType<typeof vi.fn>;
 let pendingUploads: PendingCreate[] = [];
@@ -197,4 +230,19 @@ test('a pending new chat does not hold up a submit in another session', async ()
     [['session-other', 'elsewhere']],
   );
   await releaseCreates();
+});
+
+
+test('Codex compact typed or selected from the menu sends one native action without command expansion', async () => {
+  const { view, chatSends } = renderComposer({ id: 'codex-native', __provider: 'codex' });
+  await waitFor(() => assert.ok(view.result.current.filteredCommands.some((command) => command.name === '/compact')));
+  await act(async () => { view.result.current.setInput('/compact'); });
+  await act(async () => { await view.result.current.handleSubmit({ preventDefault: () => undefined } as never); });
+  assert.equal(chatSends().length, 1);
+  assert.equal(chatSends()[0].content, '/compact');
+  const compact = view.result.current.filteredCommands.find((command) => command.name === '/compact')!;
+  await act(async () => { view.result.current.handleCommandSelect(compact, 0, false); });
+  await waitFor(() => assert.equal(chatSends().length, 2));
+  assert.equal(chatSends()[1].content, '/compact');
+  assert.ok(!fetchMock.mock.calls.some(([url, init]) => String(url) === '/api/commands/execute' && (init as RequestInit)?.method === 'POST'));
 });

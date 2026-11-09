@@ -93,11 +93,42 @@
   "usageLimit": {
     "resetAt": "Claude 使用限制已達到。您的限制將在 **{{time}} {{timezone}}** - {{date}} 重置"
   },
+  "mcpElicitation": {
+    "asks": "{{server}} 需要你提供資訊",
+    "submit": "送出",
+    "decline": "拒絕",
+    "openLink": "開啟連結",
+    "unsafeUrl": "這裡只能開啟 http 和 https 連結。",
+    "optional": "選填",
+    "choose": "請選擇…",
+    "required": "必填",
+    "notANumber": "請輸入數字",
+    "notAnInteger": "請輸入整數",
+    "tooSmall": "不能小於 {{value}}",
+    "tooLarge": "不能大於 {{value}}",
+    "tooShort": "至少 {{count}} 個字元",
+    "tooLong": "最多 {{count}} 個字元",
+    "tooFew": "至少選擇 {{count}} 項",
+    "tooMany": "最多選擇 {{count}} 項",
+    "notAnEmail": "請輸入電子郵件地址",
+    "notAUri": "請輸入完整網址，例如 https://example.com",
+    "notADate": "請輸入日期",
+    "notADateTime": "請輸入日期和時間",
+    "notTheFormat": "不是有效的 {{format}}"
+  },
+  "autoReview": {
+    "approveRetry": "核准並重試",
+    "retryMessage": "我已核准剛才被自動審核拒絕的操作，請重試。"
+  },
+  "codexApproval": {
+    "allowForTurn": "本輪內允許",
+    "allowForTurnHint": "這一輪結束前，Codex 對同樣的操作不再詢問。"
+  },
   "codex": {
     "permissionMode": "權限模式",
     "modes": {
       "default": "預設模式",
-      "auto": "自動模式",
+      "auto": "自動審批",
       "acceptEdits": "編輯模式",
       "bypassPermissions": "無限制模式",
       "plan": "計畫模式",
@@ -105,13 +136,18 @@
     },
     "descriptions": {
       "default": "只有受信任的指令（ls、cat、grep、git status 等）自動執行。其他指令將被略過。可以寫入工作區。",
-      "auto": "由模型分類器針對每次工具呼叫決定核准或拒絕。免手動操作，但比 Bypass 安全——仍可能發生拒絕。",
+      "auto": "指令在工作區沙箱內執行；需要越權的操作交給 Codex 自動審核，安全的代為核准，判定有風險的會被拒絕。",
       "acceptEdits": "工作區內的所有指令自動執行。完全自動模式，具有沙箱執行功能。",
       "bypassPermissions": "完全的系統存取，無限制。所有指令自動執行，具有完整的磁碟和網路存取權限。請謹慎使用。",
       "plan": "計畫模式 - 不執行任何指令",
       "dontAsk": "不請求權限；未預先允許的工具呼叫會被拒絕。"
     },
     "technicalDetails": "技術細節"
+  },
+  "permissionOverrides": {
+    "codex": {
+      "default": "指令在工作區沙箱內執行；需要越權（如連網、寫入工作區外的檔案）時會先請你核准。"
+    }
   },
   "claude": {
     "modes": {

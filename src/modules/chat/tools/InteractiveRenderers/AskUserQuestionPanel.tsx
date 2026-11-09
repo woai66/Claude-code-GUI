@@ -85,7 +85,7 @@ export const AskUserQuestionPanel: React.FC<PermissionPanelProps> = ({
       const isOther = otherActive.get(idx) || false;
       const otherText = (otherTexts.get(idx) || '').trim();
       if (isOther && otherText) selected.push(otherText);
-      if (selected.length > 0) answers[q.question] = selected.join(', ');
+      if (selected.length > 0) answers[q.id ?? q.question] = selected.join(', ');
     });
     return answers;
   }, [questions, selections, otherActive, otherTexts]);
@@ -117,7 +117,7 @@ export const AskUserQuestionPanel: React.FC<PermissionPanelProps> = ({
     }
 
     // 0 for "Other"
-    if (e.key === '0') {
+    if (e.key === '0' && q.allowOther !== false) {
       e.preventDefault();
       toggleOther(currentStep, multi);
       return;
@@ -281,7 +281,7 @@ export const AskUserQuestionPanel: React.FC<PermissionPanelProps> = ({
             })}
 
             {/* "Other" option */}
-            <button
+            {q.allowOther !== false && <button
               type="button"
               onClick={() => toggleOther(currentStep, multi)}
               className={`group flex w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-150 ${
@@ -309,7 +309,7 @@ export const AskUserQuestionPanel: React.FC<PermissionPanelProps> = ({
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                 </svg>
               )}
-            </button>
+            </button>}
 
             {/* Other text input — inline */}
             {isOtherOn && (
@@ -317,7 +317,7 @@ export const AskUserQuestionPanel: React.FC<PermissionPanelProps> = ({
                 <div className="relative">
                   <input
                     ref={otherInputRef}
-                    type="text"
+                    type={q.isSecret ? 'password' : 'text'}
                     value={otherTexts.get(currentStep) || ''}
                     onChange={(e) => setOtherText(currentStep, e.target.value)}
                     onKeyDown={(e) => {

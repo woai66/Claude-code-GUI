@@ -37,6 +37,15 @@ export interface IProviderRuntime {
     context: ProviderRuntimeContext,
   ): Promise<unknown>;
   abort(sessionId: string): boolean | Promise<boolean>;
+  /**
+   * Delivers a user message into the session's running turn instead of
+   * starting a new one; the model takes it in without the run stopping.
+   * `options` carries the verified `images`/`files` descriptors. Resolves
+   * false when the session has no turn that can still take it; the caller then
+   * keeps the message for the next turn. Only a runtime whose CLI accepts input
+   * mid-turn implements this.
+   */
+  steer?(sessionId: string, command: string, options: AnyRecord): Promise<boolean>;
   permissions?: ProviderRuntimePermissionGateway;
   /**
    * Sessions with background tasks still outstanding, whether or not their

@@ -44,6 +44,8 @@ type UseChatRealtimeHandlersArgs = {
   onWebSocketReconnect?: () => void;
   requestLatestMessages: (sessionId: string, allowNetwork?: boolean) => Promise<void>;
   sessionStore: SessionStore;
+  /** Reports whether a message sent into a running turn (chat.steer) was taken in or refused. */
+  onSteerOutcome?: (sessionId: string, messageId: string, outcome: 'accepted' | 'refused') => void;
 };
 
 /* ------------------------------------------------------------------ */
@@ -79,6 +81,7 @@ export function useChatRealtimeHandlers({
   onWebSocketReconnect,
   requestLatestMessages,
   sessionStore,
+  onSteerOutcome,
 }: UseChatRealtimeHandlersArgs) {
   // Session switches can send `chat.subscribe` before this effect has a chance
   // to rebind the websocket listener. Read the visible session id from a ref
@@ -169,7 +172,21 @@ export function useChatRealtimeHandlers({
           return;
         }
 
+        case 'chat_steer_accepted': {
+          // Only the tab that sent the message gets this; it is not a transcript row.
+          if (sid && typeof msg.messageId === 'string') {
+            onSteerOutcome?.(sid, msg.messageId, 'accepted');
+          }
+          return;
+        }
+
         case 'protocol_error': {
+          // The turn had already ended: the run is not failing, so nothing is shown
+          // or idled; the composer keeps the message queued for the next turn.
+          if (sid && msg.code === 'STEER_UNAVAILABLE' && typeof msg.messageId === 'string') {
+            onSteerOutcome?.(sid, msg.messageId, 'refused');
+            return;
+          }
           console.error('[Chat] Protocol error:', msg.code, msg.error);
           if (sid) {
             // Surface the failure in the conversation and stop the spinner —
@@ -418,5 +435,6 @@ export function useChatRealtimeHandlers({
     onWebSocketReconnect,
     requestLatestMessages,
     sessionStore,
+    onSteerOutcome,
   ]);
 }

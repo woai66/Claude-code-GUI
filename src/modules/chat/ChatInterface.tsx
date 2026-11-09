@@ -124,9 +124,11 @@ function ChatInterface({
     providerModelActions,
     selectProviderModel,
     selectProviderEffort,
+    waitForSessionSelection,
     resolvePermissionModeForProvider,
     supportsMessageEditing,
     supportsSessionForking,
+    supportsSteering,
   } = useChatProviderState({
     selectedSession,
     selectedProject,
@@ -238,6 +240,9 @@ function ChatInterface({
     showCostModal,
     editingAnchorId,
     beginEditMessage,
+    approveAutoReviewDenial,
+    steerQueuedDraft,
+    handleSteerOutcome,
     cancelEditMessage,
   } = useChatComposerState({
     selectedProject,
@@ -249,6 +254,7 @@ function ChatInterface({
     currentProviderModel,
     currentProviderEffort,
     currentProviderSpeed,
+    waitForSessionSelection,
     isLoading: isProcessing,
     processingSessions,
     canAbortSession,
@@ -303,6 +309,7 @@ function ChatInterface({
     onWebSocketReconnect: handleWebSocketReconnect,
     requestLatestMessages,
     sessionStore,
+    onSteerOutcome: handleSteerOutcome,
   });
 
   // Lets other modules (the quick settings Commands tab) hand text to the
@@ -524,6 +531,7 @@ function ChatInterface({
               // a live stream writing into it is not recoverable.
               onEditMessage={supportsMessageEditing && !isProcessing ? beginEditMessage : undefined}
               onForkFromMessage={supportsSessionForking ? handleForkFromMessage : undefined}
+              onApproveAutoReviewDenial={provider === 'codex' ? approveAutoReviewDenial : undefined}
               onLoadFullTranscript={loadFullTranscript}
             />
           </TranscriptSessionContext.Provider>
@@ -581,6 +589,7 @@ function ChatInterface({
           queuedDraft={queuedDraft}
           onEditQueuedDraft={editQueuedDraft}
           onDeleteQueuedDraft={deleteQueuedDraft}
+          onSteerQueuedDraft={supportsSteering && isProcessing ? steerQueuedDraft : undefined}
           attachedFiles={attachedFiles}
           onRemoveAttachment={(index) =>
             setAttachedFiles((previous) =>

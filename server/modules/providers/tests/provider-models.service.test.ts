@@ -110,22 +110,24 @@ const createTestService = (options: {
   catalog?: ReturnType<typeof createCatalogStore>;
   sessions?: ReturnType<typeof createSessionStore>;
   activeModel?: (provider: LLMProvider, sessionId?: string) => string;
+  nativeSelection?: () => ProviderCurrentActiveModel;
   onCatalogRead?: (provider: LLMProvider) => void;
 } = {}) => {
   const catalog = options.catalog ?? createCatalogStore();
   const sessions = options.sessions ?? createSessionStore();
+  const preferences = new Map<string, string>();
   const service = createProviderModelsService({
     catalog,
     sessions,
+    modelCache: { get: (key) => preferences.get(key) ?? null, set: (key, value) => { preferences.set(key, value); } },
     resolveProvider: (provider) => ({
       models: {
         getSupportedModels: async () => {
           options.onCatalogRead?.(provider);
           return createModels(`${provider}-default`);
         },
-        getCurrentActiveModel: async (sessionId) => createCurrentActiveModel(
-          options.activeModel?.(provider, sessionId) ?? `${provider}-default`,
-        ),
+        getCurrentActiveModel: async (sessionId) => options.nativeSelection?.() ?? createCurrentActiveModel(
+          options.activeModel?.(provider, sessionId) ?? (provider === 'codex' && sessionId ? '' : `${provider}-default`)),
       },
     }),
   });
@@ -559,4 +561,36 @@ test('resolveResumeModel never consults provider-global state', async () => {
 
   assert.equal(model, 'gpt-5.5');
   assert.equal(providerLookups, 0);
+});
+
+test('Codex native state wins over stale GUI cache even if it equals the catalog default', async () => {
+  const { service } = createTestService({
+    sessions: createSessionStore({ external: 'old-gui-model' }, { external: 'low' }),
+    nativeSelection: () => ({ model: 'codex-default', effort: 'ultra', source: 'session', revision: 'turn-1' }),
+  });
+  const selection = await service.resolveSessionModel('codex', { sessionId: 'external', requestedModel: 'new-chat' });
+  assert.equal(selection.model, 'codex-default');
+  assert.equal(selection.effort, 'ultra');
+  assert.equal(selection.source, 'provider');
+  assert.equal(selection.pending, false);
+});
+
+test('Codex pending choices survive reopening until a newer native turn supersedes them', async () => {
+  let native: ProviderCurrentActiveModel = { model: 'cli-model', effort: 'high', revision: 'turn-1' };
+  const { service } = createTestService({
+    sessions: createSessionStore({ external: 'old-gui-model' }), nativeSelection: () => native,
+  });
+  await service.selectSessionModel('codex', 'external', 'next-model');
+  await service.selectSessionEffort('codex', 'external', 'max');
+  const pending = await service.resolveSessionModel('codex', { sessionId: 'external' });
+  assert.equal(pending.model, 'next-model');
+  assert.equal(pending.effort, 'max');
+  assert.equal(pending.pending, true);
+  assert.deepEqual(pending.lastUsed, { model: 'cli-model', effort: 'high' });
+  native = { model: 'updated-in-cli', effort: 'ultra', revision: 'turn-2' };
+  const refreshed = await service.resolveSessionModel('codex', { sessionId: 'external' });
+  assert.equal(refreshed.model, 'updated-in-cli');
+  assert.equal(refreshed.effort, 'ultra');
+  assert.equal(refreshed.pending, false);
+  assert.equal(await service.resolveResumeModel('codex', 'external'), 'updated-in-cli');
 });

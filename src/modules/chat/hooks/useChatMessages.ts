@@ -524,6 +524,7 @@ export function normalizedToChatMessages(messages: NormalizedMessage[]): ChatMes
           timestamp: msg.timestamp,
           isTaskNotification: true,
           taskNotificationStatus: msg.status || 'completed',
+          ...(typeof msg.autoReviewDenialId === 'string' ? { autoReviewDenialId: msg.autoReviewDenialId } : {}),
           ...sharedMetadata,
         });
         break;

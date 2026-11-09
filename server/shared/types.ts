@@ -194,17 +194,21 @@ export type CustomProviderModelInput = {
  */
 export type ProviderCurrentActiveModel = {
   model: string;
+  /** Native reasoning setting; null means the CLI did not record an override. */
+  effort?: string | null;
+  /** Distinguishes a real session observation from a provider-wide config default. */
+  source?: 'session' | 'config';
+  /** Opaque revision of the native turn context, used to expire pending GUI selections. */
+  revision?: string;
 };
 
 /**
  * Where a resolved session model came from.
  *
- * `session` means the app has recorded a model for this session (the user
- * picked one, or the session has been sent on at least once) and that value is
- * authoritative. `provider` means the session predates any app-recorded model
- * and the value was read back from the provider's own session state — the case
- * for sessions started directly in a provider CLI. `default` means neither was
- * available and the catalog default is standing in.
+ * `session` means an explicit pending GUI choice or a cached session value.
+ * `provider` means the value was read from native session state. Codex native
+ * state supersedes its GUI cache when no pending choice exists. `default`
+ * means no recorded value is available.
  *
  * Routes surface this so the frontend can tell a real selection apart from a
  * placeholder without re-deriving the precedence chain.
@@ -226,6 +230,10 @@ export type ProviderSessionModel = {
   /** NULL means this session has not recorded an effort choice yet. */
   effort: string | null;
   source: ProviderSessionModelSource;
+  /** True only for an explicit GUI choice awaiting its first native turn. */
+  pending?: boolean;
+  /** Last observed native settings, kept distinct from a pending GUI override. */
+  lastUsed?: { model: string; effort: string | null };
 };
 
 /**
@@ -644,6 +652,8 @@ export type ProviderPermissionDecision = {
   updatedInput?: unknown;
   message?: string;
   rememberEntry?: unknown;
+  /** Codex only: approve the same action for the rest of the run, where the CLI offers that. */
+  scope?: 'session';
 };
 
 export type ProviderRuntimePermissionGateway = {

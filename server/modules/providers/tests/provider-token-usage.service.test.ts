@@ -81,7 +81,7 @@ test('Codex token usage uses the latest token_count snapshot', async () => {
         payload: {
           type: 'token_count',
           info: {
-            total_token_usage: { input_tokens: 10, output_tokens: 4, total_tokens: 14 },
+            last_token_usage: { input_tokens: 10, output_tokens: 4, total_tokens: 14 },
             model_context_window: 100_000,
           },
         },
@@ -91,7 +91,8 @@ test('Codex token usage uses the latest token_count snapshot', async () => {
         payload: {
           type: 'token_count',
           info: {
-            total_token_usage: { input_tokens: 40, output_tokens: 9, total_tokens: 49 },
+            total_token_usage: { input_tokens: 90000, output_tokens: 9000, total_tokens: 99000 },
+            last_token_usage: { input_tokens: 40, output_tokens: 9, total_tokens: 49 },
             model_context_window: 250_000,
           },
         },
@@ -321,7 +322,7 @@ test('Codex token usage reads only the tail of a large rollout', async () => {
         payload: {
           type: 'token_count',
           info: {
-            total_token_usage: { input_tokens: 21, output_tokens: 8, total_tokens: 29 },
+            last_token_usage: { input_tokens: 21, output_tokens: 8, total_tokens: 29 },
             model_context_window: 150_000,
           },
         },
@@ -355,7 +356,7 @@ test('Codex token usage falls back to the whole file when the tail has no token_
         type: 'event_msg',
         payload: {
           type: 'token_count',
-          info: { total_token_usage: { input_tokens: 5, output_tokens: 1, total_tokens: 6 } },
+          info: { last_token_usage: { input_tokens: 5, output_tokens: 1, total_tokens: 6 } },
         },
       }),
       paddingLines(5 * 1024 * 1024),
@@ -371,3 +372,21 @@ test('Codex token usage falls back to the whole file when the tail has no token_
     await rm(tempDirectory, { recursive: true, force: true });
   }
 });
+
+
+for (const info of [
+  { last_token_usage: { input_tokens: 5, output_tokens: 1, total_tokens: 6 } },
+  { total_token_usage: { input_tokens: 99000, output_tokens: 1000, total_tokens: 100000 } },
+]) {
+  test(`Codex never guesses capacity or uses lifetime totals (${!!('last_token_usage' in info)})`, async () => {
+    const service = createProviderTokenUsageService({
+      getSessionById: () => createSessionRow({ provider: 'codex', jsonl_path: 'fixture.jsonl' }),
+      fileExists: () => true,
+      readTextFileTail: async () => ({ isComplete: true, content: JSON.stringify({ type: 'event_msg', payload: { type: 'token_count', info } }) }),
+    });
+    const usage = await service.getSessionTokenUsage('app-session');
+    assert.equal(usage.total, undefined);
+    assert.equal(usage.used, 'last_token_usage' in info ? 6 : 0);
+    assert.equal(usage.unsupported, 'last_token_usage' in info ? undefined : true);
+  });
+}

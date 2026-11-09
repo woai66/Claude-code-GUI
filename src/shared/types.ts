@@ -440,6 +440,8 @@ export type ChatMessage = {
   /** Set on the row that stands for a background task's completion report, with the status it reported. */
   isTaskNotification?: boolean;
   taskNotificationStatus?: string;
+  /** A Codex auto-review denial the person can still approve for one retry. */
+  autoReviewDenialId?: string;
   /** Stored memory this reply drew on, shown as a footnote beneath it. */
   memoryCitations?: MemoryCitation[];
   /** Lifecycle the provider reported for this tool call, when it reports one; otherwise the status is inferred from whether a result has arrived. */
@@ -483,6 +485,10 @@ export type PendingPermissionRequest = {
 
 /** One question asked by the AskUserQuestion tool, with its answer options and whether more than one option may be selected. */
 export type Question = {
+  /** Native question identity; Claude tools without one use the question text. */
+  id?: string;
+  isSecret?: boolean;
+  allowOther?: boolean;
   question: string;
   header?: string;
   options: QuestionOption[];
@@ -607,6 +613,8 @@ export type NormalizedMessage = {
   newSessionId?: string;
   status?: string;
   summary?: string;
+  /** On a Codex `task_notification`: the auto-review denial its retry button approves. */
+  autoReviewDenialId?: string;
   exitCode?: number;
   actualSessionId?: string;
   parentToolUseId?: string;
@@ -1560,6 +1568,8 @@ export type SessionRowActions = {
 
 export type SidebarProjectListProps = SessionRowActions & {
   projects: Project[];
+  /** Count of locally hidden projects, used to explain an otherwise empty project list. */
+  hiddenProjectsCount?: number;
   filteredProjects: Project[];
   selectedProject: Project | null;
   selectedSession: ProjectSession | null;
@@ -1582,6 +1592,8 @@ export type SidebarProjectListProps = SessionRowActions & {
   onCancelEditingProject: () => void;
   onSaveProjectName: (projectId: string, nextName: string) => void;
   onDeleteProject: (project: Project) => void;
+  /** Hides a project from navigation without archiving or deleting its sessions. */
+  onHideProject?: (project: Project) => void;
   onSessionSelect: (session: SessionWithProvider, projectName: string) => void;
   onNewSession: (project: Project) => void;
   /** The project whose session list is in bulk-selection mode and the rows ticked in it, or null while no list is selecting. */

@@ -148,6 +148,13 @@ export const MCP_SUPPORTED_TRANSPORTS: Record<McpProvider, McpTransport[]> = {
   opencode: ['stdio', 'http'],
 };
 
+/**
+ * Tool name the backend gives an MCP server's request for input ("elicitation") when it
+ * forwards it as a permission request. The permission banner draws it with the elicitation
+ * panel, and the composer steps aside while one is open, as it does for a question.
+ */
+export const MCP_ELICITATION_TOOL_NAME = 'McpElicitation';
+
 /** Transports offered when configuring a global (provider-agnostic) MCP server. */
 export const MCP_GLOBAL_SUPPORTED_TRANSPORTS: McpTransport[] = ['stdio', 'http'];
 

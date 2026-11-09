@@ -23,7 +23,7 @@ type ParsedSession = {
  */
 export class CodexSessionSynchronizer implements IProviderSessionSynchronizer {
   private readonly provider = 'codex' as const;
-  private readonly codexHome = path.join(os.homedir(), '.codex');
+  private get codexHome() { return process.env.CODEX_HOME || path.join(os.homedir(), '.codex'); }
 
   /**
    * Scans ~/.codex/sessions and upserts discovered sessions into DB.

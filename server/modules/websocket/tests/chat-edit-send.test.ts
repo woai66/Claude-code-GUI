@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { closeConnection, initializeDatabase, sessionsDb } from '@/modules/database/index.js';
-import { sessionsService } from '@/modules/providers/index.js';
+import { providerModelsService, sessionsService } from '@/modules/providers/index.js';
 import { handleChatConnection } from '@/modules/websocket/services/chat-websocket.service.js';
 import { chatRunRegistry } from '@/modules/websocket/services/chat-run-registry.service.js';
 import { connectedClients } from '@/modules/websocket/services/websocket-state.service.js';
@@ -131,6 +131,77 @@ async function withGateway(
 
 /** The handler is async and the socket listener does not await it. */
 const settle = () => new Promise((resolve) => { setTimeout(resolve, 30); });
+
+const NATIVE_CODEX_SELECTION = [{
+  type: 'turn_context', timestamp: '2026-10-17T10:00:00.000Z',
+  payload: { turn_id: 'native-turn', model: 'gpt-6.1-sol', effort: 'max' },
+}];
+
+test('a resumed Codex send inherits native settings instead of stale browser selections', async () => {
+  await withGateway('codex', async ({ socket, runs }) => {
+    sessionsDb.setSessionModel(SESSION_ID, 'old-gui-model');
+    sessionsDb.setSessionEffort(SESSION_ID, 'low');
+    socket.emit('message', JSON.stringify({
+      type: 'chat.send', sessionId: SESSION_ID, content: 'continue from CLI',
+      options: { model: 'stale-browser-model', effort: 'medium', inheritSessionSettings: true },
+    }));
+    await settle();
+
+    assert.equal(runs.length, 1);
+    assert.equal(runs[0].options.model, 'gpt-6.1-sol');
+    assert.equal(runs[0].options.effort, 'max');
+  }, NATIVE_CODEX_SELECTION);
+});
+
+test('an explicit Codex send keeps its parameter snapshot for queued messages and direct callers', async () => {
+  await withGateway('codex', async ({ socket, runs }) => {
+    socket.emit('message', JSON.stringify({
+      type: 'chat.send', sessionId: SESSION_ID, content: 'use the queued selection',
+      options: { model: 'queued-model', effort: 'low' },
+    }));
+    await settle();
+
+    assert.equal(runs.length, 1);
+    assert.equal(runs[0].options.model, 'queued-model');
+    assert.equal(runs[0].options.effort, 'low');
+  }, NATIVE_CODEX_SELECTION);
+});
+
+test('a resumed Codex send honors pending composer choices over native history', async () => {
+  await withGateway('codex', async ({ socket, runs }) => {
+    await providerModelsService.selectSessionModel('codex', SESSION_ID, 'next-model');
+    await providerModelsService.selectSessionEffort('codex', SESSION_ID, 'high');
+    socket.emit('message', JSON.stringify({
+      type: 'chat.send', sessionId: SESSION_ID, content: 'continue with my selection',
+      options: { model: 'stale-browser-model', effort: 'medium', inheritSessionSettings: true },
+    }));
+    await settle();
+
+    assert.equal(runs.length, 1);
+    assert.equal(runs[0].options.model, 'next-model');
+    assert.equal(runs[0].options.effort, 'high');
+  }, NATIVE_CODEX_SELECTION);
+});
+
+test('a failed Codex selection lookup releases the run so the session can be retried', async () => {
+  await withGateway('codex', async ({ socket, runs }) => {
+    const resolveSelection = providerModelsService.resolveSessionModel;
+    providerModelsService.resolveSessionModel = async () => { throw new Error('selection lookup failed'); };
+    try {
+      socket.emit('message', JSON.stringify({ type: 'chat.send', sessionId: SESSION_ID, content: 'first try' }));
+      await settle();
+      assert.equal(runs.length, 0);
+      assert.notEqual(chatRunRegistry.getRun(SESSION_ID)?.status, 'running');
+      assert.ok(socket.frames.some((frame) => frame.kind === 'complete'));
+    } finally {
+      providerModelsService.resolveSessionModel = resolveSelection;
+    }
+
+    socket.emit('message', JSON.stringify({ type: 'chat.send', sessionId: SESSION_ID, content: 'retry' }));
+    await settle();
+    assert.equal(runs.length, 1);
+  }, NATIVE_CODEX_SELECTION);
+});
 
 test('an edit resumes through the turn before the one being replaced', async () => {
   await withGateway('claude', async ({ socket, runs }) => {

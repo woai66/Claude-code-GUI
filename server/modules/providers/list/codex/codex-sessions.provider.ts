@@ -19,7 +19,9 @@ import type {
 } from '@/shared/types.js';
 import {
   AppError,
+  readCodexContextUsage,
   createNormalizedMessage,
+  findLastJsonlLine,
   generateMessageId,
   readObjectRecord,
   sliceTailPage,
@@ -27,6 +29,39 @@ import {
 } from '@/shared/utils.js';
 
 const PROVIDER = 'codex';
+
+/**
+ * Maps the approval settings one `turn_context` row recorded back to a composer
+ * permission mode; the inverse of `permissions()` in the Codex runtime, so a
+ * thread last run in Codex Desktop with "Approve for me" reopens as `auto`.
+ *
+ * Any turn_context yields a result: `mode: null` means the latest turn used
+ * settings the composer cannot express (read-only sandbox, `untrusted`,
+ * granular policies), and scanning must stop there instead of falling back to
+ * an older turn's mode.
+ */
+function parseTurnPermissionMode(line: string): { mode: string | null } | null {
+  if (!line.includes('"turn_context"')) return null;
+  let entry: AnyRecord | null;
+  try {
+    entry = readObjectRecord(JSON.parse(line));
+  } catch {
+    return null;
+  }
+  const payload = entry?.type === 'turn_context' ? readObjectRecord(entry.payload) : null;
+  if (!payload) return null;
+  const approval = payload.approval_policy;
+  const sandbox = readObjectRecord(payload.sandbox_policy)?.type;
+  if (approval === 'never' && sandbox === 'danger-full-access') return { mode: 'bypassPermissions' };
+  if (approval === 'never' && sandbox === 'workspace-write') return { mode: 'acceptEdits' };
+  if (approval === 'on-request' && sandbox === 'workspace-write') {
+    const reviewer = payload.approvals_reviewer;
+    if (reviewer === 'auto_review') return { mode: 'auto' };
+    // Rollouts written before the reviewer setting existed omit the field.
+    if (reviewer === undefined || reviewer === 'user') return { mode: 'default' };
+  }
+  return { mode: null };
+}
 
 /**
  * How far up the `~/.codex/sessions/<year>/<month>/<day>` tree a subagent
@@ -137,10 +172,7 @@ function createCodexTurnTracker() {
  */
 async function readCodexLiveTurnIds(filePath: string): Promise<string[]> {
   const turns = createCodexTurnTracker();
-  const stream = fsSync.createReadStream(filePath);
-  const lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-  for await (const line of lines) {
+  for await (const line of readCodexRolloutLines(filePath)) {
     if (!line.trim()) {
       continue;
     }
@@ -157,6 +189,105 @@ async function readCodexLiveTurnIds(filePath: string): Promise<string[]> {
   }
 
   return turns.getLiveTurnIds();
+}
+
+/** Resolve reference-backed history without requiring the source to remain indexed. */
+async function findCodexHistorySource(filePath: string, threadId: string): Promise<string | null> {
+  const suffixes = [`-${threadId}.jsonl`, `_${threadId}.jsonl`];
+  const indexed = sessionsDb.getSessionByProviderSessionId(threadId);
+  // 同一会话的数据库记录会指向最新快照，历史引用必须匹配文件自身的快照 ID。
+  if (indexed?.provider === PROVIDER && indexed.jsonl_path
+    && suffixes.some((suffix) => indexed.jsonl_path?.endsWith(suffix))) {
+    try {
+      if ((await fsp.stat(indexed.jsonl_path)).isFile()) {
+        return indexed.jsonl_path;
+      }
+    } catch {
+      // The native CLI can archive a rollout without updating the app row.
+    }
+  }
+
+  let directory = path.dirname(filePath);
+  while (path.dirname(directory) !== directory) {
+    if (path.basename(directory) === 'sessions' || path.basename(directory) === 'archived_sessions') {
+      const home = path.dirname(directory);
+      for (const storage of ['sessions', 'archived_sessions']) {
+        const found = await findFileWithSuffix(path.join(home, storage), suffixes, 3);
+        if (found) return found;
+      }
+      break;
+    }
+    directory = path.dirname(directory);
+  }
+  return null;
+}
+
+/**
+ * Codex 0.160 paginated forks keep a frozen prefix in `history_base` instead
+ * of copying it. Read each ancestor only through its recorded byte boundary,
+ * then the child's own rows. `forked_from_id` alone also appears on copied
+ * legacy rollouts and must never cause history to be included twice.
+ */
+/** Used by Codex history and model readers to follow native fork snapshot boundaries. */
+export async function* readCodexRolloutLines(
+  filePath: string,
+  endByteOffset?: number,
+  ancestors = new Set<string>(),
+): AsyncGenerator<string> {
+  const canonicalPath = await fsp.realpath(filePath);
+  if (ancestors.has(canonicalPath) || ancestors.size >= 128) {
+    throw new AppError('Codex fork history contains a cyclic or excessively deep source chain.', {
+      code: 'CODEX_HISTORY_SOURCE_INVALID', statusCode: 502,
+    });
+  }
+  if (endByteOffset !== undefined) {
+    if ((await fsp.stat(canonicalPath)).size < endByteOffset) {
+      throw new AppError('The source transcript is shorter than the Codex fork snapshot.', {
+        code: 'CODEX_HISTORY_SOURCE_INVALID', statusCode: 502,
+      });
+    }
+    if (endByteOffset === 0) return;
+  }
+  const nextAncestors = new Set(ancestors).add(canonicalPath);
+  const stream = fsSync.createReadStream(canonicalPath, {
+    ...(endByteOffset !== undefined ? { end: endByteOffset - 1 } : {}),
+  });
+  const lines = readline.createInterface({ input: stream, crlfDelay: Infinity });
+  let readMetadata = false;
+  try {
+    for await (const line of lines) {
+      let entry: AnyRecord | undefined;
+      if (!readMetadata) {
+        try { entry = readObjectRecord(JSON.parse(line)) ?? undefined; } catch { /* Skip malformed rows. */ }
+      }
+      if (entry?.type === 'session_meta') {
+        readMetadata = true;
+        const payload = readObjectRecord(entry.payload);
+        if (payload?.history_base != null) {
+          const base = readObjectRecord(payload.history_base);
+          const threadId = readNonEmptyString(base?.thread_id);
+          const offset = base?.end_byte_offset;
+          if (!threadId || !/^[a-zA-Z0-9-]+$/.test(threadId)
+            || typeof offset !== 'number' || !Number.isSafeInteger(offset) || offset < 0) {
+            throw new AppError('Codex fork history has an invalid source boundary.', {
+              code: 'CODEX_HISTORY_SOURCE_INVALID', statusCode: 502,
+            });
+          }
+          const sourcePath = await findCodexHistorySource(canonicalPath, threadId);
+          if (!sourcePath) {
+            throw new AppError('The source transcript referenced by this Codex fork is unavailable.', {
+              code: 'CODEX_HISTORY_SOURCE_UNAVAILABLE', statusCode: 502,
+            });
+          }
+          yield* readCodexRolloutLines(sourcePath, offset, nextAncestors);
+        }
+      }
+      yield line;
+    }
+  } finally {
+    lines.close();
+    stream.destroy();
+  }
 }
 
 /**
@@ -690,7 +821,7 @@ type CodexFileChange = {
  * surrounding context the patch described, which is what Claude's `Edit` rows
  * already show.
  *
- * Exported for tests.
+ * Used by the Codex runtime and history reader to display native file changes; also covered by tests.
  */
 export function unifiedDiffToTexts(unifiedDiff: string): { oldText: string; newText: string } {
   const oldLines: string[] = [];
@@ -926,8 +1057,13 @@ async function findCodexSubagentRollout(
   return null;
 }
 
-/** Depth-limited search for a file whose name ends with `suffix`. */
-async function findFileWithSuffix(directory: string, suffix: string, depth: number): Promise<string | null> {
+/** Depth-limited search for a file whose name ends with one of the requested suffixes. */
+async function findFileWithSuffix(
+  directory: string,
+  suffix: string | readonly string[],
+  depth: number,
+): Promise<string | null> {
+  const suffixes = typeof suffix === 'string' ? [suffix] : suffix;
   let entries;
   try {
     entries = await fsp.readdir(directory, { withFileTypes: true });
@@ -941,7 +1077,7 @@ async function findFileWithSuffix(directory: string, suffix: string, depth: numb
       subdirectories.push(path.join(directory, entry.name));
       continue;
     }
-    if (entry.name.endsWith(suffix)) {
+    if (suffixes.some((candidate) => entry.name.endsWith(candidate))) {
       return path.join(directory, entry.name);
     }
   }
@@ -1232,9 +1368,6 @@ async function getCodexSessionMessages(sessionId: string): Promise<CodexHistoryR
   /** Turns whose prompt already carries the anchor, so only the first does. */
   const anchoredTurnIds = new Set<string>();
 
-  const fileStream = fsSync.createReadStream(sessionFilePath);
-  const rl = readline.createInterface({ input: fileStream, crlfDelay: Infinity });
-
   /** Emits a tool_result row unless the call already produced one. */
   const pushToolResult = (callId: string, timestamp: string, output: string, isError: boolean) => {
     if (completedExecCalls.has(callId)) {
@@ -1244,7 +1377,7 @@ async function getCodexSessionMessages(sessionId: string): Promise<CodexHistoryR
     messages.push({ type: 'tool_result', timestamp, toolCallId: callId, output, isError });
   };
 
-  for await (const line of rl) {
+  for await (const line of readCodexRolloutLines(sessionFilePath)) {
     if (!line.trim()) {
       continue;
     }
@@ -1266,14 +1399,16 @@ async function getCodexSessionMessages(sessionId: string): Promise<CodexHistoryR
     // branches ends in a `continue`.
     turns.observe(entry.type, payload);
 
+    if (entry.type === 'compacted') {
+      messages.push({ type: 'compact', timestamp, summary: typeof payload.message === 'string' ? payload.message : '' });
+      continue;
+    }
+
     // ── event_msg ──────────────────────────────────────────────────────────
     if (entry.type === 'event_msg') {
       if (payload.type === 'token_count' && payload.info) {
         const info = payload.info as AnyRecord;
-        if (info.total_token_usage) {
-          const usage = info.total_token_usage as AnyRecord;
-          tokenUsage = { used: usage.total_tokens || 0, total: info.model_context_window || 200000 };
-        }
+        tokenUsage = readCodexContextUsage(info);
         continue;
       }
 
@@ -1341,7 +1476,7 @@ async function getCodexSessionMessages(sessionId: string): Promise<CodexHistoryR
       }
 
       if (payload.type === 'context_compacted') {
-        messages.push({ type: 'status_note', timestamp, content: 'Context compacted' });
+        messages.push({ type: 'compact', timestamp });
         continue;
       }
 
@@ -1852,7 +1987,27 @@ async function attachCodexSubagentTranscripts(
   }
 }
 
+/** The provider registry uses this reader for session history and message edits. */
 export class CodexSessionsProvider implements IProviderSessions {
+  /**
+   * Reads the permission mode of the thread's latest turn, so a thread
+   * continued from Codex Desktop or the CLI keeps its approval setup instead of
+   * inheriting whatever mode the composer used last.
+   */
+  async readPermissionMode(sessionId: string): Promise<string | null> {
+    const session = sessionsDb.getSessionById(sessionId)
+      ?? sessionsDb.getSessionByProviderSessionId(sessionId);
+    if (session?.provider !== PROVIDER || !session.jsonl_path) {
+      return null;
+    }
+    try {
+      return (await findLastJsonlLine(session.jsonl_path, parseTurnPermissionMode))?.mode ?? null;
+    } catch {
+      // The CLI can archive or move a rollout without updating the app row.
+      return null;
+    }
+  }
+
   /**
    * Resolves the last turn to keep when the turn `anchorId` names is replaced.
    *
@@ -1887,8 +2042,8 @@ export class CodexSessionsProvider implements IProviderSessions {
    * Branches the conversation at `keepThroughId` and moves the session onto
    * the branch.
    *
-   * Codex threads are append-only — the SDK resumes one at its tip and nothing
-   * shortens it — so rewinding means copying the part being kept into a new
+   * Editing keeps the source conversation intact, so rewinding copies the
+   * part being kept into a new
    * thread. The pre-edit thread stays on disk in full and is recorded as
    * superseded so the session indexer does not hand it back later.
    */
@@ -1937,13 +2092,21 @@ export class CodexSessionsProvider implements IProviderSessions {
   /**
    * Normalizes a persisted Codex JSONL entry.
    *
-   * Live Codex SDK events are transformed before they reach normalizeMessage(),
+   * Live Codex app-server events are transformed before they reach normalizeMessage(),
    * while history entries already use the compact message/tool shape produced
    * by getCodexSessionMessages().
    */
   private normalizeHistoryEntry(raw: AnyRecord, sessionId: string | null): NormalizedMessage[] {
     const ts = raw.timestamp || new Date().toISOString();
     const baseId = raw.uuid || generateMessageId('codex');
+
+    if (raw.type === 'compact') {
+      const boundary = createNormalizedMessage({ id: baseId, sessionId, timestamp: ts, provider: PROVIDER,
+        kind: 'text', role: 'assistant', content: '', compact: { phase: 'done' } });
+      return raw.summary ? [boundary, createNormalizedMessage({ id: `${baseId}_summary`, sessionId,
+        timestamp: ts, provider: PROVIDER, kind: 'text', role: 'assistant', content: raw.summary,
+        isCompactSummary: true })] : [boundary];
+    }
 
     if (raw.type === 'status_note' && typeof raw.content === 'string') {
       return [createNormalizedMessage({
@@ -2061,7 +2224,7 @@ export class CodexSessionsProvider implements IProviderSessions {
   }
 
   /**
-   * Normalizes either a Codex history entry or a transformed live SDK event.
+   * Normalizes either a Codex history entry or a transformed live app-server event.
    */
   normalizeMessage(rawMessage: unknown, sessionId: string | null): NormalizedMessage[] {
     const raw = readObjectRecord(rawMessage);
@@ -2077,7 +2240,7 @@ export class CodexSessionsProvider implements IProviderSessions {
     const baseId = raw.uuid || generateMessageId('codex');
 
     if (raw.type === 'item') {
-      // Live items carry a stable SDK id, so an in-progress row and its later
+      // Live items carry a stable native item id, so an in-progress row and its later
       // completion collapse onto the same transcript entry instead of stacking.
       const itemId = readNonEmptyString(raw.itemId as string | undefined) ?? baseId;
 
@@ -2285,6 +2448,10 @@ export class CodexSessionsProvider implements IProviderSessions {
     try {
       result = await getCodexSessionMessages(sessionId);
     } catch (error) {
+      // A broken inherited snapshot must not masquerade as an empty thread.
+      if (error instanceof AppError && error.code.startsWith('CODEX_HISTORY_SOURCE_')) {
+        throw error;
+      }
       const message = error instanceof Error ? error.message : String(error);
       console.warn(`[CodexProvider] Failed to load session ${sessionId}:`, message);
       return { messages: [], total: 0, hasMore: false, offset: 0, limit: null };

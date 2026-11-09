@@ -79,6 +79,8 @@ type ChatMessagesPaneProps = {
   onEditMessage?: (message: ChatMessage) => void;
   /** Branches the conversation into a new session ending at a message. */
   onForkFromMessage?: (message: ChatMessage) => void;
+  /** Approves one retry of a Codex auto-review denial; absent for other providers. */
+  onApproveAutoReviewDenial?: (reviewId: string) => void;
   /** Fetches the whole transcript for an export, which otherwise only sees the loaded page. */
   onLoadFullTranscript?: () => Promise<ChatMessage[]>;
 };
@@ -138,6 +140,7 @@ function ChatMessagesPane({
   createDiff,
   onEditMessage,
   onForkFromMessage,
+  onApproveAutoReviewDenial,
   onLoadFullTranscript,
   onFileOpen,
   onShowSettings,
@@ -354,6 +357,7 @@ function ChatMessagesPane({
                     provider={provider}
                     onEditMessage={onEditMessage}
                     onForkFromMessage={onForkFromMessage}
+                    onApproveAutoReviewDenial={onApproveAutoReviewDenial}
                   />
                 </LazyMessageRow>
               );

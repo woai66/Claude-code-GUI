@@ -6,7 +6,7 @@ export type PermissionContextValue = {
   pendingPermissionRequests: PendingPermissionRequest[];
   handlePermissionDecision: (
     requestIds: string | string[],
-    decision: { allow?: boolean; message?: string; rememberEntry?: string | null; updatedInput?: unknown },
+    decision: { allow?: boolean; message?: string; rememberEntry?: string | null; updatedInput?: unknown; scope?: 'session' },
   ) => void;
 };
 

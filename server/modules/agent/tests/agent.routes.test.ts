@@ -252,3 +252,26 @@ test('Agent route starts codex on the catalog default when the request names no 
 
   assert.deepEqual(codexCalls.map((call) => call.model), ['catalog-default']);
 });
+
+test('Agent route marks a Claude run unattended, as no person can answer an MCP server there', async () => {
+  const runOptions: { unattended?: boolean }[] = [];
+  await withAgentServer(createDependencies({
+    fileSystem: { access: async () => undefined } as unknown as AgentDependencies['fileSystem'],
+    models: {
+      getProviderModels: async () => ({ OPTIONS: [{ value: 'sonnet' }], DEFAULT: 'sonnet' }),
+    } as unknown as AgentDependencies['models'],
+    queryClaude: (async (_prompt: string, options: { unattended?: boolean }) => {
+      runOptions.push(options);
+    }) as unknown as AgentDependencies['queryClaude'],
+  }), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/agent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ projectPath: '/home/test/project', message: 'Run', provider: 'claude', stream: false }),
+    });
+    assert.equal(response.status, 200);
+  });
+
+  assert.equal(runOptions.length, 1);
+  assert.equal(runOptions[0].unattended, true);
+});

@@ -74,6 +74,8 @@ export type ProviderRuntimeGateway = {
   ): Promise<unknown>;
   abort(provider: LLMProvider, sessionId: string): Promise<boolean>;
   stopBackgroundTask(provider: LLMProvider, sessionId: string, taskId: string): Promise<boolean>;
+  /** Delivers a message into the session's running turn; false when no turn can take it. */
+  steer(provider: LLMProvider, sessionId: string, command: string, options: AnyRecord): Promise<boolean>;
   /** Whether a provider runtime still holds background work for the session after its turn ended. */
   hasBackgroundWork(sessionId: string): boolean;
   resolveToolApproval(requestId: string, payload: ProviderPermissionDecision): void;
@@ -125,15 +127,33 @@ function sendProtocolError(
   ws: WebSocket,
   code: string,
   error: string,
-  sessionId?: string
+  sessionId?: string,
+  extra: AnyRecord = {},
 ): void {
   sendJson(ws, {
+    ...extra,
     kind: 'protocol_error',
     code,
     error,
     sessionId: sessionId ?? null,
     timestamp: new Date().toISOString(),
   });
+}
+
+/**
+ * The attachments a send names, from any of the option keys clients use,
+ * narrowed to files in the upload store and with duplicates dropped.
+ */
+function readVerifiedAttachments(clientOptions: AnyRecord): ChatAttachmentDescriptor[] {
+  const attachmentCandidates = [
+    ...normalizeAttachmentDescriptors(clientOptions.images),
+    ...normalizeAttachmentDescriptors(clientOptions.files),
+    ...normalizeAttachmentDescriptors(clientOptions.attachments),
+  ];
+  const verifiedAttachments = filterAttachmentsToUploadStore(attachmentCandidates);
+  return verifiedAttachments.filter(
+    (descriptor, index, all) => all.findIndex((candidate) => candidate.path === descriptor.path) === index,
+  );
 }
 
 function readRequiredSessionId(data: AnyRecord): string | null {
@@ -158,6 +178,45 @@ async function handleChatSend(
   }
 
   await dispatchRun(ws, userId, resolved.sessionId, resolved.session, data, dependencies);
+}
+
+/**
+ * Handles `chat.steer`: delivers a message into the session's running turn
+ * instead of starting a new one. The sender gets `chat_steer_accepted` once the
+ * provider has taken it, or `STEER_UNAVAILABLE` (naming the `messageId`) when
+ * no turn can: the run has ended or the provider cannot write into a turn. The
+ * client keeps the message queued for the next turn then, so nothing is lost.
+ */
+async function handleChatSteer(
+  ws: WebSocket,
+  data: AnyRecord,
+  dependencies: ChatWebSocketDependencies
+): Promise<void> {
+  const resolved = resolveSendTarget(ws, data, dependencies, 'chat.steer');
+  if (!resolved) {
+    return;
+  }
+
+  const { sessionId, provider } = resolved;
+  const messageId = typeof data.messageId === 'string' ? data.messageId : '';
+  const content = typeof data.content === 'string' ? data.content : '';
+  const attachments = readVerifiedAttachments((data.options ?? {}) as AnyRecord);
+  if (!content.trim() && attachments.length === 0) {
+    sendProtocolError(ws, 'MESSAGE_REQUIRED', 'chat.steer requires a message.', sessionId, { messageId });
+    return;
+  }
+
+  const steered = chatRunRegistry.getRun(sessionId)?.status === 'running'
+    && await dependencies.runtime.steer(provider, sessionId, content, {
+      images: attachments.filter(isImageAttachmentDescriptor),
+      files: attachments.filter((descriptor) => !isImageAttachmentDescriptor(descriptor)),
+    });
+  if (!steered) {
+    sendProtocolError(ws, 'STEER_UNAVAILABLE', `Session "${sessionId}" has no running turn to send the message into.`,
+      sessionId, { messageId });
+    return;
+  }
+  sendJson(ws, { kind: 'chat_steer_accepted', sessionId, messageId, timestamp: new Date().toISOString() });
 }
 
 type ResolvedSendTarget = {
@@ -240,58 +299,54 @@ async function dispatchRun(
     return { started: false, error: 'A run is already in progress for this session.' };
   }
 
-  const clientOptions = (data.options ?? {}) as AnyRecord;
-  const command = typeof data.content === 'string' ? data.content : '';
-
-  // Record what this turn runs with so reopening the session later restores the
-  // same model and reasoning effort, and so the resume path has a
-  // session-scoped model answer to use.
-  if (typeof clientOptions.model === 'string' && clientOptions.model.trim()) {
-    providerModelsService.setSessionModel(provider, sessionId, clientOptions.model);
-  }
-  if (typeof clientOptions.effort === 'string' && clientOptions.effort.trim()) {
-    providerModelsService.setSessionEffort(provider, sessionId, clientOptions.effort);
-  }
-  if (provider === 'codex') {
-    const speed = clientOptions.speed;
-    if (speed === 'default' || speed === 'standard' || speed === 'fast') {
-      providerModelsService.setSessionSpeed(provider, sessionId, speed);
-    } else {
-      clientOptions.speed = providerModelsService.getSessionSpeed(provider, sessionId);
-    }
-  }
-
-  const attachmentCandidates = [
-    ...normalizeAttachmentDescriptors(clientOptions.images),
-    ...normalizeAttachmentDescriptors(clientOptions.files),
-    ...normalizeAttachmentDescriptors(clientOptions.attachments),
-  ];
-  const verifiedAttachments = filterAttachmentsToUploadStore(attachmentCandidates);
-  const uniqueAttachments = verifiedAttachments.filter(
-    (descriptor, index, all) => all.findIndex((candidate) => candidate.path === descriptor.path) === index,
-  );
-
-  // The provider runtimes receive the stable app session id. When their
-  // CLI/SDK needs the provider-native id for resume, they resolve it from the
-  // session row themselves (sessionsService.resolveProviderSessionId).
-  // Brand-new sessions have no provider id yet, so the runtime starts fresh
-  // and announces one, which the gateway writer captures and maps back to the
-  // app session id.
-  const runtimeOptions: AnyRecord = {
-    ...clientOptions,
-    ...extraRuntimeOptions,
-    // Attachments are re-validated server-side: only direct children of the
-    // global upload store may reach provider runtimes or their file tools.
-    attachments: uniqueAttachments,
-    images: uniqueAttachments.filter(isImageAttachmentDescriptor),
-    files: uniqueAttachments.filter((descriptor) => !isImageAttachmentDescriptor(descriptor)),
-    sessionId,
-    cwd: clientOptions.cwd ?? session.project_path ?? undefined,
-    projectPath: session.project_path ?? clientOptions.projectPath,
-  };
-
   let failure: string | null = null;
   try {
+    const clientOptions = { ...(data.options ?? {}) } as AnyRecord;
+    const command = typeof data.content === 'string' ? data.content : '';
+
+    if (provider === 'codex') {
+      const selection = await providerModelsService.resolveSessionModel(provider, { sessionId });
+      if (clientOptions.inheritSessionSettings === true
+        || typeof clientOptions.model !== 'string' || !clientOptions.model.trim()) {
+        clientOptions.model = selection.model || undefined;
+      }
+      if (clientOptions.inheritSessionSettings === true
+        || typeof clientOptions.effort !== 'string' || !clientOptions.effort.trim()) {
+        clientOptions.effort = selection.effort ?? undefined;
+      }
+    }
+
+    // Record this turn's selection after resolving the native state and pending composer intent.
+    if (typeof clientOptions.model === 'string' && clientOptions.model.trim()) {
+      providerModelsService.setSessionModel(provider, sessionId, clientOptions.model);
+    }
+    if (typeof clientOptions.effort === 'string' && clientOptions.effort.trim()) {
+      providerModelsService.setSessionEffort(provider, sessionId, clientOptions.effort);
+    }
+    if (provider === 'codex') {
+      const speed = clientOptions.speed;
+      if (speed === 'default' || speed === 'standard' || speed === 'fast') {
+        providerModelsService.setSessionSpeed(provider, sessionId, speed);
+      } else {
+        clientOptions.speed = providerModelsService.getSessionSpeed(provider, sessionId);
+      }
+    }
+    const uniqueAttachments = readVerifiedAttachments(clientOptions);
+
+    // Runtimes resolve native ids from the stable app session id; new sessions receive an id on first run.
+    const runtimeOptions: AnyRecord = {
+      ...clientOptions,
+      ...extraRuntimeOptions,
+      // Attachments are re-validated server-side: only direct children of the
+      // global upload store may reach provider runtimes or their file tools.
+      attachments: uniqueAttachments,
+      images: uniqueAttachments.filter(isImageAttachmentDescriptor),
+      files: uniqueAttachments.filter((descriptor) => !isImageAttachmentDescriptor(descriptor)),
+      sessionId,
+      cwd: clientOptions.cwd ?? session.project_path ?? undefined,
+      projectPath: session.project_path ?? clientOptions.projectPath,
+    };
+
     // Runs only now that the session is reserved, because an edit rewinds the
     // conversation here and a rewind for a run that was never admitted cannot
     // be taken back. Inside the try so a rewind that throws still releases the
@@ -579,6 +634,7 @@ function handlePermissionResponse(data: AnyRecord, dependencies: ChatWebSocketDe
     updatedInput: data.updatedInput,
     message: typeof data.message === 'string' ? data.message : undefined,
     rememberEntry: data.rememberEntry,
+    ...(data.scope === 'session' ? { scope: 'session' as const } : {}),
   });
 }
 
@@ -587,10 +643,11 @@ function handlePermissionResponse(data: AnyRecord, dependencies: ChatWebSocketDe
  *
  * Inbound protocol (client to server):
  * - `chat.send`                { sessionId, content, options? }
+ * - `chat.steer`               { sessionId, messageId, content, options? }
  * - `chat.abort`               { sessionId }
  * - `chat.stop-task`           { sessionId, taskId }
  * - `chat.subscribe`           { sessions: [{ sessionId, lastSeq? }] }
- * - `chat.permission-response` { requestId, allow, updatedInput?, message?, rememberEntry? }
+ * - `chat.permission-response` { requestId, allow, updatedInput?, message?, rememberEntry?, scope? }
  *
  * Outbound protocol (server to client): every frame is `kind`-based — either
  * a provider `NormalizedMessage` (with `seq`) or a gateway event
@@ -688,6 +745,9 @@ export function handleChatConnection(
           return;
         case 'chat.send':
           await handleChatSend(ws, userId, data, dependencies);
+          return;
+        case 'chat.steer':
+          await handleChatSteer(ws, data, dependencies);
           return;
         case 'chat.abort':
           await handleChatAbort(ws, data, dependencies);

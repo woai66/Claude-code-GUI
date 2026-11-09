@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import childProcess from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { createRequire, syncBuiltinESMExports } from 'node:module';
+import { syncBuiltinESMExports } from 'node:module';
+import { appendFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { PassThrough } from 'node:stream';
 import test, { mock } from 'node:test';
 
@@ -35,8 +38,8 @@ test('Codex discovery uses one hidden process and closes it after reading all mo
       assert.match(command, /[\\/]codex\.exe$/);
       assert.deepEqual(args, ['app-server']);
     } else {
-      assert.equal(command, process.execPath);
-      assert.equal(args?.at(-1), 'app-server');
+      assert.match(command, /\/codex$/);
+      assert.deepEqual(args, ['app-server']);
     }
     assert.equal(options?.windowsHide, true);
     assert.equal(options?.cwd, '/workspace/中文项目');
@@ -113,9 +116,38 @@ test('Codex discovery rejects empty results and propagates CLI failures', async 
   }).refreshSupportedModels(), /CLI offline/);
 });
 
-test('the bundled Codex CLI supports the model discovery protocol', () => {
-  const require = createRequire(import.meta.url);
-  const { version } = require('@openai/codex/package.json') as { version: string };
-  const [major, minor] = version.split('.').map(Number);
-  assert.ok(major > 0 || minor >= 155, 'bundled Codex must preserve the current model and effort protocol');
+test('Codex restores the last native turn settings and notices later CLI changes', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'codex-selection-'));
+  const transcript = path.join(directory, 'rollout.jsonl');
+  const config = path.join(directory, 'config.toml');
+  const row = (model: string, effort: string) => `${JSON.stringify({
+    type: 'turn_context', payload: { model, effort },
+  })}\n`;
+  try {
+    await writeFile(config, 'model="global-default"\nmodel_reasoning_effort="low"');
+    await writeFile(transcript, row('first-model', 'low') + row('last-model', 'ultra')
+      + `${JSON.stringify({ type: 'response_item', payload: { text: '中'.repeat(70_000) } })}\n`
+      + '{"type":"turn_context","payload":');
+    const adapter = new CodexProviderModels({ configPath: config, readSession: (id) => {
+      assert.equal(id, 'gui-session');
+      return { provider: 'codex', provider_session_id: 'native-id', jsonl_path: transcript };
+    } });
+    const first = await adapter.getCurrentActiveModel('gui-session');
+    assert.equal(first.model, 'last-model');
+    assert.equal(first.effort, 'ultra');
+    assert.equal(first.source, 'session');
+    await appendFile(transcript, `\n${row('new-cli-model', 'max')}`);
+    const second = await adapter.getCurrentActiveModel('gui-session');
+    assert.equal(second.model, 'new-cli-model');
+    assert.equal(second.effort, 'max');
+    assert.notEqual(second.revision, first.revision);
+    assert.deepEqual(await adapter.getCurrentActiveModel(), {
+      model: 'global-default', effort: 'low', source: 'config',
+    });
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('Codex does not mistake global config for the model of a missing native session', async () => {
+  const adapter = new CodexProviderModels({ readSession: () => null });
+  assert.deepEqual(await adapter.getCurrentActiveModel('unknown'), { model: '', effort: null, source: 'session' });
 });

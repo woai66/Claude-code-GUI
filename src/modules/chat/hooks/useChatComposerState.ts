@@ -48,6 +48,8 @@ type UseChatComposerStateArgs = {
   currentProviderModel: string;
   currentProviderEffort: string;
   currentProviderSpeed?: CodexSpeed;
+  /** Waits for explicit selections before a resumed send asks the backend to inherit its latest settings. */
+  waitForSessionSelection?: (provider: LLMProvider, sessionId: string) => Promise<void>;
   isLoading: boolean;
   processingSessions?: SessionActivityMap;
   canAbortSession: boolean;
@@ -180,6 +182,7 @@ export function useChatComposerState({
   currentProviderModel,
   currentProviderEffort,
   currentProviderSpeed,
+  waitForSessionSelection,
   isLoading,
   processingSessions,
   canAbortSession,
@@ -436,8 +439,12 @@ export function useChatComposerState({
           tokenUsage: tokenBudget,
         };
 
+        if (provider === 'codex' && command.name === '/compact') {
+          await handleCustomCommand({ type: 'custom', content: effectiveInput.startsWith('/compact') ? effectiveInput : '/compact' } as CommandExecutionResult);
+          return;
+        }
         const response = await api.commands.execute({
-          commandName: command.name,
+          commandName: provider === 'codex' && command.name === '/context' ? '/cost' : command.name,
           commandPath: command.path,
           args,
           context,
@@ -716,10 +723,16 @@ export function useChatComposerState({
           return;
         }
 
+        // A follow-up joins the message already waiting instead of replacing it, so
+        // every one reaches the next turn: text and attachments in order, latest options.
+        const waiting = queuedSessionKey ? readQueuedMessage(queuedSessionKey) : null;
+        const waitingFiles = waiting && queuedDraftSessionRef.current === queuedSessionKey
+          ? queuedDraft?.attachments ?? []
+          : [];
         const durableDraft: QueuedDraft = {
-          content: currentInput,
-          attachments: currentAttachments,
-          uploadedAttachments,
+          content: [waiting?.content, currentInput].filter((text) => text?.trim()).join('\n\n'),
+          attachments: [...waitingFiles, ...currentAttachments],
+          uploadedAttachments: [...(waiting?.attachments ?? []), ...uploadedAttachments],
           options: queuedOptions,
         };
         if (queuedSessionKey) {
@@ -780,7 +793,7 @@ export function useChatComposerState({
                 metadata: { type: 'builtin' },
               } as SlashCommand)
             : undefined);
-        if (matchedCommand && matchedCommand.type !== 'skill') {
+        if (matchedCommand && matchedCommand.type !== 'skill' && !(provider === 'codex' && commandName === '/compact')) {
           executeCommand(matchedCommand, isHelpAlias ? '/help' : commandInput);
           recordSentMessage(currentInput);
           setInput('');
@@ -816,6 +829,19 @@ export function useChatComposerState({
 
       const resolvedProjectPath = selectedProject.fullPath || selectedProject.path || '';
       const sessionSummary = getNotificationSessionSummary(selectedSession, currentInput);
+
+      if (provider === 'codex' && selectedSession?.id && !queuedSubmission) {
+        try {
+          await waitForSessionSelection?.(provider, selectedSession.id);
+        } catch (error) {
+          addMessage({
+            type: 'error',
+            content: error instanceof Error ? error.message : 'Unable to save session settings.',
+            timestamp: new Date(),
+          });
+          return;
+        }
+      }
 
       // The conversation always has a stable backend-allocated session id
       // BEFORE the first websocket send: brand-new chats allocate one here
@@ -926,6 +952,8 @@ export function useChatComposerState({
         content: messageContent,
         options: {
           ...(queuedSubmission?.options ?? buildSendOptions(messageContent)),
+          ...(provider === 'codex' && selectedSession?.id && !queuedSubmission
+            ? { inheritSessionSettings: true } : {}),
           attachments: uploadedAttachments,
         },
       });
@@ -955,6 +983,8 @@ export function useChatComposerState({
       selectedSession,
       attachedFiles,
       buildSendOptions,
+      queuedDraft,
+      waitForSessionSelection,
       currentSessionId,
       editingAnchorId,
       executeCommand,
@@ -1007,6 +1037,20 @@ export function useChatComposerState({
     handleSubmitRef.current = handleSubmit;
   }, [handleSubmit]);
 
+  // Codex records the approval right before the turn this message starts, so the
+  // retry goes through the normal send path (and queues behind a running turn).
+  const approveAutoReviewDenial = useCallback((reviewId: string) => {
+    const content = t('autoReview.retryMessage', {
+      defaultValue: 'I approved the action auto-review just denied. Please try it again.',
+    });
+    void handleSubmit(createFakeSubmitEvent(), {
+      content,
+      attachments: [],
+      uploadedAttachments: [],
+      options: { ...buildSendOptions(content), approveAutoReviewDenials: [reviewId] },
+    });
+  }, [buildSendOptions, handleSubmit, t]);
+
   // The VPS dispatcher owns sending. While the card is visible, periodically
   // reconcile only its removal so the UI notices when the server claims it.
   useEffect(() => {
@@ -1042,6 +1086,62 @@ export function useChatComposerState({
   const deleteQueuedDraft = useCallback(() => {
     setQueuedDraft(null);
   }, []);
+
+  // Messages handed to a running turn, until the server says whether it took them.
+  const pendingSteersRef = useRef(new Map<string, { sessionId: string; draft: QueuedDraft }>());
+
+  // Delivers the queued message into the running turn instead of after it. The queue is
+  // cleared first so the server's dispatcher cannot also send it when the turn ends.
+  const steerQueuedDraft = useCallback(() => {
+    if (!queuedDraft || !sessionKey) {
+      return;
+    }
+    const messageId = `steer-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    pendingSteersRef.current.set(messageId, { sessionId: sessionKey, draft: queuedDraft });
+    queuedDraftSessionRef.current = sessionKey;
+    setQueuedDraft(null);
+    clearQueuedMessage(sessionKey);
+    sendMessage({
+      type: 'chat.steer',
+      sessionId: sessionKey,
+      messageId,
+      content: queuedDraft.content,
+      options: { attachments: queuedDraft.uploadedAttachments ?? [] },
+    });
+  }, [queuedDraft, sendMessage, sessionKey]);
+
+  const handleSteerOutcome = useCallback((sessionId: string, messageId: string, outcome: 'accepted' | 'refused') => {
+    const pending = pendingSteersRef.current.get(messageId);
+    if (!pending || pending.sessionId !== sessionId) {
+      return;
+    }
+    pendingSteersRef.current.delete(messageId);
+    const { draft } = pending;
+    const uploaded = (draft.uploadedAttachments ?? []) as ChatAttachment[];
+    if (outcome === 'accepted') {
+      // Another session's transcript picks the message up from history instead.
+      if (sessionKeyRef.current === sessionId) {
+        addMessage({
+          type: 'user',
+          content: draft.content,
+          images: uploaded.filter(isImageAttachment),
+          files: uploaded.filter((attachment) => !isImageAttachment(attachment)),
+          timestamp: new Date(),
+        });
+      }
+      return;
+    }
+    // The turn ended first: queue it again, ahead of anything queued since, so the
+    // dispatcher sends it as the next turn.
+    const queued = readQueuedMessage(sessionId);
+    const content = queued ? `${draft.content}\n\n${queued.content}` : draft.content;
+    const attachments = [...uploaded, ...(queued?.attachments ?? [])];
+    writeQueuedMessage(sessionId, { content, options: draft.options, attachments });
+    if (sessionKeyRef.current === sessionId) {
+      queuedDraftSessionRef.current = sessionId;
+      setQueuedDraft({ content, attachments: draft.attachments, uploadedAttachments: attachments, options: draft.options });
+    }
+  }, [addMessage]);
 
   // A voice transcript either fills the input (to edit before sending) or, when the
   // user tapped "stop and send", is submitted straight away. Mirror the value into
@@ -1273,7 +1373,7 @@ export function useChatComposerState({
   const handlePermissionDecision = useCallback(
     (
       requestIds: string | string[],
-      decision: { allow?: boolean; message?: string; rememberEntry?: string | null; updatedInput?: unknown },
+      decision: { allow?: boolean; message?: string; rememberEntry?: string | null; updatedInput?: unknown; scope?: 'session' },
     ) => {
       const ids = Array.isArray(requestIds) ? requestIds : [requestIds];
       const validIds = ids.filter(Boolean);
@@ -1289,6 +1389,7 @@ export function useChatComposerState({
           updatedInput: decision?.updatedInput,
           message: decision?.message,
           rememberEntry: decision?.rememberEntry,
+          ...(decision?.scope === 'session' ? { scope: 'session' } : {}),
         });
       });
 
@@ -1328,6 +1429,9 @@ export function useChatComposerState({
     setInput,
     editingAnchorId,
     beginEditMessage,
+    approveAutoReviewDenial,
+    steerQueuedDraft,
+    handleSteerOutcome,
     cancelEditMessage,
     textareaRef,
     inputHighlightRef,

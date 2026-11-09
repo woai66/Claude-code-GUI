@@ -51,7 +51,7 @@ const providerModelStorageKey = (provider: LLMProvider): string => `${provider}-
 const FALLBACK_PERMISSION_MODES: Record<LLMProvider, PermissionMode[]> = {
   claude: ['default', 'auto', 'acceptEdits', 'bypassPermissions', 'plan', 'dontAsk'],
   cursor: ['default', 'acceptEdits', 'bypassPermissions', 'plan'],
-  codex: ['default', 'acceptEdits', 'bypassPermissions'],
+  codex: ['default', 'auto', 'acceptEdits', 'bypassPermissions'],
   opencode: ['default', 'acceptEdits', 'bypassPermissions', 'plan'],
 };
 
@@ -67,6 +67,7 @@ type ProviderCapabilities = {
   supportsEffort?: boolean;
   supportsMessageEditing?: boolean;
   supportsSessionForking?: boolean;
+  supportsSteering?: boolean;
 };
 
 type ProviderCapabilitiesApiResponse = {
@@ -185,6 +186,25 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
   const sessionModelMutationIdRef = useRef(0);
   const sessionEffortMutationIdRef = useRef(0);
   const sessionSpeedMutationIdRef = useRef(0);
+  // A resumed send waits for explicit parameter changes to reach the backend before inheriting its state.
+  const sessionSelectionRequestsRef = useRef(new Map<string, Set<Promise<unknown>>>());
+  const trackSessionSelectionRequest = useCallback(async <T,>(sessionKey: string, request: Promise<T>): Promise<T> => {
+    const requests = sessionSelectionRequestsRef.current.get(sessionKey) ?? new Set<Promise<unknown>>();
+    sessionSelectionRequestsRef.current.set(sessionKey, requests);
+    requests.add(request);
+    try {
+      return await request;
+    } finally {
+      requests.delete(request);
+      if (!requests.size) sessionSelectionRequestsRef.current.delete(sessionKey);
+    }
+  }, []);
+  const waitForSessionSelection = useCallback(async (targetProvider: LLMProvider, sessionId: string): Promise<void> => {
+    const key = getSessionSelectionKey(targetProvider, sessionId);
+    while (sessionSelectionRequestsRef.current.get(key)?.size) {
+      await Promise.all([...sessionSelectionRequestsRef.current.get(key)!]);
+    }
+  }, []);
 
   const setStoredProviderModel = useCallback((targetProvider: LLMProvider, model: string) => {
     setProviderModels((previous) => (
@@ -504,6 +524,7 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
    */
   const supportsMessageEditing = Boolean(providerCapabilities?.[provider]?.supportsMessageEditing);
   const supportsSessionForking = Boolean(providerCapabilities?.[provider]?.supportsSessionForking);
+  const supportsSteering = Boolean(providerCapabilities?.[provider]?.supportsSteering);
 
   const resolvePermissionModeForProvider = useCallback((
     targetProvider: LLMProvider,
@@ -532,10 +553,8 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
   const sessionModel = activeSessionSelection?.model ?? null;
 
   useEffect(() => {
-    const requestId = sessionSelectionLoadRequestIdRef.current + 1;
-    sessionSelectionLoadRequestIdRef.current = requestId;
-
     if (!selectedSessionId) {
+      sessionSelectionLoadRequestIdRef.current += 1;
       setSessionSelection(null);
       return;
     }
@@ -543,9 +562,10 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     let cancelled = false;
     const targetProvider = selectedSessionProvider;
     const targetSessionKey = getSessionSelectionKey(targetProvider, selectedSessionId);
-    const speedVersion = sessionSpeedMutationIdRef.current;
-
     const loadSessionSelection = async () => {
+      if (sessionSelectionRequestsRef.current.get(targetSessionKey)?.size) return;
+      const requestId = ++sessionSelectionLoadRequestIdRef.current;
+      const speedVersion = sessionSpeedMutationIdRef.current;
       try {
         const response = await api.providers.sessionActiveModel(targetProvider, selectedSessionId);
         const body = (await response.json()) as SessionSelectionApiResponse;
@@ -590,8 +610,13 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     };
 
     void loadSessionSelection();
+    const refreshOnFocus = () => {
+      if (targetProvider === 'codex' && document.visibilityState !== 'hidden') void loadSessionSelection();
+    };
+    window.addEventListener('focus', refreshOnFocus);
     return () => {
       cancelled = true;
+      window.removeEventListener('focus', refreshOnFocus);
     };
   }, [selectedSessionId, selectedSessionProvider]);
 
@@ -621,16 +646,13 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     sessionModelMutationIdRef.current = mutationId;
     const targetSessionKey = getSessionSelectionKey(targetProvider, normalizedSessionId);
 
-    const response = await api.providers.setSessionActiveModel(
-      targetProvider,
-      normalizedSessionId,
-      model,
+    const body = await trackSessionSelectionRequest(targetSessionKey,
+      api.providers.setSessionActiveModel(targetProvider, normalizedSessionId, model).then(async (response) => {
+        const body = (await response.json()) as SessionSelectionApiResponse;
+        if (!response.ok || !body.success) throw new Error('Unable to change the active model for this session.');
+        return body;
+      }),
     );
-
-    const body = (await response.json()) as SessionSelectionApiResponse;
-    if (!response.ok || !body.success) {
-      throw new Error('Unable to change the active model for this session.');
-    }
 
     const storedModel = body.data?.model?.trim() || model;
     if (
@@ -652,7 +674,7 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       }));
     }
     return { scope: 'session' as const, model: storedModel };
-  }, [setStoredProviderModel]);
+  }, [setStoredProviderModel, trackSessionSelectionRequest]);
 
   /**
    * Applies an effort choice optimistically and persists it for the open
@@ -690,15 +712,13 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     });
 
     try {
-      const response = await api.providers.setSessionActiveEffort(
-        targetProvider,
-        normalizedSessionId,
-        effort,
+      const body = await trackSessionSelectionRequest(targetSessionKey,
+        api.providers.setSessionActiveEffort(targetProvider, normalizedSessionId, effort).then(async (response) => {
+          const body = (await response.json()) as SessionSelectionApiResponse;
+          if (!response.ok || !body.success) throw new Error('Unable to change the reasoning effort for this session.');
+          return body;
+        }),
       );
-      const body = (await response.json()) as SessionSelectionApiResponse;
-      if (!response.ok || !body.success) {
-        throw new Error('Unable to change the reasoning effort for this session.');
-      }
 
       const storedEffort = body.data?.effort?.trim() || effort;
       if (
@@ -736,7 +756,7 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
       }
       throw error;
     }
-  }, [sessionSelection, setStoredProviderEffort]);
+  }, [sessionSelection, setStoredProviderEffort, trackSessionSelectionRequest]);
 
   const currentProviderSpeed: CodexSpeed = selectedSessionId
     ? activeSessionSelection?.speed ?? 'default'
@@ -772,11 +792,17 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
 
   // The open session's model wins over the per-provider default, so switching
   // sessions shows (and sends) what each session actually runs with.
-  const currentProviderModel = sessionModel ?? providerModels[provider];
+  const isCodexSession = Boolean(selectedSessionId && selectedSessionProvider === 'codex');
+  const currentProviderModel = sessionModel ?? (isCodexSession ? '' : providerModels[provider]);
   const currentProviderEffortOptions = useMemo(() => {
-    return getEffortOptionsForModel(provider, currentProviderModel);
-  }, [currentProviderModel, getEffortOptionsForModel, provider]);
+    const options = getEffortOptionsForModel(provider, currentProviderModel);
+    const nativeEffort = isCodexSession ? activeSessionSelection?.effort : null;
+    return nativeEffort && nativeEffort !== DEFAULT_EFFORT_VALUE
+      && !options.some((option) => option.value === nativeEffort)
+      ? [...options, { value: nativeEffort }] : options;
+  }, [activeSessionSelection?.effort, currentProviderModel, getEffortOptionsForModel, isCodexSession, provider]);
   const currentProviderEffort = useMemo(() => {
+    if (isCodexSession) return activeSessionSelection?.effort ?? DEFAULT_EFFORT_VALUE;
     return reconcileStoredEffort(
       provider,
       currentProviderModel,
@@ -784,10 +810,15 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
         ?? providerEfforts[provider]
         ?? DEFAULT_EFFORT_VALUE,
     );
-  }, [activeSessionSelection?.effort, currentProviderModel, provider, providerEfforts, reconcileStoredEffort]);
+  }, [activeSessionSelection?.effort, currentProviderModel, isCodexSession, provider, providerEfforts, reconcileStoredEffort]);
   const currentProviderModelOptions = useMemo(
-    () => providerModelCatalog[provider]?.OPTIONS ?? [],
-    [provider, providerModelCatalog],
+    () => {
+      const options = providerModelCatalog[provider]?.OPTIONS ?? [];
+      // Preserve a model observed in native history even when the cached catalog predates it.
+      return isCodexSession && sessionModel && !findProviderModelOption(options, sessionModel)
+        ? [{ value: sessionModel, label: sessionModel }, ...options] : options;
+    },
+    [isCodexSession, provider, providerModelCatalog, sessionModel],
   );
 
   const applyProviderCatalog = useCallback((
@@ -938,8 +969,10 @@ export function useChatProviderState({ selectedSession, selectedProject }: UseCh
     providerModelActions,
     selectProviderModel,
     selectProviderEffort,
+    waitForSessionSelection,
     resolvePermissionModeForProvider,
     supportsMessageEditing,
     supportsSessionForking,
+    supportsSteering,
   };
 }

@@ -1,206 +1,204 @@
 import { spawn } from 'node:child_process';
 import { stat } from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import readline from 'node:readline';
 
 import { AppError } from '@/shared/utils.js';
 import { resolveCodexExecutablePath } from '@/shared/index.js';
 
-/**
- * Minimal JSON-RPC client for `codex app-server`.
- *
- * Codex ships two entry points and they expose different things. The
- * `@openai/codex-sdk` this app runs conversations through is a wrapper around
- * `codex exec`, and its whole surface is `startThread` and `resumeThread` —
- * there is no way to branch a thread or to resume one partway. The same
- * binary's `app-server` subcommand speaks JSON-RPC and does have that
- * primitive, `thread/fork`, which is what the Codex IDE clients build their
- * own "fork" and "edit an earlier message" on top of.
- *
- * So this is a second transport to the same CLI, opened only for the
- * operations the SDK cannot express. Everything else still goes through the
- * SDK.
- */
-
-/** How long a single request may take before the child is killed. */
+/** Duplex stdio transport for the user's installed Codex CLI. No shell or listening port is needed. */
 const REQUEST_TIMEOUT_MS = 30_000;
+const CLOSE_TIMEOUT_MS = 3_000;
 
-type JsonRpcResponse = {
-  id?: number;
+type RpcMessage = {
+  id?: number | string;
+  method?: string;
+  params?: Record<string, any>;
   result?: unknown;
   error?: { code?: number; message?: string };
 };
 
-/**
- * One fork of a Codex thread.
- *
- * `path` is returned by the server rather than reconstructed: the rollout
- * lands in today's date directory, not next to the file it was copied from,
- * so deriving it from the source path would be wrong roughly every day.
- */
-export type CodexThreadFork = {
-  threadId: string;
-  path: string;
+type ConnectionOptions = {
+  cwd?: string;
+  onNotification?: (method: string, params: Record<string, any>) => void;
+  onRequest?: (method: string, params: Record<string, any>, id: number | string) => Promise<unknown>;
 };
 
-/**
- * Uses the installed Windows CLI shared with SDK runs, with the bundled
- * package as a fallback. Other hosts retain the package launcher.
- */
-function resolveCodexLaunch(): { command: string; args: string[] } {
-  const require_ = createRequire(import.meta.url);
-  try {
-    if (process.platform !== 'win32') {
-      const launcher = require_.resolve('@openai/codex/bin/codex.js');
-      return { command: process.execPath, args: [launcher, 'app-server'] };
-    }
-    const command = resolveCodexExecutablePath();
-    if (!command) throw new Error('Codex executable is missing');
-    return { command, args: ['app-server'] };
-  } catch {
-    throw new AppError('Cannot find Codex CLI. Install Codex or reinstall Claude GUI, then try again.', {
-      code: 'CODEX_APP_SERVER_UNAVAILABLE',
-      statusCode: 501,
+/** Used by Codex branching to retain the native thread identity and authoritative rollout path. */
+export type CodexThreadFork = { threadId: string; path: string };
+
+/** Used by the Codex runtime and discovery/fork operations for one isolated CLI connection. */
+export class CodexAppServerConnection {
+  private child;
+  private reader;
+  private stderr = '';
+  private nextId = 1;
+  private ended = false;
+  private serverRequests = new Set<number | string>();
+  private pending = new Map<number, { reject: (error: Error) => void; finish: (reply: RpcMessage) => void }>();
+  private finishClosed!: () => void;
+  private failClosed!: (error: Error) => void;
+  private childExited: Promise<void>;
+  private closePromise: Promise<void> | null = null;
+  readonly closed: Promise<void>;
+
+  constructor(private options: ConnectionOptions = {}) {
+    this.closed = new Promise((resolve, reject) => { this.finishClosed = resolve; this.failClosed = reject; });
+    // Discovery callers only await RPCs; still observe process failures on the lifecycle promise.
+    void this.closed.catch(() => {});
+    this.child = spawn(resolveCodexExecutablePath(), ['app-server'], {
+      env: process.env, cwd: options.cwd, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'],
     });
+    this.childExited = new Promise((resolve) => { this.child.once('exit', () => resolve()); });
+    this.child.stderr.on('data', (chunk) => { this.stderr = (this.stderr + String(chunk)).slice(-2000); });
+    this.child.stderr.on('error', () => {});
+    this.reader = readline.createInterface({ input: this.child.stdout });
+    this.reader.on('line', (line) => this.receive(line));
+    this.child.on('error', (error) => this.fail(error));
+    this.child.on('exit', (code, signal) => this.fail(new Error(
+      `codex app-server exited (code ${code ?? 'null'}, signal ${signal ?? 'null'})${this.stderr ? `: ${this.stderr.trim().split('\n').at(-1)}` : ''}`,
+    )));
+    this.child.stdin.on('error', (error) => this.fail(error));
+    this.child.stdout.on('error', (error) => this.fail(error));
   }
-}
 
-/**
- * Runs one exchange against a freshly spawned `codex app-server`.
- *
- * A process per operation rather than a pooled long-lived one: the handshake
- * costs a fraction of a second, forking happens at most once per user action,
- * and a shared child would need lifecycle handling — restarts, back-pressure,
- * a crash taking every pending fork with it — for no measurable gain next to
- * the model turn that follows.
- */
-async function withAppServer<T>(
-  run: (call: (method: string, params: unknown) => Promise<unknown>) => Promise<T>,
-  cwd?: string,
-): Promise<T> {
-  const launch = resolveCodexLaunch();
-  const child = spawn(launch.command, launch.args, {
-    env: process.env,
-    cwd,
-    windowsHide: true,
-    stdio: ['pipe', 'pipe', 'pipe'],
-  });
-
-  // The server logs sandbox and skill warnings to stderr on every start. They
-  // are not failures and drowning the app log in them helps nobody, so stderr
-  // is only kept around to explain a spawn that dies.
-  let stderr = '';
-  child.stderr?.on('data', (chunk) => {
-    stderr = (stderr + String(chunk)).slice(-2000);
-  });
-
-  let nextRequestId = 1;
-  const pending = new Map<number, (response: JsonRpcResponse) => void>();
-  let exitReason: string | null = null;
-
-  const reader = readline.createInterface({ input: child.stdout });
-  reader.on('line', (line) => {
-    if (!line.trim()) {
-      return;
-    }
-    let message: JsonRpcResponse;
-    try {
-      message = JSON.parse(line) as JsonRpcResponse;
-    } catch {
-      // Server-to-client notifications and any non-JSON banner are not
-      // replies to anything this client asked for.
-      return;
-    }
-    if (typeof message.id !== 'number') {
-      return;
-    }
-    pending.get(message.id)?.(message);
-    pending.delete(message.id);
-  });
-
-  const failPending = (reason: string) => {
-    exitReason = reason;
-    for (const resolve of pending.values()) {
-      resolve({ error: { message: reason } });
-    }
-    pending.clear();
-  };
-
-  child.on('error', (error) => failPending(error.message));
-  child.on('exit', (code, signal) => {
-    failPending(`codex app-server exited (code ${code ?? 'null'}, signal ${signal ?? 'null'})`);
-  });
-  // A child that dies mid-request leaves its pipes broken, and the next write
-  // raises EPIPE on the stream rather than at the call site. Without a
-  // listener that is an unhandled 'error' event, which takes the whole server
-  // down over one failed fork.
-  child.stdin?.on('error', (error) => failPending(error.message));
-  child.stdout?.on('error', (error) => failPending(error.message));
-  child.stderr?.on('error', () => {});
-
-  const call = (method: string, params: unknown): Promise<unknown> =>
-    new Promise((resolve, reject) => {
-      if (exitReason) {
-        reject(new AppError(`Codex app-server is not running: ${exitReason}`, {
-          code: 'CODEX_APP_SERVER_UNAVAILABLE',
-          statusCode: 502,
-        }));
-        return;
-      }
-
-      const id = nextRequestId++;
-      const timer = setTimeout(() => {
-        pending.delete(id);
-        reject(new AppError(`Codex app-server did not answer "${method}" within ${REQUEST_TIMEOUT_MS}ms.`, {
-          code: 'CODEX_APP_SERVER_TIMEOUT',
-          statusCode: 504,
-        }));
-      }, REQUEST_TIMEOUT_MS);
-
-      pending.set(id, (response) => {
-        clearTimeout(timer);
-        if (response.error) {
-          reject(new AppError(response.error.message || `Codex app-server rejected "${method}".`, {
-            code: 'CODEX_APP_SERVER_ERROR',
-            statusCode: 502,
-            details: { method, rpcCode: response.error.code },
-          }));
-          return;
+  private receive(line: string): void {
+    let message: RpcMessage;
+    try { message = JSON.parse(line); } catch { return; }
+    if (!message || typeof message !== 'object') return;
+    // Server requests have their own ID namespace; route by method before inspecting IDs.
+    if (message.method) {
+      const params = message.params ?? {};
+      if (message.id !== undefined) {
+        const id = message.id;
+        this.serverRequests.add(id);
+        let response: Promise<unknown>;
+        try {
+          // Register interactive requests before the next notification can resolve/cancel them.
+          response = this.options.onRequest
+            ? Promise.resolve(this.options.onRequest(message.method, params, id))
+            : Promise.reject(new Error(`Unsupported Codex request: ${message.method}`));
+        } catch (error) { response = Promise.reject(error); }
+        void response.then(
+          (result) => { if (this.serverRequests.delete(id)) this.write({ id, result }); },
+          (error) => {
+            if (this.serverRequests.delete(id)) this.write({ id, error: { code: -32601, message: String(error?.message ?? error) } });
+          },
+        );
+      } else {
+        if (message.method === 'serverRequest/resolved') this.serverRequests.delete(params.requestId);
+        try { this.options.onNotification?.(message.method, params); } catch (error) {
+          this.fail(error instanceof Error ? error : new Error(String(error)));
         }
-        resolve(response.result);
+      }
+      return;
+    }
+    if (typeof message.id === 'number') this.pending.get(message.id)?.finish(message);
+  }
+
+  private write(message: unknown): void {
+    if (this.ended) return;
+    try { this.child.stdin.write(`${JSON.stringify(message)}\n`); } catch (error) {
+      this.fail(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
+  private fail(error: Error): void {
+    if (this.ended) return;
+    this.ended = true;
+    for (const pending of this.pending.values()) pending.reject(error);
+    this.pending.clear();
+    this.serverRequests.clear();
+    this.failClosed(error);
+    this.reader.close();
+    this.child.kill();
+  }
+
+  async initialize(): Promise<void> {
+    await this.call('initialize', {
+      clientInfo: { name: 'claude_gui', title: 'Claude GUI', version: '1' },
+      // User-input questions and newer permission requests are opt-in protocol surfaces.
+      capabilities: { experimentalApi: true },
+    });
+    this.write({ method: 'initialized', params: {} });
+  }
+
+  call(method: string, params: unknown): Promise<any> {
+    if (this.ended) return Promise.reject(new Error('Codex app-server connection is closed.'));
+    return new Promise((resolve, reject) => {
+      const id = this.nextId++;
+      const rejectRequest = (error: Error) => { clearTimeout(timer); this.pending.delete(id); reject(error); };
+      const timer = setTimeout(() => rejectRequest(new AppError(`Codex app-server did not answer "${method}" within ${REQUEST_TIMEOUT_MS}ms.`, {
+        code: 'CODEX_APP_SERVER_TIMEOUT', statusCode: 504,
+      })), REQUEST_TIMEOUT_MS);
+      this.pending.set(id, {
+        reject: rejectRequest,
+        finish: (reply) => {
+          clearTimeout(timer);
+          this.pending.delete(id);
+          if (reply.error) reject(new AppError(reply.error.message || `Codex rejected "${method}".`, {
+            code: 'CODEX_APP_SERVER_ERROR', statusCode: 502, details: { method, rpcCode: reply.error.code },
+          }));
+          else resolve(reply.result);
+        },
       });
-
-      child.stdin?.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+      this.write({ id, method, params });
     });
+  }
 
-  try {
-    // `capabilities` is deliberately empty. `thread/fork` with `lastTurnId` is
-    // in the stable protocol; only `beforeTurnId` and the turn-listing methods
-    // are gated behind `experimentalApi`, and neither is needed here.
-    await call('initialize', {
-      clientInfo: { name: 'cloudcli', title: 'Claude GUI', version: '1' },
-      capabilities: {},
-    });
-    child.stdin?.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'initialized', params: {} })}\n`);
+  close(): void {
+    if (this.ended) return;
+    this.ended = true;
+    for (const pending of this.pending.values()) pending.reject(new Error('Codex app-server connection closed.'));
+    this.pending.clear();
+    this.serverRequests.clear();
+    this.reader.close();
+    this.child.kill();
+    this.finishClosed();
+  }
 
-    return await run(call);
-  } catch (error) {
-    if (error instanceof AppError && exitReason) {
-      throw new AppError(`${error.message}${stderr ? ` — ${stderr.trim().split('\n').slice(-1)[0]}` : ''}`, {
-        code: error.code,
-        statusCode: error.statusCode,
+  /**
+   * Used by the Codex runtime before releasing a conversation for another turn.
+   *
+   * The CLI keeps a cross-process thread writer lock until its app-server
+   * process exits. Waiting here prevents the next turn from starting while the
+   * previous writer is still shutting down.
+   */
+  closeAndWait(timeoutMs = CLOSE_TIMEOUT_MS): Promise<void> {
+    this.closePromise ??= this.performCloseAndWait(timeoutMs);
+    return this.closePromise;
+  }
+
+  private async performCloseAndWait(timeoutMs: number): Promise<void> {
+    if (!this.ended) this.close();
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = await Promise.race([
+      this.childExited.then(() => false),
+      new Promise<boolean>((resolve) => { timer = setTimeout(() => resolve(true), timeoutMs); }),
+    ]);
+    clearTimeout(timer);
+    if (timedOut) {
+      throw new AppError(`Codex app-server did not exit within ${timeoutMs}ms.`, {
+        code: 'CODEX_APP_SERVER_CLOSE_TIMEOUT',
+        statusCode: 504,
       });
     }
-    throw error;
-  } finally {
-    reader.close();
-    child.kill();
+    this.finishClosed();
   }
 }
 
-/** Used by Codex session branching and model discovery to access CLI-only RPC methods. */
+async function withAppServer<T>(run: (call: CodexAppServerConnection['call']) => Promise<T>, cwd?: string): Promise<T> {
+  const connection = await codexAppServer.connect({ cwd });
+  try { return await run(connection.call.bind(connection)); } finally { connection.close(); }
+}
+
+/** Used by Codex runtime, session branching and discovery to access the installed CLI. */
 export const codexAppServer = {
-  /** Reads every visible model page from the same Codex binary used by the SDK runtime. */
+  async connect(options: ConnectionOptions = {}): Promise<CodexAppServerConnection> {
+    const connection = new CodexAppServerConnection(options);
+    try { await connection.initialize(); return connection; } catch (error) { connection.close(); throw error; }
+  },
+  /** Reads every visible model page from the same Codex binary used by the chat runtime. */
   async listModels(cwd?: string): Promise<unknown[]> {
     return withAppServer(async (call) => {
       const models: unknown[] = [];

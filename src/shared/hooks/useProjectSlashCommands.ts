@@ -121,7 +121,12 @@ export function useProjectSlashCommands(
           : null;
         const skillCommands = dedupeProviderSkills(skillsData?.data?.skills || [])
           .map(mapSkillToSlashCommand);
+        const nativeCommands: SlashCommand[] = provider === 'codex' ? [
+          { name: '/compact', description: 'Compact context using the local Codex CLI', namespace: 'native', metadata: { type: 'native' } },
+          { name: '/context', description: 'Show context usage reported by Codex CLI', namespace: 'native', metadata: { type: 'native' } },
+        ] : [];
         const allCommands: SlashCommand[] = [
+          ...nativeCommands,
           ...((data.builtIn || []) as SlashCommand[]).map((command) => ({
             ...command,
             type: 'built-in',

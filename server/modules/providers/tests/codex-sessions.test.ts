@@ -610,3 +610,38 @@ test('Codex history restores user prompts from typed item_completed rows', { con
     await rm(tempRoot, { recursive: true, force: true });
   }
 });
+
+test('Codex permission mode follows the latest turn_context, including Desktop\'s auto review', { concurrency: false }, async () => {
+  const tempRoot = await mkdtemp(path.join(os.tmpdir(), 'codex-permission-mode-'));
+  const turnContext = (approval: unknown, sandbox: string, reviewer?: string) => JSON.stringify({
+    type: 'turn_context',
+    payload: { cwd: tempRoot, approval_policy: approval, sandbox_policy: { type: sandbox }, model: 'gpt-6.1-sol',
+      // ~300 KB of multi-byte text spans several 64 KiB read blocks per row.
+      ...(reviewer ? { approvals_reviewer: reviewer } : {}), developer_instructions: '工作区说明'.repeat(20_000) },
+  });
+  const cases: Array<[string, string[], string | null]> = [
+    ['auto', [turnContext('on-request', 'workspace-write', 'user'), turnContext('on-request', 'workspace-write', 'auto_review')], 'auto'],
+    ['default', [turnContext('on-request', 'workspace-write', 'auto_review'), turnContext('on-request', 'workspace-write')], 'default'],
+    ['acceptEdits', [turnContext('never', 'workspace-write', 'user')], 'acceptEdits'],
+    ['bypass', [turnContext('never', 'danger-full-access', 'user')], 'bypassPermissions'],
+    // The latest turn ran under settings the composer cannot express: no guessing from older turns.
+    ['granular', [turnContext('never', 'danger-full-access'), turnContext({ granular: { rules: true } }, 'workspace-write')], null],
+  ];
+
+  try {
+    await withIsolatedDatabase(async () => {
+      for (const [name, contexts, expected] of cases) {
+        const filePath = path.join(tempRoot, `rollout-${name}.jsonl`);
+        const lines = [JSON.stringify({ type: 'session_meta', payload: { id: name, cwd: tempRoot } }), ...contexts,
+          JSON.stringify({ type: 'event_msg', payload: { type: 'agent_message', message: 'done' } })];
+        // No trailing newline: the CLI may still be appending the last row.
+        await writeFile(filePath, lines.join('\n'), 'utf8');
+        sessionsDb.createSession(name, 'codex', tempRoot, undefined, undefined, undefined, filePath);
+        assert.equal(await new CodexSessionsProvider().readPermissionMode(name), expected, name);
+      }
+      assert.equal(await new CodexSessionsProvider().readPermissionMode('missing'), null);
+    });
+  } finally {
+    await rm(tempRoot, { recursive: true, force: true });
+  }
+});

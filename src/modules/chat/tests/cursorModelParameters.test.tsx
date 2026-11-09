@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, test, vi } from 'vitest';
 
 import { i18n } from '@/modules/i18n';
@@ -78,4 +78,14 @@ test('the Codex composer exposes Fast, follows CLI explicitly, and preserves rea
   fireEvent.click(screen.getByRole('menuitemradio', { name: 'Follow CLI settings' }));
   assert.equal(select.mock.calls[1]?.[0], 'default');
   assert.equal(screen.getByRole('menuitemradio', { name: 'high' }).getAttribute('aria-checked'), 'true');
+});
+
+test('effort ids are capitalized without title-casing the CLI descriptions', () => {
+  render(<ComposerModelMenu provider="codex" model="codex-model" modelOptions={[]}
+    effort="low" effortOptions={[{ value: 'low', description: 'Fast responses with lighter reasoning' }]}
+    onSelectEffort={() => {}} onSelectModel={() => {}} modelsLoading={false} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Select model and reasoning effort' }));
+  const lowRow = within(screen.getByRole('menuitemradio', { name: /low/ }));
+  assert.ok(lowRow.getByText('low').classList.contains('capitalize'));
+  assert.equal(lowRow.getByText('Fast responses with lighter reasoning').closest('.capitalize'), null);
 });

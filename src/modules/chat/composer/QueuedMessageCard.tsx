@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import { PencilIcon, XIcon } from 'lucide-react';
+import { CornerDownRightIcon, PencilIcon, XIcon } from 'lucide-react';
 
 type QueuedMessageCardProps = {
   content: string;
   attachmentCount?: number;
   onEdit: () => void;
   onDelete: () => void;
+  /** Sends it into the running turn now; absent when the provider cannot. */
+  onSteer?: () => void;
 };
 
 /**
@@ -17,6 +19,7 @@ export default function QueuedMessageCard({
   attachmentCount = 0,
   onEdit,
   onDelete,
+  onSteer,
 }: QueuedMessageCardProps) {
   const { t } = useTranslation('chat');
 
@@ -41,6 +44,17 @@ export default function QueuedMessageCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-0.5">
+          {onSteer && (
+            <button
+              type="button"
+              onClick={onSteer}
+              aria-label={t('input.queue.steer', { defaultValue: 'Send into the running turn now' })}
+              title={t('input.queue.steer', { defaultValue: 'Send into the running turn now' })}
+              className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <CornerDownRightIcon className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             type="button"
             onClick={onEdit}

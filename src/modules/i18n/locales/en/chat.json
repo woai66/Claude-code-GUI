@@ -107,11 +107,42 @@
   "usageLimit": {
     "resetAt": "Claude usage limit reached. Your limit will reset at **{{time}} {{timezone}}** - {{date}}"
   },
+  "mcpElicitation": {
+    "asks": "{{server}} asks for your input",
+    "submit": "Submit",
+    "decline": "Decline",
+    "openLink": "Open link",
+    "unsafeUrl": "Only http and https links can be opened from here.",
+    "optional": "optional",
+    "choose": "Choose…",
+    "required": "Required",
+    "notANumber": "Enter a number",
+    "notAnInteger": "Enter a whole number",
+    "tooSmall": "At least {{value}}",
+    "tooLarge": "At most {{value}}",
+    "tooShort": "At least {{count}} characters",
+    "tooLong": "At most {{count}} characters",
+    "tooFew": "Pick at least {{count}}",
+    "tooMany": "Pick at most {{count}}",
+    "notAnEmail": "Enter an email address",
+    "notAUri": "Enter a full address, such as https://example.com",
+    "notADate": "Enter a date",
+    "notADateTime": "Enter a date and time",
+    "notTheFormat": "Not a valid {{format}}"
+  },
+  "autoReview": {
+    "approveRetry": "Approve and retry",
+    "retryMessage": "I approved the action auto-review just denied. Please try it again."
+  },
+  "codexApproval": {
+    "allowForTurn": "Allow for this turn",
+    "allowForTurnHint": "Codex will not ask again for the same action until this turn ends."
+  },
   "codex": {
     "permissionMode": "Permission Mode",
     "modes": {
       "default": "Default Mode",
-      "auto": "Auto Mode",
+      "auto": "Approve for me",
       "acceptEdits": "Accept Edits",
       "bypassPermissions": "Bypass Permissions",
       "plan": "Plan Mode",
@@ -119,13 +150,18 @@
     },
     "descriptions": {
       "default": "Only trusted commands (ls, cat, grep, git status, etc.) run automatically. Other commands are skipped. Can write to workspace.",
-      "auto": "A model classifier decides per tool call whether to approve or deny. Hands-off, but safer than Bypass — denials still happen.",
+      "auto": "Runs sandboxed in the workspace. Escalation requests go to Codex auto-review, which approves safe actions and rejects risky ones.",
       "acceptEdits": "All commands run automatically within the workspace. Full auto mode with sandboxed execution.",
       "bypassPermissions": "Full system access with no restrictions. All commands run automatically with full disk and network access. Use with caution.",
       "plan": "Planning mode - no commands are executed",
       "dontAsk": "Never prompt for permission. Tools that are not already allowed are denied."
     },
     "technicalDetails": "Technical details"
+  },
+  "permissionOverrides": {
+    "codex": {
+      "default": "Commands run sandboxed in the workspace. Anything that needs more access, such as the network or writes outside the workspace, asks for your approval first."
+    }
   },
   "claude": {
     "modes": {
@@ -173,11 +209,12 @@
     "scrollToBottom": "Scroll to bottom",
     "queue": {
       "sendNext": "Queue next message",
-      "update": "Update queued message",
+      "update": "Add to queued message",
       "label": "Queued",
       "willSend": "Will send when this finishes",
       "edit": "Edit queued message",
-      "delete": "Delete queued message"
+      "delete": "Delete queued message",
+      "steer": "Send into the running turn now"
     }
   },
   "composer": {

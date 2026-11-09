@@ -754,7 +754,15 @@ export function useSessionStore() {
       msg.sessionId === sessionId
         ? msg
         : { ...msg, sessionId };
-    let updated = [...slot.realtimeMessages, normalizedMessage];
+    // Native providers send snapshots with stable item IDs. Replace in place to keep one row
+    // and its original timeline position while text, reasoning or tool output grows.
+    const existingIndex = slot.realtimeMessages.findIndex((message) => message.id === normalizedMessage.id);
+    let updated = [...slot.realtimeMessages];
+    if (existingIndex >= 0) {
+      updated[existingIndex] = { ...normalizedMessage, timestamp: updated[existingIndex].timestamp };
+    } else {
+      updated.push(normalizedMessage);
+    }
     if (updated.length > MAX_REALTIME_MESSAGES) {
       updated = updated.slice(-MAX_REALTIME_MESSAGES);
     }

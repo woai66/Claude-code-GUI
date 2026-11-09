@@ -144,8 +144,12 @@ function ComposerPermissionMenu({
                 label={t(`${translationPrefix}.modes.${mode}`, {
                   defaultValue: t(`codex.modes.${mode}`, { defaultValue: mode }),
                 })}
-                description={t(`${translationPrefix}.descriptions.${mode}`, {
-                  defaultValue: t(`codex.descriptions.${mode}`, { defaultValue: '' }),
+                // Cursor and OpenCode share the `codex` wording; a provider whose mode behaves
+                // differently overrides that one description under `permissionOverrides`.
+                description={t(`permissionOverrides.${provider}.${mode}`, {
+                  defaultValue: t(`${translationPrefix}.descriptions.${mode}`, {
+                    defaultValue: t(`codex.descriptions.${mode}`, { defaultValue: '' }),
+                  }),
                 }) || undefined}
                 isSelected={mode === permissionMode}
                 onSelect={() => {

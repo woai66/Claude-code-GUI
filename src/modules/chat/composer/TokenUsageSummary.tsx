@@ -2,7 +2,10 @@ import { memo } from 'react';
 import { ActivityIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import type { LLMProvider } from '@/shared/types';
+
 type TokenUsageSummaryProps = {
+  provider: LLMProvider;
   usage: Record<string, unknown> | null;
   onClick?: () => void;
 };
@@ -36,7 +39,7 @@ const readUsageNumber = (value: unknown) => {
  * Rendered by chat's ChatComposer to show the session's context-window usage
  * and open the detailed token breakdown on click.
  */
-function TokenUsageSummary({ usage, onClick }: TokenUsageSummaryProps) {
+function TokenUsageSummary({ provider, usage, onClick }: TokenUsageSummaryProps) {
   const { t } = useTranslation();
   const breakdown =
     usage?.breakdown && typeof usage.breakdown === 'object'
@@ -45,6 +48,10 @@ function TokenUsageSummary({ usage, onClick }: TokenUsageSummaryProps) {
   const inputTokens = readUsageNumber(usage?.inputTokens ?? breakdown?.input);
   const outputTokens = readUsageNumber(usage?.outputTokens ?? breakdown?.output);
   const usedTokens = readUsageNumber(usage?.used) || inputTokens + outputTokens;
+  const capacity = readUsageNumber(usage?.total);
+  const contextLabel = provider === 'codex'
+    ? `${usage && !usage.unsupported ? formatTokenCount(usedTokens) : '—'} / ${capacity > 0 ? formatTokenCount(capacity) : '?'}`
+    : formatTokenCount(usedTokens);
 
   return (
     <button
@@ -57,7 +64,7 @@ function TokenUsageSummary({ usage, onClick }: TokenUsageSummaryProps) {
       <span className="grid h-5 w-5 place-items-center rounded-md bg-primary/10 text-primary">
         <ActivityIcon className="h-3.5 w-3.5" />
       </span>
-      <span className="font-medium text-foreground">{formatTokenCount(usedTokens)}</span>
+      <span className="font-medium text-foreground">{contextLabel}</span>
       <span className="hidden text-muted-foreground/70 sm:inline">
         {t('chat:misc.tokensLabel', { count: usedTokens })}
       </span>

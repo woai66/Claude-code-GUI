@@ -23,6 +23,7 @@ import { prepareTranscriptMessages, truncateNestedOutput } from '@/shared/messag
 import {
   createNormalizedMessage,
   generateMessageId,
+  isClaudeNonTurnMessageRow,
   isPlaceholderProviderModel,
   readObjectRecord,
   sliceTailPage,
@@ -31,7 +32,10 @@ import {
 } from '@/shared/utils.js';
 import { sessionsDb } from '@/modules/database/index.js';
 import { getClaudeSDKSessionStartTime } from '@/modules/providers/list/claude/claude-runtime.provider.js';
-import { summarizeClaudeTokenUsage } from '@/modules/providers/services/provider-token-usage.service.js';
+import {
+  getReportedClaudeContextWindow,
+  summarizeClaudeTokenUsage,
+} from '@/modules/providers/services/provider-token-usage.service.js';
 
 const PROVIDER = 'claude';
 const CLAUDE_PERMISSION_MODES = new Set([
@@ -180,6 +184,9 @@ async function readClaudeSubagentTranscript(filePath: string): Promise<ClaudeSub
 
       try {
         const entry = JSON.parse(line) as AnyRecord;
+        if (isClaudeNonTurnMessageRow(entry)) {
+          continue;
+        }
         const timestamp = typeof entry.timestamp === 'string' ? entry.timestamp : undefined;
         if (timestamp && !transcript.startedAt) {
           transcript.startedAt = timestamp;
@@ -541,7 +548,7 @@ async function readTranscriptRows(jsonlPath: string, providerSessionId: string):
     }
     try {
       const entry = JSON.parse(line) as AnyRecord;
-      if (entry.sessionId === providerSessionId) {
+      if (entry.sessionId === providerSessionId && !isClaudeNonTurnMessageRow(entry)) {
         rows.push(entry);
       }
     } catch {
@@ -1915,7 +1922,11 @@ export class ClaudeSessionsProvider implements IProviderSessions {
       // Carried on every page, like the Codex and OpenCode readers do, so the
       // composer's counter tracks the conversation instead of being frozen at
       // whatever it was when the session was opened.
-      tokenUsage: summarizeClaudeTokenUsage(rawMessages),
+      tokenUsage: summarizeClaudeTokenUsage(
+        rawMessages,
+        undefined,
+        getReportedClaudeContextWindow(providerSessionId),
+      ),
     };
   }
 }

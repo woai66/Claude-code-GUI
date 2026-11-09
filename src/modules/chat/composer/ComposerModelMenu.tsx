@@ -130,16 +130,19 @@ function ComposerModelMenu({
             <CursorModelParameters family={cursorFamily} model={model} onSelectModel={onSelectModel} />
           )}
           {showSpeed && (
-            <div className="space-y-2 px-2.5 py-2">
-              <ComposerMenuToggle label="Fast" checked={speed === 'fast'}
-                onChange={(checked) => onSelectSpeed?.(checked ? 'fast' : 'standard')} />
-              <p className="text-[11px] text-muted-foreground">
-                {t('composer.fastUsage', { defaultValue: 'Uses more allowance' })}
-              </p>
+            <>
+              <div className="space-y-2 px-2.5 py-2">
+                <ComposerMenuToggle label="Fast" checked={speed === 'fast'}
+                  onChange={(checked) => onSelectSpeed?.(checked ? 'fast' : 'standard')} />
+                <p className="text-[11px] text-muted-foreground">
+                  {t('composer.fastUsage', { defaultValue: 'Uses more allowance' })}
+                </p>
+              </div>
+              {/* Kept outside the padded block so it lines up with the other menu rows. */}
               <ComposerMenuItem label={t('composer.followCli', { defaultValue: 'Follow CLI settings' })}
                 isSelected={speed === 'default'} onSelect={() => onSelectSpeed?.('default')} />
               <ComposerMenuSeparator />
-            </div>
+            </>
           )}
           {hasEffortSection && (
             <>
@@ -149,14 +152,14 @@ function ComposerModelMenu({
               {resolvedEffortOptions.map((option) => (
                 <ComposerMenuItem
                   key={option.value}
-                  label={option.value === DEFAULT_EFFORT_VALUE ? defaultEffortLabel : option.value}
+                  // Capitalize only the raw effort id; the CLI's descriptions are sentences.
+                  label={<span className="capitalize">{option.value === DEFAULT_EFFORT_VALUE ? defaultEffortLabel : option.value}</span>}
                   description={option.description}
                   isSelected={option.value === effort}
                   onSelect={() => {
                     onSelectEffort(option.value);
                     setIsOpen(false);
                   }}
-                  className="capitalize"
                 />
               ))}
             </>

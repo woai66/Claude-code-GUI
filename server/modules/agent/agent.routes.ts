@@ -1029,7 +1029,8 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): expres
           sessionId: appSessionId,
           model: model,
           effort,
-          permissionMode: 'bypassPermissions' // Bypass all permissions for API calls
+          permissionMode: 'bypassPermissions', // Bypass all permissions for API calls
+          unattended: true // No person is there to answer an MCP server's request for input
         }, run.writer);
 
       } else if (provider === 'cursor') {

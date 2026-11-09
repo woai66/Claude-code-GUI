@@ -696,7 +696,7 @@ router.post(
     const provider = parseProvider(req.params.provider);
     const sessionId = parseSessionId(req.params.sessionId);
     const model = parseSessionModelPayload(req.body);
-    const stored = providerModelsService.setSessionModel(provider, sessionId, model);
+    const stored = await providerModelsService.selectSessionModel(provider, sessionId, model);
     // A session row only exists once the gateway has allocated one. Report the
     // selection back either way so the client can hold it until the first send.
     res.json(createApiSuccessResponse(
@@ -727,7 +727,7 @@ router.post(
     const provider = parseProvider(req.params.provider);
     const sessionId = parseSessionId(req.params.sessionId);
     const effort = parseSessionEffortPayload(req.body);
-    const stored = providerModelsService.setSessionEffort(provider, sessionId, effort);
+    const stored = await providerModelsService.selectSessionEffort(provider, sessionId, effort);
     // Mirror active-model behavior for a composer that picked an effort just
     // before the session gateway created its row.
     res.json(createApiSuccessResponse(

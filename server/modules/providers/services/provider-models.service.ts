@@ -398,6 +398,28 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
     };
   };
 
+  type PendingCodexSelection = { revision: string; model?: string; effort?: string };
+  const pendingSelectionKey = (sessionId: string) => `session-pending-selection:codex:${sessionId}`;
+  const readPendingSelection = (sessionId: string, revision: string): PendingCodexSelection | null => {
+    try {
+      const pending = JSON.parse(modelCache.get(pendingSelectionKey(sessionId)) || 'null') as PendingCodexSelection | null;
+      return pending?.revision === revision ? pending : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const rememberPendingSelection = async (
+    provider: LLMProvider, sessionId: string, selection: { model?: string; effort?: string },
+  ): Promise<void> => {
+    if (provider !== 'codex') return;
+    const native = await getCurrentActiveModel(provider, sessionId);
+    const revision = native.revision ?? '';
+    modelCache.set(pendingSelectionKey(sessionId), JSON.stringify({
+      ...readPendingSelection(sessionId, revision), revision, ...selection,
+    }));
+  };
+
   /**
    * Records the model one session runs with.
    *
@@ -464,10 +486,21 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
     };
   };
 
+  // A composer click is a pending intent, unlike the turn cache written by chat.send.
+  const selectSessionModel = async (provider: LLMProvider, sessionId: string, model: string) => {
+    await rememberPendingSelection(provider, sessionId, { model });
+    return setSessionModel(provider, sessionId, model);
+  };
+  const selectSessionEffort = async (provider: LLMProvider, sessionId: string, effort: string) => {
+    await rememberPendingSelection(provider, sessionId, { effort });
+    return setSessionEffort(provider, sessionId, effort);
+  };
+
   /**
    * Answers "which model is this session using?" for every display surface.
    *
-   * Precedence, highest first:
+   * Codex prefers pending explicit choices, then native turn state, then its
+   * cached row. Other providers retain their existing precedence:
    *   1. the model recorded on the session row;
    *   2. the provider's own session state for externally-created sessions;
    *   3. `requestedModel`, the client's current default;
@@ -484,6 +517,20 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
 
     if (normalizedSessionId) {
       const recordedSelection = readRecordedSessionSelection(normalizedSessionId);
+      if (provider === 'codex') {
+        const native = await getCurrentActiveModel(provider, normalizedSessionId);
+        const pending = readPendingSelection(normalizedSessionId, native.revision ?? '');
+        const model = pending?.model ?? (native.model || recordedSelection?.model || normalizedRequestedModel);
+        return {
+          provider,
+          sessionId: normalizedSessionId,
+          model,
+          effort: pending?.effort ?? (native.model ? native.effort ?? null : recordedSelection?.effort ?? null),
+          source: pending ? 'session' : native.model ? 'provider' : model ? 'session' : 'default',
+          pending: Boolean(pending),
+          lastUsed: { model: native.model, effort: native.effort ?? null },
+        };
+      }
       if (recordedSelection?.model) {
         return {
           provider,
@@ -547,11 +594,15 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
     sessionId: string | undefined,
     requestedModel?: string | null,
   ): Promise<string | undefined> => {
-    void provider;
     const normalizedRequestedModel = typeof requestedModel === 'string' ? requestedModel.trim() : '';
     const normalizedSessionId = sessionId?.trim();
     if (!normalizedSessionId) {
       return normalizedRequestedModel || undefined;
+    }
+
+    if (provider === 'codex') {
+      return normalizedRequestedModel
+        || (await resolveSessionModel(provider, { sessionId: normalizedSessionId })).model || undefined;
     }
 
     const recordedModel = readRecordedSessionSelection(normalizedSessionId)?.model;
@@ -568,6 +619,8 @@ export const createProviderModelsService = (dependencies: ProviderModelsServiceD
     deleteCustomModel,
     setSessionModel,
     setSessionEffort,
+    selectSessionModel,
+    selectSessionEffort,
     resolveSessionModel,
     resolveResumeModel,
   };
