@@ -1,8 +1,9 @@
 <div align="center">
-  <img src="public/logo.svg" alt="Claude GUI" width="64" height="64">
+  <img src="public/logo.svg" alt="Claude GUI 像素角色图标" width="88" height="88">
   <h1>Claude GUI</h1>
   <p>为本地 AI 编程 CLI 打造的桌面工作区。<br>把项目、对话和模型选择放在一个界面里。</p>
   <p>
+    <a href="#界面预览">界面预览</a> ·
     <a href="https://github.com/woai66/Claude-code-GUI/releases">下载与发布</a> ·
     <a href="https://github.com/woai66/Claude-code-GUI/issues">问题反馈</a> ·
     <a href="#开发与验证">开发说明</a>
@@ -13,12 +14,48 @@ Claude GUI 是基于 **[CloudCLI UI (https://github.com/siteboon/claudecodeui)](
 
 安装后直接进入本地工作区，无需 Cloud 服务账户；在同一个项目目录里，可以选择不同 CLI 创建各自的对话。AI 服务使用你已有的 CLI 登录、订阅或 API 配置。
 
+## 界面预览
+
+项目、不同 CLI 的历史会话和当前对话集中在同一个工作区。
+
+![Claude GUI 工作区：项目侧边栏、多 CLI 会话和 Claude 对话](public/screenshots/workspace.png)
+
+<details>
+<summary>查看模型库、Codex Fast 和 Cursor 参数截图</summary>
+
+### 动态模型库
+
+从 CLI 获取可用模型，也可以补充自定义模型。
+
+![模型库：提供商切换、获取模型列表和自定义模型](public/screenshots/model-library.png)
+
+### 模型参数
+
+<table>
+  <tr>
+    <th>Codex：Fast 与思考等级</th>
+    <th>Cursor：同一模型下调整参数</th>
+  </tr>
+  <tr>
+    <td align="center" valign="top">
+      <img src="public/screenshots/codex-fast.png" alt="Codex Fast 开关、跟随 CLI 设置和思考等级" width="340">
+    </td>
+    <td align="center" valign="top">
+      <img src="public/screenshots/cursor-parameters.png" alt="Cursor 模型的思考等级、1M 上下文和 Fast 开关" width="230">
+    </td>
+  </tr>
+</table>
+
+</details>
+
+截图来自当前版本的独立演示环境，项目与对话均为示例；模型和可用选项以实际 CLI 返回为准。
+
 ## 主要功能
 
 | 功能 | 当前体验 |
 | --- | --- |
 | 项目与对话管理 | 自动发现已有 CLI 会话，按 Agent 筛选项目、对话、运行中会话和归档 |
-| 简洁的侧边栏 | 顶部统一新建会话入口，展开项目查看历史对话 |
+| 简洁的侧边栏 | 顶部统一新建会话入口，展开项目查看历史对话，可隐藏临时项目并随时恢复 |
 | 本地目录操作 | 桌面版使用系统目录选择窗口，也可将文件夹拖入新建项目窗口 |
 | 动态模型库 | 从 CLI 获取模型列表，缓存结果供各模型选择器使用；刷新时保留自定义模型 |
 | CLI 会话衔接 | 在 GUI 继续已有对话；Windows 桌面版可在 PowerShell 中恢复 Claude 会话 |
@@ -29,7 +66,7 @@ Claude GUI 是基于 **[CloudCLI UI (https://github.com/siteboon/claudecodeui)](
 | CLI | 模型与参数 |
 | --- | --- |
 | Claude Code | 动态读取模型，识别已有会话的模型和权限模式，兼容原生 `auto` 权限模式 |
-| Codex | 通过本机 CLI 获取模型及其思考等级；独立提供 Fast 开关和「跟随 CLI 设置」，按会话保存速度选择 |
+| Codex | 从原生会话恢复上次实际使用的模型和思考等级；通过本机 CLI 获取模型；提供 Fast 开关和「跟随 CLI 设置」 |
 | Cursor CLI | 将同一模型的已识别变体合并展示，按实际返回的组合选择思考等级、上下文、Thinking 或 Fast |
 
 Codex 和 Cursor 的模型列表来自 CLI 查询，不维护固定模型预设。Cursor 的参数选择最终对应 CLI 返回的真实模型 ID；界面仅展示当前模型实际支持的选项。
@@ -45,6 +82,8 @@ Codex 和 Cursor 的模型列表来自 CLI 查询，不维护固定模型预设�
 - [Cursor CLI](https://docs.cursor.com/en/cli/overview)
 
 Claude GUI 管理本地工作区和 CLI 会话，模型访问权限与用量由对应服务及账户决定。
+
+Claude Code、Codex 和 Cursor 的聊天、模型查询及安装检查使用本机 CLI。找不到本机 Claude Code 或 Codex 时会提示安装，不再自动使用依赖附带的版本。可在设置的 Agent 账户页查看实际 CLI 路径和版本；需要指定安装时，可设置 `CLAUDE_CLI_PATH` 或 `CODEX_CLI_PATH`。
 
 ### 2. 安装 Windows 桌面版
 
@@ -67,6 +106,8 @@ npm run desktop:dist:win -- --publish never
 
 1. 新建项目，选择本地目录；桌面版也可以从资源管理器拖入一个文件夹。
 2. 通过侧边栏顶部的「新建会话」选择项目和 CLI，或打开已有对话继续。
+
+不常用的目录可在项目的三点菜单中选择「隐藏项目」。点击「新建会话」旁的「已隐藏的项目」图标可恢复显示；隐藏状态会保留，目录与历史对话不受影响，仍可从「对话」页访问，运行中的任务也会继续显示。
 3. 打开「模型库」，选择提供商并点击「获取模型列表」。已有缓存时可以手动刷新。
 4. 在输入区的模型菜单中选择模型和可用参数，再发送消息。
 
@@ -79,6 +120,16 @@ CLI 更新或账户模型权限变化后，可再次获取模型列表，无需�
 打开输入区的模型菜单，使用 **Fast** 开关设置速度。关闭开关会明确使用标准速度；选择「跟随 CLI 设置」则由原生 CLI 配置和恢复行为决定。速度与模型、思考等级分别设置，并按会话保存。
 
 Fast 的可用性取决于模型与账户，开启后会消耗更多额度。
+
+### Codex 原生聊天与上下文
+
+Codex 聊天通过本机官方 `codex app-server` 的标准输入输出协议运行，新建、恢复、流式回复、工具调用和停止均交给本机 CLI，不再使用 `codex exec` SDK 或随软件附带的 Codex。
+
+- `/context`：查看 CLI 报告的最新上下文用量与容量；不把会话累计消耗当作当前上下文，未报告的数据显示为未知。
+- `/compact`：调用官方 `thread/compact/start`，显示实际压缩进度与结果；不会把命令作为普通提示词发送或自行生成摘要。
+- 审批与提问：在界面处理命令执行、文件变更、临时权限请求和原生用户提问，决定通过同一连接回传 CLI。GUI 审批只针对当前请求或当前轮次，永久规则仍由官方 CLI 管理。
+
+这些能力取决于本机 CLI 版本。遇到尚未支持的交互会明确提示，可继续使用官方 CLI；项目不会自动批准未知请求。当前已在本机 Codex 0.162.1 验证连接、新建、恢复和参数协议。
 
 ### Cursor 模型参数
 
@@ -146,6 +197,8 @@ docs/architecture/   聊天运行时架构说明
 ```
 
 聊天流程的实现说明见 [架构文档](docs/architecture/README.md)。前后端模块约定见 [AGENTS.md](AGENTS.md)。
+
+应用图标采用白底终端窗口与 Claude Code 像素角色。SVG、网页图标、PWA 图标和桌面图标统一维护，修改与生成方式见 [图标说明](public/convert-icons.md)。
 
 ## 数据与兼容
 

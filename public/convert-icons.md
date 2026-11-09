@@ -1,53 +1,28 @@
-# Convert SVG Icons to PNG
+# Claude GUI 图标
 
-I've created SVG versions of the app icons that match the MessageSquare design from the sidebar. To convert them to PNG format, you can use one of these methods:
+应用图标采用暖白色底板、细边框终端窗口与陶土橙 Claude Code 像素角色。通过克制的渐变、顶部命令提示符与轻微投影增加层次；窗口尽量铺满画布，角色保留宽扁比例，确保小尺寸下仍清晰。
 
-## Method 1: Online Converter (Easiest)
-1. Go to https://cloudconvert.com/svg-to-png
-2. Upload each SVG file from the `/icons/` directory
-3. Download the PNG versions
-4. Replace the existing PNG files
+唯一设计源文件是 [logo.svg](logo.svg)。README、侧边栏、浏览器、PWA 和桌面安装包均使用它生成的资源。
 
-## Method 2: Using Node.js (if you have it)
-```bash
-npm install sharp
-node -e "
-const sharp = require('sharp');
-const fs = require('fs');
-const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
-sizes.forEach(size => {
-  const svgPath = \`./icons/icon-\${size}x\${size}.svg\`;
-  const pngPath = \`./icons/icon-\${size}x\${size}.png\`;
-  if (fs.existsSync(svgPath)) {
-    sharp(svgPath).png().toFile(pngPath);
-    console.log(\`Converted \${svgPath} to \${pngPath}\`);
-  }
-});
-"
+## 重新生成
+
+在仓库根目录安装开发依赖后执行：
+
+```powershell
+node public/generate-icons.js
+npm run desktop:icon:mac
 ```
 
-## Method 3: Using ImageMagick (if installed)
-```bash
-cd public/icons
-for size in 72 96 128 144 152 192 384 512; do
-  convert "icon-${size}x${size}.svg" "icon-${size}x${size}.png"
-done
-```
+第一条命令生成网页 SVG / PNG、favicon、PWA 图标和 Windows ICO；第二条命令生成 macOS PNG / ICNS。无需在线转换服务。
 
-## Method 4: Using Inkscape (if installed)
-```bash
-cd public/icons
-for size in 72 96 128 144 152 192 384 512; do
-  inkscape --export-type=png "icon-${size}x${size}.svg"
-done
-```
+| 资源 | 输出 |
+| --- | --- |
+| 网页与通知 | `public/logo-32.png` 至 `public/logo-512.png` |
+| 浏览器标签 | `public/favicon.svg`、`public/favicon.png` |
+| PWA 与移动端 | `public/icons/icon-*.svg`、`public/icons/icon-*.png` |
+| Windows 桌面与安装包 | `electron/assets/logo-windows.ico` |
+| macOS 桌面 | `electron/assets/logo-macos.png`、`electron/assets/logo-macos.icns` |
 
-## Icon Design
-The new icons feature:
-- Clean MessageSquare (chat bubble) design matching the sidebar
-- Primary color background with rounded corners
-- White stroke icon that's clearly visible
-- Consistent sizing and proportions across all sizes
-- Proper PWA-compliant format
+Windows ICO 包含 16、24、32、48、64、128 和 256 像素条目。生成后重新打包桌面应用即可使用新图标。
 
-Once converted, the PNG files will replace the existing ones and provide a consistent icon experience across all platforms.
+提供商自身的 Logo（Claude、Codex、Cursor 等）单独保留，便于在会话列表中区分 CLI。

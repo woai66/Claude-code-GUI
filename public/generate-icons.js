@@ -1,49 +1,51 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import sharp from 'sharp';
 
-// Icon sizes needed
+const publicDir = path.dirname(fileURLToPath(import.meta.url));
+const svg = await fs.readFile(path.join(publicDir, 'logo.svg'), 'utf8');
 const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+const desktopDir = path.resolve(publicDir, '../electron/assets');
 
-// SVG template function
-function createIconSVG(size) {
-  const cornerRadius = Math.round(size * 0.25); // 25% corner radius
-  const strokeWidth = Math.max(2, Math.round(size * 0.06)); // Scale stroke width
-  
-  // MessageSquare path scaled to size
-  const padding = Math.round(size * 0.25);
-  const iconSize = size - (padding * 2);
-  const startX = padding;
-  const startY = Math.round(padding * 0.7);
-  const endX = startX + iconSize;
-  const endY = startY + Math.round(iconSize * 0.6);
-  const tailX = startX;
-  const tailY = endY + Math.round(iconSize * 0.3);
-  
-  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Background with rounded corners -->
-  <rect width="${size}" height="${size}" rx="${cornerRadius}" fill="hsl(262.1 83.3% 57.8%)"/>
-  
-  <!-- MessageSquare icon -->
-  <path d="M${startX} ${startY}C${startX} ${startY - 10} ${startX + 10} ${startY - 20} ${startX + 20} ${startY - 20}H${endX - 20}C${endX - 10} ${startY - 20} ${endX} ${startY - 10} ${endX} ${startY}V${endY - 20}C${endX} ${endY - 10} ${endX - 10} ${endY} ${endX - 20} ${endY}H${startX + Math.round(iconSize * 0.4)}L${tailX} ${tailY}V${startY}Z" 
-        stroke="white" 
-        stroke-width="${strokeWidth}" 
-        stroke-linecap="round" 
-        stroke-linejoin="round" 
-        fill="none"/>
-</svg>`;
+async function renderPng(size) {
+  return sharp(Buffer.from(svg)).resize(size, size).png().toBuffer();
 }
 
-// Generate SVG files for each size
-sizes.forEach(size => {
-  const svgContent = createIconSVG(size);
-  const filename = `icon-${size}x${size}.svg`;
-  const filepath = path.join(__dirname, 'icons', filename);
-  
-  fs.writeFileSync(filepath, svgContent);
-  console.log(`Created ${filename}`);
-});
+await fs.mkdir(path.join(publicDir, 'icons'), { recursive: true });
+await fs.mkdir(desktopDir, { recursive: true });
+await fs.writeFile(path.join(publicDir, 'favicon.svg'), svg);
+await fs.writeFile(path.join(publicDir, 'favicon.png'), await renderPng(64));
+await fs.writeFile(path.join(publicDir, 'icons/icon-template.svg'), svg);
 
-console.log('\nSVG icons created! To convert to PNG, you can use:');
-console.log('1. Online converter like cloudconvert.com');
-console.log('2. If you have ImageMagick: convert icon.svg icon.png');
-console.log('3. If you have Inkscape: inkscape --export-type=png icon.svg');
+for (const size of sizes) {
+  const name = `icon-${size}x${size}`;
+  const sizedSvg = svg.replace('width="128" height="128"', `width="${size}" height="${size}"`);
+  await fs.writeFile(path.join(publicDir, 'icons', `${name}.svg`), sizedSvg);
+  await fs.writeFile(path.join(publicDir, 'icons', `${name}.png`), await renderPng(size));
+}
+
+for (const size of [32, 64, 128, 256, 512]) {
+  await fs.writeFile(path.join(publicDir, `logo-${size}.png`), await renderPng(size));
+}
+
+// PNG-backed ICO entries keep the same source artwork at every Windows shell size.
+const iconSizes = [16, 24, 32, 48, 64, 128, 256];
+const images = await Promise.all(iconSizes.map(renderPng));
+const directory = Buffer.alloc(6 + images.length * 16);
+directory.writeUInt16LE(1, 2);
+directory.writeUInt16LE(images.length, 4);
+let offset = directory.length;
+for (let index = 0; index < images.length; index++) {
+  const entry = 6 + index * 16;
+  const size = iconSizes[index];
+  directory[entry] = size === 256 ? 0 : size;
+  directory[entry + 1] = size === 256 ? 0 : size;
+  directory.writeUInt16LE(1, entry + 4);
+  directory.writeUInt16LE(32, entry + 6);
+  directory.writeUInt32LE(images[index].length, entry + 8);
+  directory.writeUInt32LE(offset, entry + 12);
+  offset += images[index].length;
+}
+await fs.writeFile(path.join(desktopDir, 'logo-windows.ico'), Buffer.concat([directory, ...images]));
+console.log('Generated web, PWA, and Windows icons from public/logo.svg');

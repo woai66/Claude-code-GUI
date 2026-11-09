@@ -5,6 +5,7 @@
 Claude GUI 是基于 **CloudCLI UI (https://github.com/siteboon/claudecodeui)** 持续二次开发的个人维护版本，重点面向 Windows 本地桌面使用。
 
 - [主要功能](../README.md#主要功能)
+- [界面预览](../README.md#界面预览)
 - [开始使用](../README.md#开始使用)
 - [常用操作](../README.md#常用操作)
 - [使用浏览器访问](../README.md#使用浏览器访问)
