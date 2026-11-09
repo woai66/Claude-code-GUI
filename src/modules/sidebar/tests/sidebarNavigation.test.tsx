@@ -26,6 +26,8 @@ const LABELS: Record<string, string> = {
   'projects.options': 'Project options',
   'projects.renameProject': 'Rename project',
   'projects.deleteProject': 'Remove project',
+  'projects.hideProject': 'Hide project',
+  'projects.hiddenProjects': 'Hidden projects',
   'tooltips.addToFavorites': 'Add to favorites',
   'search.modeProjects': 'Projects',
   'search.modeConversations': 'Conversations',
@@ -131,6 +133,25 @@ test('the project menu preserves rename, favorite and removal actions', () => {
   assert.ok(view.getByRole('menuitem', { name: 'Add to favorites' }));
   fireEvent.click(view.getByRole('menuitem', { name: 'Remove project' }));
   assert.deepEqual(onDeleteProject.mock.calls, [[PROJECT_A]]);
+});
+
+test('hiding a project uses its own action without invoking removal', () => {
+  const onHideProject = vi.fn();
+  const onDeleteProject = vi.fn();
+  const view = renderProject({ onHideProject, onDeleteProject });
+  fireEvent.click(view.getByRole('button', { name: 'Project options · Alpha' }));
+  fireEvent.click(view.getByRole('menuitem', { name: 'Hide project' }));
+  assert.deepEqual(onHideProject.mock.calls, [[PROJECT_A]]);
+  assert.equal(onDeleteProject.mock.calls.length, 0);
+});
+
+test('hidden project menu shows paths and restores a chosen project', () => {
+  const onRestoreHiddenProject = vi.fn();
+  const view = renderHeader({ projects: [PROJECT_B], hiddenProjects: [PROJECT_A], onRestoreHiddenProject });
+  fireEvent.click(view.getByRole('button', { name: 'Hidden projects' }));
+  assert.ok(view.getByText('/repo/alpha'));
+  fireEvent.click(view.getByRole('menuitem', { name: /Alpha/ }));
+  assert.deepEqual(onRestoreHiddenProject.mock.calls, [['a']]);
 });
 
 test('selection starts from the project menu and expands a collapsed project', () => {

@@ -5,6 +5,14 @@ export const readProjectSortOrder = (): ProjectSortOrder => (
   readUserPreference<ProjectSortOrder>('projectSortOrder', 'name') === 'date' ? 'date' : 'name'
 );
 
+/** Sidebar controller reads hidden identities independently of project scans and agent filters. */
+export const readHiddenProjectIds = (): Set<string> => {
+  const stored = readUserPreference<unknown>('hiddenProjectIds', []);
+  return new Set(Array.isArray(stored)
+    ? stored.filter((value): value is string => typeof value === 'string' && value.length > 0)
+    : []);
+};
+
 const LEGACY_STARRED_PROJECTS_STORAGE_KEY = 'starredProjects';
 
 /**

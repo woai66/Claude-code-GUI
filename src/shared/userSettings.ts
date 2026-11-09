@@ -21,6 +21,7 @@ export type UserPreferences = {
   userLanguage: string;
   tasksEnabled: boolean;
   projectSortOrder: 'name' | 'date';
+  hiddenProjectIds: string[];
   claudePermissions: unknown;
   cursorPermissions: unknown;
   codexPermissions: unknown;
@@ -58,6 +59,7 @@ const LEGACY_STORAGE_KEYS: Record<UserPreferenceKey, string> = {
   userLanguage: 'userLanguage',
   tasksEnabled: 'tasks-enabled',
   projectSortOrder: 'claude-settings',
+  hiddenProjectIds: '',
   claudePermissions: 'claude-settings',
   cursorPermissions: 'cursor-tools-settings',
   codexPermissions: 'codex-settings',
@@ -203,9 +205,13 @@ export function subscribeToUserPreferences(listener: () => void): () => void {
  * `claudePermissions` are pulled out of it separately.
  */
 function readLegacyPreference(key: UserPreferenceKey): unknown {
+  const storageKey = LEGACY_STORAGE_KEYS[key];
+  if (!storageKey) {
+    return undefined;
+  }
   let raw: string | null = null;
   try {
-    raw = localStorage.getItem(LEGACY_STORAGE_KEYS[key]);
+    raw = localStorage.getItem(storageKey);
   } catch {
     return undefined;
   }

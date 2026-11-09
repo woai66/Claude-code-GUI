@@ -1,5 +1,10 @@
 {
   "projects": {
+    "hideProject": "Hide project",
+    "hiddenProjects": "Hidden projects",
+    "allHidden": "All projects are hidden",
+    "restoreHiddenHint": "Use Hidden projects next to New session to show them again.",
+    "hiddenProjectsHint": "Select a project to show it again. Files and conversations are preserved.",
     "options": "Project options",
     "title": "Projects",
     "newProject": "New Project",

@@ -1,4 +1,4 @@
-import { Folder, Search } from 'lucide-react';
+import { EyeOff, Folder, Search } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import type { LoadingProgress } from '@/shared/types';
@@ -7,6 +7,7 @@ type SidebarProjectsStateProps = {
   isLoading: boolean;
   loadingProgress: LoadingProgress | null;
   projectsCount: number;
+  hiddenProjectsCount: number;
   filteredProjectsCount: number;
   t: TFunction;
 };
@@ -16,6 +17,7 @@ export default function SidebarProjectsState({
   isLoading,
   loadingProgress,
   projectsCount,
+  hiddenProjectsCount,
   filteredProjectsCount,
   t,
 }: SidebarProjectsStateProps) {
@@ -49,6 +51,18 @@ export default function SidebarProjectsState({
         ) : (
           <p className="text-sm text-muted-foreground">{t('projects.fetchingProjects')}</p>
         )}
+      </div>
+    );
+  }
+
+  if (projectsCount > 0 && projectsCount === hiddenProjectsCount) {
+    return (
+      <div className="px-4 py-8 text-center">
+        <EyeOff className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+        <h3 className="mb-1 text-sm font-medium">{t('projects.allHidden', 'All projects are hidden')}</h3>
+        <p className="text-xs text-muted-foreground">
+          {t('projects.restoreHiddenHint', 'Use Hidden projects next to New session to show them again.')}
+        </p>
       </div>
     );
   }

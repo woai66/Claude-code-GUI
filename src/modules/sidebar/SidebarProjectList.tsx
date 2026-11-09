@@ -9,6 +9,7 @@ import SidebarProjectsState from '@/modules/sidebar/SidebarProjectsState';
 /** Rendered by SidebarContent to list the filtered projects, delegating each row to SidebarProjectItem. */
 export default function SidebarProjectList({
   projects,
+  hiddenProjectsCount = 0,
   filteredProjects,
   selectedProject,
   selectedSession,
@@ -37,6 +38,7 @@ export default function SidebarProjectList({
   onCancelEditingProject,
   onSaveProjectName,
   onDeleteProject,
+  onHideProject,
   onSessionSelect,
   onDeleteSession,
   onForkSession,
@@ -57,6 +59,7 @@ export default function SidebarProjectList({
       isLoading={isLoading}
       loadingProgress={loadingProgress}
       projectsCount={projects.length}
+      hiddenProjectsCount={hiddenProjectsCount}
       filteredProjectsCount={filteredProjects.length}
       t={t}
     />
@@ -120,6 +123,7 @@ export default function SidebarProjectList({
                 onCancelEditingProject={onCancelEditingProject}
                 onSaveProjectName={onSaveProjectName}
                 onDeleteProject={onDeleteProject}
+                onHideProject={onHideProject}
                 onSessionSelect={onSessionSelect}
                 onDeleteSession={onDeleteSession}
                 onForkSession={onForkSession}

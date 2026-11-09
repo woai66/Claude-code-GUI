@@ -85,6 +85,8 @@ type SidebarContentProps = {
   isPWA: boolean;
   isMobile: boolean;
   projects: Project[];
+  hiddenProjects: Project[];
+  onRestoreHiddenProject: (projectId: string) => void;
   runningSessionsCount: number;
   archivedProjects: ArchivedProjectListItem[];
   archivedSessions: ArchivedSessionListItem[];
@@ -136,6 +138,8 @@ export default function SidebarContent({
   isPWA,
   isMobile,
   projects,
+  hiddenProjects,
+  onRestoreHiddenProject,
   runningSessionsCount,
   archivedProjects,
   archivedSessions,
@@ -198,6 +202,8 @@ export default function SidebarContent({
         isPWA={isPWA}
         isMobile={isMobile}
         projects={projects}
+        hiddenProjects={hiddenProjects}
+        onRestoreHiddenProject={onRestoreHiddenProject}
         selectedProject={projectListProps.selectedProject}
         runningSessionsCount={runningSessionsCount}
         searchFilter={searchFilter}
@@ -390,7 +396,7 @@ export default function SidebarContent({
         ) : searchMode === 'conversations' ? (
           <SidebarRecentConversations
             conversations={recentConversations}
-            projects={projects}
+            projects={projectListProps.projects}
             total={recentConversationsTotal}
             hasMore={recentConversationsHasMore}
             isLoading={isRecentConversationsLoading}

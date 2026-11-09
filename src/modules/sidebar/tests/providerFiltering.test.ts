@@ -1,16 +1,19 @@
 import assert from 'node:assert/strict';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { TFunction } from 'i18next';
-import { beforeEach, test, vi } from 'vitest';
+import { afterEach, beforeEach, test, vi } from 'vitest';
 
 import { api } from '@/shared/api';
 import type { Project, SidebarProviderFilter } from '@/shared/types';
 import { useProviderProjectFilter } from '@/modules/sidebar/hooks/useProviderProjectFilter';
 import { useSidebarController } from '@/modules/sidebar/hooks/useSidebarController';
+import { hydrateUserPreferences, readUserPreference, resetUserPreferences } from '@/shared/userSettings';
 
 vi.mock('@/shared/api', () => ({ api: {
   projects: vi.fn(), projectSessions: vi.fn(), recentConversations: vi.fn(),
   archivedProjects: vi.fn(), getArchivedSessions: vi.fn(), searchConversationsUrl: vi.fn(),
+  deleteProject: vi.fn(),
+  user: { preferences: vi.fn(), savePreferences: vi.fn().mockResolvedValue({ ok: true }) },
 } }));
 
 const response = (payload: unknown) => ({ ok: true, json: async () => payload }) as Response;
@@ -23,15 +26,17 @@ const claudeProjects: Project[] = [{
   sessionMeta: { total: 2, hasMore: true },
 }];
 
-const renderController = () => renderHook(() => useSidebarController({
-  projects: globalProjects, selectedProject: null, selectedSession: null,
+const renderController = () => renderHook(({ projects }: { projects: Project[] }) => useSidebarController({
+  projects, selectedProject: null, selectedSession: null,
   activeSessions: new Set<string>(), backgroundSessionIds: new Set<string>(),
   isLoading: false, isMobile: false, t: ((key: string) => key) as unknown as TFunction,
   onRefresh: vi.fn(), onProjectSelect: vi.fn(), onSessionSelect: vi.fn(),
   setCurrentProject: vi.fn(), setSidebarVisible: vi.fn(), sidebarVisible: true,
-}));
+}), { initialProps: { projects: globalProjects } });
 
 beforeEach(() => {
+  resetUserPreferences();
+  vi.mocked(api.user.savePreferences).mockReset().mockResolvedValue(response({}));
   localStorage.clear();
   vi.mocked(api.projects).mockReset().mockResolvedValue(response(claudeProjects));
   vi.mocked(api.projectSessions).mockReset();
@@ -40,6 +45,45 @@ beforeEach(() => {
   }));
   vi.mocked(api.archivedProjects).mockResolvedValue(response({ data: { projects: [] } }));
   vi.mocked(api.getArchivedSessions).mockResolvedValue(response({ data: { sessions: [] } }));
+});
+
+afterEach(() => resetUserPreferences());
+
+test('hidden projects survive rescans and agent filters while sessions remain intact', async () => {
+  const view = renderController();
+  act(() => view.result.current.hideProject(globalProjects[0]));
+  assert.deepEqual(view.result.current.filteredProjects, []);
+  assert.deepEqual(view.result.current.visibleProjects, []);
+  assert.deepEqual(view.result.current.hiddenProjects, globalProjects);
+  assert.deepEqual(readUserPreference('hiddenProjectIds', []), ['mixed']);
+  assert.deepEqual(JSON.parse(localStorage.getItem('user-preferences') ?? '{}').hiddenProjectIds, ['mixed']);
+  view.rerender({ projects: globalProjects.map((project) => ({ ...project })) });
+  assert.equal(view.result.current.filteredProjects.length, 0);
+  await waitFor(() => assert.deepEqual(vi.mocked(api.user.savePreferences).mock.calls[0], [{ hiddenProjectIds: ['mixed'] }]));
+  act(() => view.result.current.setProviderFilter('claude'));
+  await waitFor(() => assert.equal(view.result.current.isProviderProjectsLoading, false));
+  assert.equal(view.result.current.filteredProjects.length, 0);
+  view.unmount();
+  const reopened = renderController();
+  await waitFor(() => assert.equal(reopened.result.current.isProviderProjectsLoading, false));
+  assert.equal(reopened.result.current.filteredProjects.length, 0);
+  assert.equal(globalProjects[0].sessions?.[0].id, 'codex-new');
+  act(() => reopened.result.current.restoreHiddenProject('mixed'));
+  assert.equal(reopened.result.current.filteredProjects[0].projectId, 'mixed');
+  assert.equal(reopened.result.current.hiddenProjects.length, 0);
+  assert.equal(vi.mocked(api.deleteProject).mock.calls.length, 0);
+});
+
+test('server preferences restore hidden identities and preserve conversation access', async () => {
+  vi.mocked(api.user.preferences).mockResolvedValue(response({ preferences: { hiddenProjectIds: ['mixed'] } }));
+  await hydrateUserPreferences();
+  const view = renderController();
+  assert.equal(view.result.current.filteredProjects.length, 0);
+  act(() => view.result.current.setSearchMode('conversations'));
+  await waitFor(() => assert.equal(view.result.current.isRecentConversationsLoading, false));
+  assert.equal(view.result.current.getProjectSessions(globalProjects[0])[0].id, 'codex-new');
+  act(() => view.result.current.restoreHiddenProject('mixed'));
+  assert.equal(view.result.current.visibleProjects[0].projectId, 'mixed');
 });
 
 test('loads an older agent session and paginates its scope without narrowing workspace data', async () => {

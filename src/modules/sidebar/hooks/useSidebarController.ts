@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TFunction } from 'i18next';
 
 import { api } from '@/shared/api';
-import { subscribeToUserPreferences } from '@/shared/userSettings';
+import { subscribeToUserPreferences, writeUserPreference } from '@/shared/userSettings';
 import { usePaletteOps } from '@/modules/command-palette';
 import { useProviderProjectFilter } from '@/modules/sidebar/hooks/useProviderProjectFilter';
 import type { ArchivedProjectListItem, ArchivedSessionListItem, ConversationProjectResult, ConversationSearchResults, LLMProvider, Project, ProjectSession, ProjectSortOrder, RecentConversationListItem, SearchProgress, ActiveSidebarRename, PendingSidebarDeletion, SessionTitleSearchResult, SessionWithProvider, SidebarSearchMode, SidebarSessionSelection, SidebarProviderFilter } from '@/shared/types';
@@ -15,6 +15,7 @@ import {
   clearLegacyStarredProjectIds,
   readLegacyStarredProjectIds,
   readProjectSortOrder,
+  readHiddenProjectIds,
 } from '@/modules/sidebar/utils/sidebarStoredPreferences';
 
 
@@ -93,6 +94,8 @@ export function useSidebarController({
   const [initialSessionsLoaded, setInitialSessionsLoaded] = useState<Set<string>>(new Set());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [projectSortOrder, setProjectSortOrder] = useState<ProjectSortOrder>('name');
+  // Mirror persisted visibility so rescans and app restarts cannot resurrect hidden project rows.
+  const [hiddenProjectIds, setHiddenProjectIds] = useState(readHiddenProjectIds);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   // Remember the navigation scope independently of the agent selected in the chat composer.
@@ -200,6 +203,7 @@ export function useSidebarController({
   useEffect(() => {
     const loadSortOrder = () => {
       setProjectSortOrder(readProjectSortOrder());
+      setHiddenProjectIds(readHiddenProjectIds());
     };
 
     loadSortOrder();
@@ -738,6 +742,35 @@ export function useSidebarController({
     [projectSortOrder, projectsWithResolvedStarState],
   );
 
+  const visibleProjects = useMemo(
+    () => projects.filter((project) => !hiddenProjectIds.has(project.projectId)),
+    [hiddenProjectIds, projects],
+  );
+  const hiddenProjects = useMemo(
+    () => sortProjects(projects.filter((project) => hiddenProjectIds.has(project.projectId)), projectSortOrder),
+    [hiddenProjectIds, projectSortOrder, projects],
+  );
+
+  const hideProject = useCallback((project: Project) => {
+    const next = readHiddenProjectIds();
+    next.add(project.projectId);
+    writeUserPreference('hiddenProjectIds', [...next]);
+    setExpandedProjects((previous) => {
+      const expanded = new Set(previous);
+      expanded.delete(project.projectId);
+      return expanded;
+    });
+    setActiveRename((previous) => previous && (previous.target === 'project'
+      ? previous.id === project.projectId : previous.projectId === project.projectId) ? null : previous);
+    setSessionSelection((previous) => previous?.projectId === project.projectId ? null : previous);
+  }, []);
+
+  const restoreHiddenProject = useCallback((projectId: string) => {
+    const next = readHiddenProjectIds();
+    next.delete(projectId);
+    writeUserPreference('hiddenProjectIds', [...next]);
+  }, []);
+
   const runningProjects = useMemo(() => {
     if (activeSessionIds.size === 0) {
       return [];
@@ -765,8 +798,9 @@ export function useSidebarController({
   }, [activeSessionIds, sortedProjects]);
 
   const filteredProjects = useMemo(
-    () => filterProjects(searchMode === 'running' ? runningProjects : sortedProjects, debouncedSearchQuery),
-    [debouncedSearchQuery, runningProjects, searchMode, sortedProjects],
+    () => filterProjects(searchMode === 'running'
+      ? runningProjects : sortedProjects.filter((project) => !hiddenProjectIds.has(project.projectId)), debouncedSearchQuery),
+    [debouncedSearchQuery, hiddenProjectIds, runningProjects, searchMode, sortedProjects],
   );
 
   const filteredArchivedSessions = useMemo(() => {
@@ -1299,6 +1333,10 @@ export function useSidebarController({
     pendingDeletion,
     showVersionModal,
     filteredProjects,
+    visibleProjects,
+    hiddenProjects,
+    hideProject,
+    restoreHiddenProject,
     runningSessionsCount: providerFilter === 'all' ? runningSessionsCount
       : runningProjects.reduce((total, project) => total + (project.sessions?.length ?? 0), 0),
     archivedProjects: filteredArchivedProjects,

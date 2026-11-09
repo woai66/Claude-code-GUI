@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef } from 'react';
-import { Check, CheckSquare, ChevronDown, ChevronRight, Edit3, Folder, MoreHorizontal, Plus, Star, Trash2, X } from 'lucide-react';
+import { Check, CheckSquare, ChevronDown, ChevronRight, Edit3, EyeOff, Folder, MoreHorizontal, Plus, Star, Trash2, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { ActionMenu, Button } from '@/shared/ui';
@@ -36,6 +36,7 @@ type SidebarProjectItemProps = {
   onCancelEditingProject: () => void;
   onSaveProjectName: (projectId: string, nextName: string) => void;
   onDeleteProject: (project: Project) => void;
+  onHideProject?: (project: Project) => void;
   onSessionSelect: (session: SessionWithProvider, projectName: string) => void;
   onDeleteSession: (sessionId: string, sessionTitle: string) => void;
   onForkSession?: (session: SessionWithProvider) => void;
@@ -81,6 +82,7 @@ function SidebarProjectItem({
   onCancelEditingProject,
   onSaveProjectName,
   onDeleteProject,
+  onHideProject,
   onSessionSelect,
   onDeleteSession,
   onForkSession,
@@ -159,6 +161,12 @@ function SidebarProjectItem({
         onSetSessionSelection({ projectId: project.projectId, sessionIds: new Set() });
       },
     },
+    ...(onHideProject ? [{
+      key: 'hide',
+      label: t('projects.hideProject', 'Hide project'),
+      icon: EyeOff,
+      onSelect: () => onHideProject(project),
+    }] : []),
     {
       key: 'delete',
       label: t('projects.deleteProject'),

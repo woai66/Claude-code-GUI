@@ -1,4 +1,4 @@
-import { ChevronDown, Folder, FolderPlus, PanelLeftClose, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { ChevronDown, Eye, EyeOff, Folder, FolderPlus, PanelLeftClose, Plus, RefreshCw, Search, X } from 'lucide-react';
 import type { TFunction } from 'i18next';
 
 import { ActionMenu, Button, Input } from '@/shared/ui';
@@ -10,6 +10,8 @@ type SidebarHeaderProps = {
   isPWA: boolean;
   isMobile: boolean;
   projects: Project[];
+  hiddenProjects?: Project[];
+  onRestoreHiddenProject?: (projectId: string) => void;
   selectedProject: Project | null;
   runningSessionsCount: number;
   searchFilter: string;
@@ -97,6 +99,8 @@ export default function SidebarHeader({
   isPWA,
   isMobile,
   projects,
+  hiddenProjects = [],
+  onRestoreHiddenProject,
   selectedProject,
   runningSessionsCount,
   searchFilter,
@@ -128,10 +132,11 @@ export default function SidebarHeader({
     >
       <div className="flex items-center justify-between gap-2">
         <h1
-          className="min-w-0 truncate text-xl font-semibold tracking-tight text-foreground"
+          className="flex min-w-0 items-center gap-2 text-xl font-semibold tracking-tight text-foreground"
           style={{ fontFamily: APP_WORDMARK_FONT_FAMILY }}
         >
-          {t('app.title')}
+          <img src="/logo.svg" alt="" className="h-7 w-7 shrink-0" />
+          <span className="truncate">{t('app.title')}</span>
         </h1>
         <div className="flex flex-shrink-0 items-center gap-0.5">
           <Button
@@ -201,6 +206,33 @@ export default function SidebarHeader({
         >
           <FolderPlus className="h-4 w-4" />
         </Button>
+        {hiddenProjects.length > 0 && onRestoreHiddenProject && (
+          <ActionMenu
+            label={t('projects.hiddenProjects', 'Hidden projects')}
+            icon={EyeOff}
+            iconOnly
+            portal
+            menuWidth={340}
+            variant="ghost"
+            triggerClassName="h-9 w-9 shrink-0 rounded-lg p-0 text-muted-foreground hover:bg-accent"
+            menuClassName="max-h-72"
+            header={(
+              <div className="px-3 py-2">
+                <p className="text-sm font-medium">{t('projects.hiddenProjects', 'Hidden projects')}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t('projects.hiddenProjectsHint', 'Select a project to show it again. Conversations are preserved.')}
+                </p>
+              </div>
+            )}
+            items={hiddenProjects.map((project) => ({
+              key: project.projectId,
+              label: project.displayName,
+              description: project.fullPath,
+              icon: Eye,
+              onSelect: () => onRestoreHiddenProject(project.projectId),
+            }))}
+          />
+        )}
       </div>
 
       <div className="space-y-2 pt-1">

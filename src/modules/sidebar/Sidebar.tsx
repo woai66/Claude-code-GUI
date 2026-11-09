@@ -103,6 +103,10 @@ function Sidebar({
     pendingDeletion,
     showVersionModal,
     filteredProjects,
+    visibleProjects,
+    hiddenProjects,
+    hideProject,
+    restoreHiddenProject,
     archivedProjects,
     archivedSessions,
     archivedSessionsCount,
@@ -203,6 +207,7 @@ function Sidebar({
 
   const projectListProps: SidebarProjectListProps = {
     projects,
+    hiddenProjectsCount: searchMode === 'projects' ? hiddenProjects.length : 0,
     filteredProjects,
     selectedProject,
     selectedSession,
@@ -229,6 +234,7 @@ function Sidebar({
     onCancelEditingProject: cancelRename,
     onSaveProjectName: handleSaveProjectName,
     onDeleteProject: requestProjectDelete,
+    onHideProject: hideProject,
     onSessionSelect: handleSessionClick,
     onDeleteSession: showDeleteSessionConfirmation,
     onForkSession: forkSession,
@@ -283,7 +289,9 @@ function Sidebar({
         <SidebarContent
             isPWA={isPWA}
             isMobile={isMobile}
-            projects={projects}
+            projects={visibleProjects}
+            hiddenProjects={hiddenProjects}
+            onRestoreHiddenProject={restoreHiddenProject}
             runningSessionsCount={runningSessionsCount}
             archivedProjects={archivedProjects}
             archivedSessions={archivedSessions}
