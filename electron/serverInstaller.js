@@ -7,14 +7,15 @@ import os from 'node:os';
 import path from 'node:path';
 
 /**
- * Installs the versioned local server runtime used by CloudCLI Desktop.
+ * Installs the versioned local server runtime used by the Claude GUI desktop app.
  *
  * Server bundles are cached under:
  *   ~/.cloudcli/server/<version>/dist-server/server/index.js
  */
 
 const DEFAULT_INSTALL_ROOT = path.join(os.homedir(), '.cloudcli', 'server');
-const DEFAULT_BUNDLE_BASE_URL = 'https://github.com/siteboon/claudecodeui/releases/download';
+// Fallback source for a build that ships without its server: this fork's releases, never upstream's.
+const DEFAULT_BUNDLE_BASE_URL = 'https://github.com/woai66/Claude-code-GUI/releases/download';
 const MAX_REDIRECTS = 5;
 const LOCAL_DOWNLOAD_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 

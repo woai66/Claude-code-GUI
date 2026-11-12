@@ -1,5 +1,3 @@
-import os from 'node:os';
-
 import spawn from 'cross-spawn';
 import type { Router } from 'express';
 
@@ -51,7 +49,6 @@ function runShellCommand(
 export function createSystemModule(options: SystemModuleOptions): Router {
   const systemUpdateService = createSystemUpdateService({
     ...options,
-    homeDirectory: os.homedir(),
     environment: process.env,
     runShellCommand,
     logInfo: (message, detail) => console.log(message, detail ?? ''),

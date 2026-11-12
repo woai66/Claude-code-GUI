@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { APP_VERSION } from '@/shared/constants';
+import { APP_REPOSITORY_NAME, APP_REPOSITORY_OWNER, APP_REPOSITORY_URL, APP_VERSION } from '@/shared/constants';
 import type { InstallMode, ReleaseInfo } from '@/shared/types';
 
 /**
@@ -23,7 +23,11 @@ const compareVersions = (v1: string, v2: string) => {
 };
 
 
-export const useVersionCheck = (owner: string, repo: string) => {
+/**
+ * Used by the sidebar and the settings about tab to report whether this fork has published
+ * a release newer than the running build. The fork's own repository is the only source.
+ */
+export const useVersionCheck = () => {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [releaseInfo, setReleaseInfo] = useState<ReleaseInfo | null>(null);
@@ -58,7 +62,7 @@ export const useVersionCheck = (owner: string, repo: string) => {
   useEffect(() => {
     const checkVersion = async () => {
       try {
-        const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`);
+        const response = await fetch(`https://api.github.com/repos/${APP_REPOSITORY_OWNER}/${APP_REPOSITORY_NAME}/releases/latest`);
         const data = await response.json();
 
         // Handle the case where there might not be any releases
@@ -72,7 +76,7 @@ export const useVersionCheck = (owner: string, repo: string) => {
           setReleaseInfo({
             title: data.name || data.tag_name,
             body: data.body || '',
-            htmlUrl: data.html_url || `https://github.com/${owner}/${repo}/releases/latest`,
+            htmlUrl: data.html_url || `${APP_REPOSITORY_URL}/releases/latest`,
             publishedAt: data.published_at
           });
         } else {
@@ -93,7 +97,7 @@ export const useVersionCheck = (owner: string, repo: string) => {
     checkVersion();
     const interval = setInterval(checkVersion, 5 * 60 * 1000); // Check every 5 minutes
     return () => clearInterval(interval);
-  }, [owner, repo]);
+  }, []);
 
   return { updateAvailable, latestVersion, currentVersion: APP_VERSION, releaseInfo, installMode, runningVersion, restartRequired };
 };

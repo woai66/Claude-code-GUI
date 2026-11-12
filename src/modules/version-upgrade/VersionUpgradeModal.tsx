@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import { useTranslation } from "react-i18next";
 
 import { api } from "@/shared/api";
+import { APP_REPOSITORY_URL } from "@/shared/constants";
 import type { ReleaseInfo,InstallMode } from "@/shared/types";
 import { copyTextToClipboard,IS_PLATFORM } from "@/shared/utils";
 
@@ -28,11 +29,14 @@ export function VersionUpgradeModal({
     installMode
 }: VersionUpgradeModalProps) {
     const { t } = useTranslation('common');
-    const upgradeCommand = installMode === 'npm'
-        ? t('versionUpdate.npmUpgradeCommand')
-        : IS_PLATFORM
-            ? 'npm run update:platform'
-            : 'git checkout main && git pull && npm install';
+    // Only a source checkout (or the hosted platform) can update in place. An installed
+    // build such as the desktop app is replaced by a new installer from this fork's releases;
+    // this fork is not published to npm, so there is no package to upgrade to.
+    const canSelfUpdate = IS_PLATFORM || installMode === 'git';
+    const upgradeCommand = IS_PLATFORM
+        ? 'npm run update:platform'
+        : 'git checkout main && git pull && npm install';
+    const downloadUrl = releaseInfo?.htmlUrl || `${APP_REPOSITORY_URL}/releases/latest`;
     const [isUpdating, setIsUpdating] = useState(false);
     const [updateOutput, setUpdateOutput] = useState('');
     const [updateError, setUpdateError] = useState('');
@@ -228,8 +232,17 @@ export function VersionUpgradeModal({
                     </div>
                 )}
 
+                {/* Download hint for builds that cannot update themselves */}
+                {!canSelfUpdate && (
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {t('versionUpdate.downloadHint', {
+                            defaultValue: 'This build does not update itself. Download the new installer from the release page and run it.',
+                        })}
+                    </p>
+                )}
+
                 {/* Upgrade Instructions */}
-                {!isUpdating && !updateOutput && (
+                {canSelfUpdate && !isUpdating && !updateOutput && (
                     <div className="space-y-3">
                         <h3 className="text-sm font-medium text-gray-900 dark:text-white">{t('versionUpdate.manualUpgrade')}</h3>
                         <div className="rounded-lg border bg-gray-100 p-3 dark:bg-gray-800">
@@ -251,7 +264,17 @@ export function VersionUpgradeModal({
                     >
                         {updateOutput ? t('versionUpdate.buttons.close') : t('versionUpdate.buttons.later')}
                     </button>
-                    {!updateOutput && (
+                    {!canSelfUpdate && (
+                        <a
+                            href={downloadUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-1 items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                        >
+                            {t('versionUpdate.buttons.download', { defaultValue: 'Download new version' })}
+                        </a>
+                    )}
+                    {canSelfUpdate && !updateOutput && (
                         <>
                             <button
                                 onClick={() => copyTextToClipboard(upgradeCommand)}

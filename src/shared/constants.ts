@@ -36,6 +36,21 @@ export const PROVIDER_LABELS: Record<LLMProvider, string> = {
 export const APP_WORDMARK_FONT_FAMILY =
   'Georgia, Cambria, "Times New Roman", serif';
 
+/**
+ * GitHub owner of this fork's repository. Update checks and every repository or issue
+ * link use the fork, so a release of the upstream project is never offered as an update.
+ */
+export const APP_REPOSITORY_OWNER = 'woai66';
+
+/** GitHub name of this fork's repository; pair it with `APP_REPOSITORY_OWNER`. */
+export const APP_REPOSITORY_NAME = 'Claude-code-GUI';
+
+/** Web address of this fork's repository; append `/releases` or `/issues/new` for those pages. */
+export const APP_REPOSITORY_URL = `https://github.com/${APP_REPOSITORY_OWNER}/${APP_REPOSITORY_NAME}`;
+
+/** Repository of CloudCLI UI, the project this fork is based on. Use it only to credit upstream. */
+export const UPSTREAM_REPOSITORY_URL = 'https://github.com/siteboon/claudecodeui';
+
 // ---------------------------
 
 //----------------- APPLICATION VERSION ------------

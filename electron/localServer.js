@@ -296,7 +296,7 @@ export class LocalServerController {
   getPendingTarget() {
     return {
       kind: 'local',
-      name: 'Local CloudCLI',
+      name: 'Local Claude GUI',
       url: this.localServerUrl || `http://${DISPLAY_HOST}:${this.localServerPort || DEFAULT_PORT}`,
     };
   }
@@ -477,7 +477,7 @@ export class LocalServerController {
         if (await isCloudCliServer(candidateUrl)) {
           const displayUrl = getDisplayUrl(candidateUrl);
           this.localServerPort = getPortFromUrl(candidateUrl);
-          this.appendStartupLog(`Using existing Local CloudCLI at ${displayUrl}`);
+          this.appendStartupLog(`Using existing Local Claude GUI at ${displayUrl}`);
           return displayUrl;
         }
       }
@@ -502,7 +502,7 @@ export class LocalServerController {
       ].join('\n\n'));
     }
 
-    this.appendStartupLog(`Local CloudCLI ready at ${displayUrl}`);
+    this.appendStartupLog(`Local Claude GUI ready at ${displayUrl}`);
     this.localServerUrl = displayUrl;
     return displayUrl;
   }
@@ -534,7 +534,7 @@ export class LocalServerController {
     await this.ensureLocalServer();
     return {
       kind: 'local',
-      name: 'Local CloudCLI',
+      name: 'Local Claude GUI',
       url: this.localServerUrl,
     };
   }

@@ -10,7 +10,6 @@ function createDependencies(
 ): SystemUpdateDependencies {
   return {
     appRoot: '/app/cloudcli',
-    homeDirectory: '/home/cloudcli',
     installMode: 'git',
     isPlatform: false,
     environment: { TEST_ENVIRONMENT: 'true' },
@@ -45,25 +44,21 @@ test('git installations update from the application root', async () => {
   });
 });
 
-test('global npm installations update from the user home directory', async () => {
+test('installed builds refuse to update instead of installing the upstream npm package', async () => {
   const calls: unknown[][] = [];
-  const dependencies = createDependencies({
+  const service = createSystemUpdateService(createDependencies({
     installMode: 'npm',
     runShellCommand: async (command, workingDirectory, environment) => {
       calls.push([command, workingDirectory, environment]);
       return { exitCode: 0, output: '', errorOutput: '' };
     },
+  }));
+
+  assert.deepEqual(await service.updateSystem(), {
+    success: false,
+    error: 'This build cannot update itself. Download the new version from the release page.',
   });
-  const service = createSystemUpdateService(dependencies);
-
-  const result = await service.updateSystem();
-
-  assert.deepEqual(calls, [[
-    'npm install -g @cloudcli-ai/cloudcli@latest',
-    '/home/cloudcli',
-    dependencies.environment,
-  ]]);
-  assert.equal(result.output, 'Update completed successfully');
+  assert.deepEqual(calls, []);
 });
 
 test('platform installations use the platform workflow regardless of install mode', async () => {

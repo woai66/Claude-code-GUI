@@ -1,4 +1,4 @@
-import { execFileSync, execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,7 +8,7 @@ import spawn from 'cross-spawn';
 import type { CliApplication, CliPackageMetadata } from '@/shared/types.js';
 import { findApplicationRoot, getModuleDirectory } from '@/shared/utils.js';
 
-import { createCliService } from './cli.service.js';
+import { APP_REPOSITORY_SLUG, createCliService } from './cli.service.js';
 import { createSandboxCommandService } from './sandbox.service.js';
 
 /**
@@ -71,15 +71,18 @@ export function createCliApplication(): CliApplication {
     sandboxService,
     getLatestPackageVersion: async () => {
       // Yield first so the default `start` command can begin loading the server
-      // before this best-effort npm registry check runs.
+      // before this best-effort release check runs.
       await new Promise<void>((resolve) => setImmediate(resolve));
-      return execSync(
-        'npm show @cloudcli-ai/cloudcli version',
-        { encoding: 'utf8' },
-      ).trim();
-    },
-    updateGlobalPackage: () => {
-      execSync('npm update -g @cloudcli-ai/cloudcli', { stdio: 'inherit' });
+      const response = await fetch(
+        `https://api.github.com/repos/${APP_REPOSITORY_SLUG}/releases/latest`,
+        { signal: AbortSignal.timeout(5000) },
+      );
+      const release = await response.json() as { tag_name?: unknown };
+      // A fork without any published release answers 404 with no tag.
+      if (!response.ok || typeof release.tag_name !== 'string') {
+        throw new Error('No published release found');
+      }
+      return release.tag_name.replace(/^v/, '');
     },
     startServer: async () => {
       // The server executable is an entrypoint rather than a feature module,

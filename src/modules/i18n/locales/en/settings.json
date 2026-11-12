@@ -843,6 +843,7 @@
   "about": {
     "tagline": "Open-source AI coding assistant interface",
     "starOnGitHub": "Star on GitHub",
+    "basedOn": "Based on CloudCLI UI",
     "docs": "Docs",
     "hostedTitle": "Try Claude GUI Hosted",
     "hostedDescription": "Team collaboration, shared MCP configs, settings sync across environments, and managed infrastructure.",

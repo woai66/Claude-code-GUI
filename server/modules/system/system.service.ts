@@ -6,7 +6,6 @@ type SystemUpdateCommandResult = {
 
 type SystemUpdateDependencies = {
   appRoot: string;
-  homeDirectory: string;
   installMode: 'git' | 'npm';
   isPlatform: boolean;
   environment: NodeJS.ProcessEnv;
@@ -29,14 +28,19 @@ export function createSystemUpdateService(dependencies: SystemUpdateDependencies
   return {
     /** Selects and executes the correct update workflow for this installation. */
     async updateSystem() {
+      // This fork is not published to npm. Updating an installed build through npm would
+      // replace it with the upstream project's package, so such a build never runs a command.
+      if (!dependencies.isPlatform && dependencies.installMode !== 'git') {
+        return {
+          success: false as const,
+          error: 'This build cannot update itself. Download the new version from the release page.',
+        };
+      }
+
       const updateCommand = dependencies.isPlatform
         ? 'npm run update:platform'
-        : dependencies.installMode === 'git'
-          ? 'git checkout main && git pull && npm install'
-          : 'npm install -g @cloudcli-ai/cloudcli@latest';
-      const workingDirectory = dependencies.isPlatform || dependencies.installMode === 'git'
-        ? dependencies.appRoot
-        : dependencies.homeDirectory;
+        : 'git checkout main && git pull && npm install';
+      const workingDirectory = dependencies.appRoot;
 
       dependencies.logInfo('Starting system update from directory:', workingDirectory);
 

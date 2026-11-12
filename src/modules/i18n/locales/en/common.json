@@ -271,8 +271,8 @@
     "viewFullRelease": "View full release",
     "updateProgress": "Update Progress:",
     "manualUpgrade": "Manual upgrade:",
-    "npmUpgradeCommand": "npm install -g @cloudcli-ai/cloudcli@latest",
     "manualUpgradeHint": "Or click \"Update Now\" to run the update automatically.",
+    "downloadHint": "This build does not update itself. Download the new installer from the release page and run it.",
     "updateCompleted": "Update completed successfully!",
     "restartServer": "Please restart the server to apply changes.",
     "updateFailed": "Update failed",
@@ -281,7 +281,8 @@
       "later": "Later",
       "copyCommand": "Copy Command",
       "updateNow": "Update Now",
-      "updating": "Updating..."
+      "updating": "Updating...",
+      "download": "Download new version"
     },
     "ariaLabels": {
       "closeModal": "Close version upgrade modal",

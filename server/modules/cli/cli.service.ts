@@ -10,6 +10,15 @@ import type {
 } from '@/shared/types.js';
 import { terminalTextStyles } from '@/shared/utils.js';
 
+/**
+ * GitHub `owner/name` of this fork. The CLI composition root reads the fork's latest
+ * release from it, and the help and update output link to it, so the CLI never offers or
+ * installs a release of the upstream project.
+ */
+export const APP_REPOSITORY_SLUG = 'woai66/Claude-code-GUI';
+
+const APP_REPOSITORY_URL = `https://github.com/${APP_REPOSITORY_SLUG}`;
+
 type CliServiceDependencies = {
   applicationRoot: string;
   defaultDatabasePath: string;
@@ -20,7 +29,6 @@ type CliServiceDependencies = {
   output: CliOutput;
   sandboxService: SandboxCommandService;
   getLatestPackageVersion(): Promise<string>;
-  updateGlobalPackage(): void;
   startServer(): Promise<void>;
   startBrowserUseMcp(): Promise<void>;
 };
@@ -139,7 +147,7 @@ Commands:
   sandbox          Manage Docker sandbox environments
   browser-use-mcp  Run Browser MCP stdio server
   status           Show configuration and data locations
-  update           Update to the latest version
+  update           Check for a newer release
   help             Show this help information
   version          Show version information
 
@@ -163,10 +171,10 @@ Environment Variables:
   CONTEXT_WINDOW      Set context window size (default: 160000)
 
 Documentation:
-  ${dependencies.packageMetadata.homepage || 'https://github.com/siteboon/claudecodeui'}
+  ${dependencies.packageMetadata.homepage || APP_REPOSITORY_URL}
 
 Report Issues:
-  ${dependencies.packageMetadata.bugsUrl || 'https://github.com/siteboon/claudecodeui/issues'}
+  ${dependencies.packageMetadata.bugsUrl || `${APP_REPOSITORY_URL}/issues`}
 `);
 }
 
@@ -182,7 +190,7 @@ export function createCliService(dependencies: CliServiceDependencies): CliAppli
       const currentVersion = dependencies.packageMetadata.version;
       if (isNewerVersion(latestVersion, currentVersion)) {
         dependencies.output.log(`\n${terminalTextStyles.warn('[UPDATE]')} New version available: ${terminalTextStyles.bright(latestVersion)} (current: ${currentVersion})`);
-        dependencies.output.log(`         Run ${terminalTextStyles.bright('cloudcli update')} to update\n`);
+        dependencies.output.log(`         Run ${terminalTextStyles.bright('claude-gui update')} to see how to get it\n`);
         return true;
       }
       if (!silent) {
@@ -205,15 +213,10 @@ export function createCliService(dependencies: CliServiceDependencies): CliAppli
       return;
     }
 
-    try {
-      dependencies.output.log(`${terminalTextStyles.info('[INFO]')} Updating ${dependencies.packageMetadata.version}...`);
-      dependencies.updateGlobalPackage();
-      dependencies.output.log(`${terminalTextStyles.ok('[OK]')} Update complete! Restart cloudcli to use the new version.`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      dependencies.output.error(`${terminalTextStyles.error('[ERROR]')} Update failed: ${message}`);
-      dependencies.output.log(`${terminalTextStyles.tip('[TIP]')} Try running manually: npm update -g @cloudcli-ai/cloudcli`);
-    }
+    // This fork is not on npm, so there is nothing to install from here: a new version is
+    // a new installer from the release page, or a pull in a source checkout.
+    dependencies.output.log(`${terminalTextStyles.tip('[TIP]')} Download it from ${APP_REPOSITORY_URL}/releases/latest`);
+    dependencies.output.log('      In a source checkout, run: git pull && npm install');
   };
 
   return {
