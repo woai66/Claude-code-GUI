@@ -31,6 +31,23 @@ async function withIsolatedDatabase(runTest: () => void | Promise<void>): Promis
   }
 }
 
+test('rows of providers outside the given list are dropped and the rest are kept', async () => {
+  await withIsolatedDatabase(() => {
+    sessionsDb.createSession('session-claude', 'claude', '/workspace/demo-project', 'Claude Session');
+    sessionsDb.createSession('session-codex', 'codex', '/workspace/demo-project', 'Codex Session');
+    sessionsDb.createSession('session-cursor', 'cursor', '/workspace/demo-project', 'Cursor Session');
+
+    assert.equal(sessionsDb.deleteSessionsOfOtherProviders(['claude', 'codex']), 1);
+    assert.deepEqual(
+      sessionsDb.getAllSessions().map((session) => session.session_id).sort(),
+      ['session-claude', 'session-codex'],
+    );
+    // Without a list of known providers nothing is deleted.
+    assert.equal(sessionsDb.deleteSessionsOfOtherProviders([]), 0);
+    assert.equal(sessionsDb.getAllSessions().length, 2);
+  });
+});
+
 test('session archive queries hide archived rows from active project views', async () => {
   await withIsolatedDatabase(() => {
     sessionsDb.createSession('session-active', 'claude', '/workspace/demo-project', 'Active Session');
@@ -149,7 +166,6 @@ test("the upsert path leaves an archived row alone for a transcript older than i
     assert.equal(sessionsDb.getSessionById("session-stale")?.isArchived, 1);
   });
 });
-
 
 test('repository reads normalize SQLite UTC timestamps to ISO strings', async () => {
   await withIsolatedDatabase(() => {

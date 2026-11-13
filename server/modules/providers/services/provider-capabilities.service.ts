@@ -53,7 +53,6 @@ type ProviderCapabilities = {
  * The capability matrix mirrors what each runtime actually implements today:
  * - permission modes match the option sets accepted by each CLI/SDK.
  * - only the Claude SDK integration surfaces interactive permission requests.
- * - Cursor has no token usage endpoint support (its store.db has no usage rows).
  */
 const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
   claude: {
@@ -71,21 +70,6 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     // `forkSession` copies a transcript prefix into a new session file.
     supportsMessageEditing: true,
     supportsSessionForking: true,
-    supportsSteering: false,
-  },
-  cursor: {
-    provider: 'cursor',
-    permissionModes: ['default', 'acceptEdits', 'bypassPermissions', 'plan'],
-    defaultPermissionMode: 'default',
-    supportsImages: true,
-    supportsFiles: true,
-    supportsAbort: true,
-    supportsPermissionRequests: false,
-    supportsTokenUsage: false,
-    supportsEffort: false,
-    effortLevels: [],
-    supportsMessageEditing: false,
-    supportsSessionForking: false,
     supportsSteering: false,
   },
   codex: {
@@ -107,26 +91,6 @@ const PROVIDER_CAPABILITIES: Record<LLMProvider, ProviderCapabilities> = {
     supportsMessageEditing: true,
     supportsSessionForking: true,
     supportsSteering: true,
-  },
-  opencode: {
-    provider: 'opencode',
-    // Mapped by the runtime onto OpenCode's controls: `--agent plan` (plan),
-    // `--auto` (bypassPermissions) and the OPENCODE_PERMISSION env var
-    // (acceptEdits). See resolveOpenCodePermissionOptions in the OpenCode runtime adapter.
-    permissionModes: ['default', 'acceptEdits', 'bypassPermissions', 'plan'],
-    defaultPermissionMode: 'default',
-    supportsImages: true,
-    supportsFiles: true,
-    supportsAbort: true,
-    supportsPermissionRequests: false,
-    supportsTokenUsage: true,
-    supportsEffort: true,
-    // Passed on as OpenCode's `--variant`. `thinking` (MiniMax's on/off
-    // variant, paired with `none`) is not a strength, so it sorts last.
-    effortLevels: ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'thinking'],
-    supportsMessageEditing: false,
-    supportsSessionForking: false,
-    supportsSteering: false,
   },
 };
 

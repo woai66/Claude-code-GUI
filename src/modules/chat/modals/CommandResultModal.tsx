@@ -26,7 +26,7 @@ import type {
   ProviderModelsDefinition,CommandModalPayload,CostCommandData,HelpCommandData,ModelCommandData,StatusCommandData
 } from '@/shared/types';
 import ModelLibraryPanel from '@/modules/chat/modals/ModelLibraryPanel';
-import { findProviderModelOption, groupCursorModels, selectCursorVariant } from '@/shared/utils';
+import { findProviderModelOption } from '@/shared/utils';
 
 type CommandResultModalProps = {
   payload: CommandModalPayload | null;
@@ -55,9 +55,7 @@ type CommandEntry = {
 
 const PROVIDER_LABELS: Record<string, string> = {
   claude: 'Claude',
-  cursor: 'Cursor',
   codex: 'Codex',
-  opencode: 'OpenCode',
 };
 
 const FALLBACK_COMMANDS: CommandEntry[] = [
@@ -268,11 +266,7 @@ function ModelsContent({
     const availableModels = Array.isArray(data?.availableModels) ? data.availableModels : [];
     return availableModels.map((model) => ({ value: model, label: model }));
   }, [data, liveDefinition]);
-  const availableOptions = useMemo(() => currentProvider === 'cursor'
-    ? groupCursorModels(rawAvailableOptions).map((family) => ({
-      ...selectCursorVariant(family, currentModel).option, label: family.label,
-    }))
-    : rawAvailableOptions, [currentModel, currentProvider, rawAvailableOptions]);
+  const availableOptions = rawAvailableOptions;
   const selectedModelOption = findProviderModelOption(availableOptions, currentModel);
   const filteredOptions = useMemo(() => {
     const normalized = query.trim().toLowerCase();

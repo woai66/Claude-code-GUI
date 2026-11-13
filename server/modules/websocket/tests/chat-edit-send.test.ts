@@ -285,21 +285,6 @@ test('an anchor the transcript does not hold is refused', async () => {
   });
 });
 
-test('a provider that cannot re-run from a point is refused rather than sending a new message', async () => {
-  await withGateway('cursor', async ({ socket, runs }) => {
-    socket.emit('message', JSON.stringify({
-      type: 'chat.edit-send',
-      sessionId: SESSION_ID,
-      anchorId: 'e-u2',
-      content: 'replacement',
-    }));
-    await settle();
-
-    assert.equal(runs.length, 0);
-    assert.equal(socket.frames.at(-1)?.code, 'EDIT_NOT_SUPPORTED');
-  });
-});
-
 test('a refused send never rewinds the conversation', async () => {
   await withGateway('codex', async ({ socket, runs }) => {
     // The rewind moves the session onto a different provider transcript and

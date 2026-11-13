@@ -5,8 +5,7 @@ import { ChevronDown, ChevronRight, Zap } from 'lucide-react';
 
 import type { CodexSpeed, LLMProvider, ProviderModelOption } from '@/shared/types';
 import { DEFAULT_EFFORT_VALUE } from '@/shared/constants';
-import { findProviderModelOption, groupCursorModels, selectCursorVariant } from '@/shared/utils';
-import { CursorModelParameters } from '@/modules/chat/composer/CursorModelParameters';
+import { findProviderModelOption } from '@/shared/utils';
 import { useComposerMenuAnchor } from '@/modules/chat/hooks/useComposerMenuAnchor';
 import {
   ComposerMenuHeading,
@@ -76,19 +75,12 @@ function ComposerModelMenu({
     () => findProviderModelOption(modelOptions, model),
     [model, modelOptions],
   );
-  const cursorFamilies = useMemo(() => provider === 'cursor' ? groupCursorModels(modelOptions) : [],
-    [provider, modelOptions]);
-  const cursorFamily = cursorFamilies.find((family) => family.variants.some((variant) => variant.option.value === model));
-  const cursorVariant = cursorFamily ? selectCursorVariant(cursorFamily, model) : null;
-  const modelLabel = cursorFamily?.label || selectedModelOption?.label || model;
+  const modelLabel = selectedModelOption?.label || model;
   const showSpeed = provider === 'codex' && Boolean(onSelectSpeed);
-  const fastEnabled = provider === 'cursor' ? cursorVariant?.fast : showSpeed && speed === 'fast';
-  const modelRows = cursorFamilies.length ? cursorFamilies.map((family) => ({
-    value: selectCursorVariant(family, model).option.value, label: family.label,
-    selected: family === cursorFamily,
-  })) : modelOptions.map((option) => ({ ...option, selected: option.value === selectedModelOption?.value }));
+  const fastEnabled = showSpeed && speed === 'fast';
+  const modelRows = modelOptions.map((option) => ({ ...option, selected: option.value === selectedModelOption?.value }));
 
-  const hasEffortSection = provider !== 'cursor' && resolvedEffortOptions.length > 0;
+  const hasEffortSection = resolvedEffortOptions.length > 0;
   const hasModelSection = modelOptions.length > 0 || modelsLoading;
   if (!hasEffortSection && !hasModelSection && !showSpeed) {
     return null;
@@ -115,9 +107,6 @@ function ComposerModelMenu({
         title={ariaLabel}
       >
         <span className="truncate">{triggerLabel}</span>
-        {cursorVariant && cursorFamily && cursorFamily.variants.length > 1 && cursorVariant.effort !== 'default' && (
-          <span className="hidden shrink-0 text-muted-foreground sm:inline">· {cursorVariant.effort}</span>
-        )}
         {fastEnabled && <Zap className="h-3 w-3 shrink-0" aria-label="Fast" />}
         {hasModelSection && hasEffortSection && effort !== DEFAULT_EFFORT_VALUE && (
           <span className="hidden shrink-0 capitalize text-muted-foreground sm:inline">· {effortLabel}</span>
@@ -126,9 +115,6 @@ function ComposerModelMenu({
 
       {isOpen && anchor && createPortal(
         <ComposerMenuSurface anchor={anchor} menuRef={menuRef} ariaLabel={ariaLabel}>
-          {cursorFamily && cursorFamily.variants.length > 1 && (
-            <CursorModelParameters family={cursorFamily} model={model} onSelectModel={onSelectModel} />
-          )}
           {showSpeed && (
             <>
               <div className="space-y-2 px-2.5 py-2">

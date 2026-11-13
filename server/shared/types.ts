@@ -84,7 +84,7 @@ export type AuthenticatedWebSocketRequest = IncomingMessage & {
  * Use this as the source of truth whenever a function or payload needs to identify
  * a specific LLM integration.
  */
-export type LLMProvider = 'claude' | 'codex' | 'cursor' | 'opencode';
+export type LLMProvider = 'claude' | 'codex';
 
 /** Providers and chat transport use default to delegate speed to the CLI; explicit choices override one run. */
 export type CodexSpeed = 'default' | 'standard' | 'fast';

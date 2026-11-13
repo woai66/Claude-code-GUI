@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, type Dispatch, type SetStateAction, useState } from 'react';
+import React, { useCallback, useMemo, type Dispatch, type SetStateAction, useState } from 'react';
 
 import { ChatInterface } from '@/modules/chat';
 import { FileTree } from '@/modules/file-tree';

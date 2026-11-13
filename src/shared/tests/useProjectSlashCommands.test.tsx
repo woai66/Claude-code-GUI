@@ -128,13 +128,12 @@ test('a disabled consumer does not request until it is enabled', async () => {
   assert.equal(listCommands.mock.calls.length, 1);
 });
 
-
 test('offers native context and compact only for Codex', async () => {
   listCommands.mockResolvedValue(jsonResponse({ builtIn: [], custom: [] }));
   listSkills.mockResolvedValue(jsonResponse({ data: { skills: [] } }));
   const { useProjectSlashCommands } = await import('@/shared/hooks/useProjectSlashCommands');
-  const { result, rerender } = renderHook(({ provider }: { provider: 'codex' | 'cursor' }) => useProjectSlashCommands(project, provider), { initialProps: { provider: 'codex' } });
+  const { result, rerender } = renderHook(({ provider }: { provider: 'codex' | 'claude' }) => useProjectSlashCommands(project, provider), { initialProps: { provider: 'codex' } });
   await waitFor(() => assert.deepEqual(result.current.commands.map((command) => command.name), ['/compact', '/context']));
-  rerender({ provider: 'cursor' });
+  rerender({ provider: 'claude' });
   await waitFor(() => assert.equal(result.current.commands.length, 0));
 });

@@ -698,6 +698,24 @@ export const sessionsDb = {
     return db.prepare('DELETE FROM sessions WHERE session_id = ?').run(sessionId).changes > 0;
   },
 
+  /**
+   * Drops the index rows of every provider not in `providers` and returns how many went.
+   * Used by the session synchronizer so conversations of integrations this build no longer
+   * has (Cursor, OpenCode) stop appearing in lists. Only the index row is removed: those
+   * tools keep their own conversation stores, which are never touched.
+   */
+  deleteSessionsOfOtherProviders(providers: string[]): number {
+    if (providers.length === 0) {
+      return 0;
+    }
+
+    const db = getConnection();
+    const placeholders = providers.map(() => '?').join(', ');
+    return db
+      .prepare(`DELETE FROM sessions WHERE provider NOT IN (${placeholders})`)
+      .run(...providers).changes;
+  },
+
   /** Used by the OpenCode synchronizer to remove indexed child sessions by their native id. */
   deleteSessionByProviderSessionId(providerSessionId: string, provider: string): boolean {
     const db = getConnection();

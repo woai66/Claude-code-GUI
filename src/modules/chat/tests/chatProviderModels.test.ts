@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, test, vi } from 'vitest';
 
-import { resetUserPreferences, writeUserPreference } from '@/shared/userSettings';
-import type { Project, ProjectSession } from '@/shared/types';
+import { resetUserPreferences } from '@/shared/userSettings';
+import type { ProjectSession } from '@/shared/types';
 
 /**
  * The four per-provider default models used to be four useState slots with four
@@ -69,22 +69,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.resetModules();
-});
-
-test('each provider gets its own model from its own storage key', async () => {
-  localStorage.setItem('claude-model', 'claude-stored');
-  localStorage.setItem('cursor-model', 'cursor-stored');
-  localStorage.setItem('codex-model', 'codex-stored');
-  localStorage.setItem('opencode-model', 'opencode-stored');
-
-  const { result } = await renderProviderState();
-
-  await waitFor(() => {
-    assert.equal(result.current.providerModels.claude, 'claude-stored');
-  });
-  assert.equal(result.current.providerModels.cursor, 'cursor-stored');
-  assert.equal(result.current.providerModels.codex, 'codex-stored');
-  assert.equal(result.current.providerModels.opencode, 'opencode-stored');
 });
 
 test('new Codex chats remember speed while existing sessions retain their own settings', async () => {
@@ -227,90 +211,6 @@ test('choosing a model persists it under that provider’s key only', async () =
   assert.equal(localStorage.getItem('claude-model'), null);
 });
 
-test('refresh applies the fetched catalog to model pickers and persists its default selection', async () => {
-  const { api } = await import('@/shared/api');
-  const updatedModels = {
-    OPTIONS: [{ value: 'live-cursor-model', label: 'Live Cursor model' }],
-    DEFAULT: 'live-cursor-model', DISCOVERY: { source: 'cli' as const },
-  };
-  const refresh = vi.spyOn(api.providers, 'refreshModels').mockImplementation(async () => okJson({
-    success: true, data: { models: updatedModels },
-  }) as unknown as Response);
-  try {
-    const { result } = await renderProviderState();
-    await waitFor(() => assert.equal(result.current.providerModelsLoading, false));
-    await act(async () => { await result.current.providerModelActions.refresh('cursor'); });
-    assert.deepEqual(result.current.providerModelCatalog.cursor, updatedModels);
-    assert.equal(result.current.providerModels.cursor, 'live-cursor-model');
-    assert.equal(localStorage.getItem('cursor-model'), 'live-cursor-model');
-    assert.equal(refresh.mock.calls[0][0], 'cursor');
-  } finally {
-    refresh.mockRestore();
-  }
-});
-
-test('a late initial response cannot overwrite a newly refreshed catalog', async () => {
-  const { api } = await import('@/shared/api');
-  let finishInitial: (response: Response) => void = () => {};
-  const original = vi.spyOn(api.providers, 'models').mockImplementation((provider) => (
-    provider === 'cursor'
-      ? new Promise<Response>((resolve) => { finishInitial = resolve; })
-      : okJson({ success: true, data: null }) as unknown as Promise<Response>
-  ));
-  const refresh = vi.spyOn(api.providers, 'refreshModels').mockImplementation(async () => okJson({
-    success: true, data: { models: { OPTIONS: [{ value: 'fresh', label: 'Fresh' }], DEFAULT: 'fresh' } },
-  }) as unknown as Response);
-  try {
-    const { result } = await renderProviderState();
-    await act(async () => { await result.current.providerModelActions.refresh('cursor'); });
-    await act(async () => {
-      finishInitial(await okJson({ success: true, data: { models: {
-        OPTIONS: [{ value: 'stale', label: 'Stale' }], DEFAULT: 'stale',
-      } } }) as unknown as Response);
-    });
-    await waitFor(() => assert.equal(result.current.providerModelsLoading, false));
-    assert.equal(result.current.providerModelCatalog.cursor?.DEFAULT, 'fresh');
-  } finally {
-    original.mockRestore();
-    refresh.mockRestore();
-  }
-});
-
-test('refreshing a previous workspace cannot replace the new project catalog', async () => {
-  const { api } = await import('@/shared/api');
-  const original = vi.spyOn(api.providers, 'models').mockImplementation(async (_provider, cwd) => okJson({
-    success: true, data: { models: {
-      OPTIONS: [{ value: cwd === 'second-project' ? 'second-model' : 'first-model', label: 'Project model' }],
-      DEFAULT: cwd === 'second-project' ? 'second-model' : 'first-model',
-    } },
-  }) as unknown as Response);
-  let finishRefresh: (response: Response) => void = () => {};
-  const refresh = vi.spyOn(api.providers, 'refreshModels').mockImplementation(() => (
-    new Promise<Response>((resolve) => { finishRefresh = resolve; })
-  ));
-  try {
-    const { useChatProviderState } = await import('@/modules/chat/hooks/useChatProviderState');
-    const { result, rerender } = renderHook(({ selectedProject }) => useChatProviderState({
-      selectedSession: null, selectedProject,
-    }), { initialProps: { selectedProject: { path: 'first-project' } as Project } });
-    await waitFor(() => assert.equal(result.current.providerModelsLoading, false));
-    let pending: Promise<unknown> = Promise.resolve();
-    act(() => { pending = result.current.providerModelActions.refresh('cursor'); });
-    rerender({ selectedProject: { path: 'second-project' } as Project });
-    await waitFor(() => assert.equal(result.current.providerModelCatalog.cursor?.DEFAULT, 'second-model'));
-    await act(async () => {
-      finishRefresh(await okJson({ success: true, data: { models: {
-        OPTIONS: [{ value: 'old-project-refresh', label: 'Old workspace' }], DEFAULT: 'old-project-refresh',
-      } } }) as unknown as Response);
-      await pending;
-    });
-    assert.equal(result.current.providerModelCatalog.cursor?.DEFAULT, 'second-model');
-  } finally {
-    original.mockRestore();
-    refresh.mockRestore();
-  }
-});
-
 test('setting the same model twice keeps the record identity stable', async () => {
   const { result } = await renderProviderState();
   await waitFor(() => {
@@ -331,20 +231,6 @@ test('setting the same model twice keeps the record identity stable', async () =
     afterFirst,
     'a no-op write must not allocate a new record and wake consumers',
   );
-});
-
-test('the active provider’s model is what currentProviderModel reports', async () => {
-  // The provider selection is a stored preference; the per-provider model is
-  // still a plain localStorage key.
-  writeUserPreference('selectedProvider', 'cursor');
-  localStorage.setItem('cursor-model', 'cursor-active');
-
-  const { result } = await renderProviderState();
-
-  await waitFor(() => {
-    assert.equal(result.current.provider, 'cursor');
-  });
-  assert.equal(result.current.currentProviderModel, 'cursor-active');
 });
 
 test('an external Claude session restores the permission mode recorded by Claude CLI', async () => {

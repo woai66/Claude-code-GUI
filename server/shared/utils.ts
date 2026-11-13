@@ -670,7 +670,7 @@ export function parseOptionalProviderFilter(value: unknown): LLMProvider | undef
   if (value === undefined || value === null || value === '' || value === 'all') {
     return undefined;
   }
-  if (value === 'claude' || value === 'codex' || value === 'cursor' || value === 'opencode') {
+  if (value === 'claude' || value === 'codex') {
     return value;
   }
   throw new AppError('Unknown provider filter.', { code: 'INVALID_PROVIDER', statusCode: 400 });
@@ -1035,44 +1035,6 @@ export function readJsonRecord(value: unknown): AnyRecord | null {
     return readObjectRecord(JSON.parse(value));
   } catch {
     return null;
-  }
-}
-
-// ---------------------------
-//----------------- OPENCODE SESSION STORAGE UTILITIES ------------
-/**
- * Resolves the OpenCode SQLite session database path.
- *
- * OpenCode stores session, message, part, and project metadata in one shared
- * `opencode.db` file under its XDG data directory. Provider readers and
- * synchronizers should use this path for read-only access and should never store
- * it as a deletable transcript path for an individual app session row.
- */
-export function getOpenCodeDatabasePath(): string {
-  return path.join(os.homedir(), '.local', 'share', 'opencode', 'opencode.db');
-}
-
-/**
- * Decodes an OpenCode text payload that was persisted as a JSON string literal.
- *
- * OpenCode can store the first user prompt (and other text parts) as `"hello"`
- * instead of `hello`. Used by both the OpenCode session reader (transcript
- * history) and the OpenCode synchronizer (session titling) so a session name or
- * message body never surfaces with surrounding quote characters. Only fully
- * quoted, valid JSON string literals are unwrapped; ordinary prose that merely
- * happens to start/end with a quote is returned untouched.
- */
-export function unwrapJsonStringLiteral(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed.startsWith('"') || !trimmed.endsWith('"')) {
-    return value;
-  }
-
-  try {
-    const parsed = JSON.parse(trimmed);
-    return typeof parsed === 'string' ? parsed : value;
-  } catch {
-    return value;
   }
 }
 
@@ -1476,53 +1438,6 @@ function listCliVersionDirectories(directory: string): string[] {
   } catch {
     return [];
   }
-}
-
-/**
- * Resolves Cursor's native Windows entry point for model discovery, auth and runs.
- * Honors the first installed CLI on absolute PATH entries, including custom
- * install roots, then checks LOCALAPPDATA. Direct Node execution bypasses the
- * official cmd/PowerShell wrappers that can create a second visible terminal.
- * Returns null on other hosts or for an unknown wrapper layout so the caller
- * can retain its normal CLI lookup. This does not start a process.
- */
-export function resolveCursorCliLaunch(
-  options: CliPathResolutionOptions = {},
-): { command: string; args: string[] } | null {
-  if ((options.platform ?? process.platform) !== 'win32') return null;
-  const env = options.env ?? process.env;
-  const exists = options.exists ?? fs.existsSync;
-  const directories = options.readDirectories ?? listCliVersionDirectories;
-  let installRoot: string | undefined;
-  for (const directory of cliPathDirectories(env)) {
-    for (const name of ['cursor-agent.exe', 'cursor-agent.cmd', 'cursor-agent.ps1', 'cursor-agent']) {
-      const candidate = path.win32.join(directory, name);
-      if (!exists(candidate)) continue;
-      if (name.endsWith('.exe')) return { command: candidate, args: [] };
-      installRoot = directory;
-      break;
-    }
-    if (installRoot) break;
-  }
-  installRoot ??= path.win32.join(env.LOCALAPPDATA ?? path.win32.join(os.homedir(), 'AppData', 'Local'), 'cursor-agent');
-  const entryAt = (root: string) => {
-    const command = path.win32.join(root, 'node.exe');
-    const script = path.win32.join(root, 'index.js');
-    return exists(command) && exists(script) ? { command, args: [script] } : null;
-  };
-  const direct = entryAt(installRoot);
-  if (direct) return direct;
-  const versionsRoot = path.win32.join(installRoot, 'versions');
-  const versionKey = (name: string) => name.split('-').slice(0, -1).join('.').split('.')
-    .map((part) => part.padStart(2, '0')).join('.');
-  const versions = directories(versionsRoot)
-    .filter((name) => /^\d{4}\.\d{1,2}\.\d{1,2}(?:-\d{2}-\d{2}-\d{2})?-[a-f0-9]+$/i.test(name))
-    .sort((left, right) => versionKey(right).localeCompare(versionKey(left)));
-  for (const version of versions) {
-    const launch = entryAt(path.win32.join(versionsRoot, version));
-    if (launch) return launch;
-  }
-  return null;
 }
 
 function codexBinaryFromLauncher(launcher: string, arch: string, exists: (filePath: string) => boolean) {

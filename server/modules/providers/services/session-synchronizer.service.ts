@@ -82,10 +82,11 @@ async function runSessionSynchronization(): Promise<SessionSynchronizeResult> {
   const processedByProvider: Record<LLMProvider, number> = {
     claude: 0,
     codex: 0,
-    cursor: 0,
-    opencode: 0,
   };
   const failures: string[] = [];
+
+  // Rows indexed by an integration that has since been removed would otherwise stay listed.
+  sessionsDb.deleteSessionsOfOtherProviders(providerRegistry.listProviders().map((provider) => provider.id));
 
   const results = await Promise.allSettled(
     providerRegistry.listProviders().map(async (provider) => ({

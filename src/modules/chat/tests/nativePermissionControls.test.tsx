@@ -57,17 +57,12 @@ describe('native Codex controls', () => {
     expect(screen.getByText('12K')).toBeTruthy();
     expect(screen.queryByText('12K / 1M')).toBeNull();
   });
-  it('describes Codex default mode by its own approval behavior without changing Cursor', () => {
-    const { unmount } = render(<ComposerPermissionMenu provider="codex" providerLabel="Codex" permissionMode="default"
+  it('describes Codex default mode by its own approval behavior', () => {
+    render(<ComposerPermissionMenu provider="codex" providerLabel="Codex" permissionMode="default"
       permissionModes={['default', 'auto']} onSelectPermissionMode={vi.fn()} />);
     fireEvent.click(screen.getByRole('button', { name: /Codex/ }));
     expect(screen.getByText(/asks for your approval first/)).toBeTruthy();
     expect(screen.queryByText(/Other commands are skipped/)).toBeNull();
-    unmount();
-    render(<ComposerPermissionMenu provider="cursor" providerLabel="Cursor" permissionMode="default"
-      permissionModes={['default']} onSelectPermissionMode={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: /Cursor/ }));
-    expect(screen.getByText(/Other commands are skipped/)).toBeTruthy();
   });
   it('offers one approve-and-retry for a Codex auto-review denial', () => {
     const approve = vi.fn();

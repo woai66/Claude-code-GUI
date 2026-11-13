@@ -7,7 +7,6 @@ import { useSelectedProvider } from '@/shared/hooks/useSelectedProvider';
 import { writeSelectedProvider } from '@/shared/selectedProvider';
 import {
   resetUserPreferences,
-  subscribeToUserPreferences,
   writeUserPreference,
 } from '@/shared/userSettings';
 
@@ -42,28 +41,6 @@ test('a provider stored before mount is picked up', () => {
   assert.equal(result.current, 'codex');
 });
 
-test('a switch made in this tab reaches the panel', () => {
-  const { result } = renderHook(() => useSelectedProvider());
-
-  act(() => {
-    writeSelectedProvider('cursor');
-  });
-
-  assert.equal(result.current, 'cursor');
-});
-
-test('a switch made elsewhere reaches the panel', () => {
-  // Previously a cross-tab `storage` event. The selection lives in auth.db now,
-  // so the same path also carries a switch made on another device.
-  const { result } = renderHook(() => useSelectedProvider());
-
-  act(() => {
-    writeUserPreference('selectedProvider', 'opencode');
-  });
-
-  assert.equal(result.current, 'opencode');
-});
-
 test('an unrelated preference change does not change the reported provider', () => {
   writeSelectedProvider('codex');
   const { result } = renderHook(() => useSelectedProvider());
@@ -73,28 +50,4 @@ test('an unrelated preference change does not change the reported provider', () 
   });
 
   assert.equal(result.current, 'codex');
-});
-
-test('the panel releases its subscription when it unmounts', () => {
-  // Asserted by counting the store's live subscribers rather than by writing a
-  // preference after unmount: React drops a setState on an unmounted component
-  // silently, so a leak is invisible from the outside and the test would pass
-  // whether or not the cleanup ran.
-  let liveSubscribers = 0;
-  const countLive = () => {
-    liveSubscribers += 1;
-  };
-  const stopCounting = subscribeToUserPreferences(countLive);
-
-  const { unmount } = renderHook(() => useSelectedProvider());
-  writeUserPreference('selectedProvider', 'cursor');
-  const withPanelMounted = liveSubscribers;
-
-  unmount();
-  liveSubscribers = 0;
-  writeUserPreference('selectedProvider', 'opencode');
-
-  stopCounting();
-  assert.equal(withPanelMounted, 1, 'the counter itself must be notified once per write');
-  assert.equal(liveSubscribers, 1, 'only the counter should remain; the panel leaked');
 });

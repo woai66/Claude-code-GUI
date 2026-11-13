@@ -42,40 +42,6 @@ async function withIsolatedDatabase(runTest: () => void | Promise<void>): Promis
   }
 }
 
-test('an upsert always carries the provider session id', async () => {
-  await withIsolatedDatabase(async () => {
-    sessionsDb.createAppSession('app-1', 'opencode', '/workspace/demo');
-    sessionsDb.assignProviderSessionId('app-1', 'native-1');
-
-    const connection = new FakeConnection();
-    connectedClients.add(connection as never);
-
-    await broadcastSessionUpserted('app-1');
-
-    assert.equal(connection.frames.length, 1);
-    assert.equal(connection.frames[0].kind, 'session_upserted');
-    assert.equal(connection.frames[0].sessionId, 'app-1');
-    assert.equal(connection.frames[0].providerSessionId, 'native-1');
-  });
-});
-
-test('the watcher path resolves a provider-native id to the same canonical event', async () => {
-  await withIsolatedDatabase(async () => {
-    sessionsDb.createAppSession('app-2', 'opencode', '/workspace/demo');
-    sessionsDb.assignProviderSessionId('app-2', 'native-2');
-
-    const connection = new FakeConnection();
-    connectedClients.add(connection as never);
-
-    // The sessions watcher only ever knows the id written in the transcript.
-    await broadcastSessionUpsertedBatch(['native-2']);
-
-    assert.equal(connection.frames.length, 1);
-    assert.equal(connection.frames[0].sessionId, 'app-2');
-    assert.equal(connection.frames[0].providerSessionId, 'native-2');
-  });
-});
-
 test('a session with no provider id yet reports null rather than omitting the field', async () => {
   await withIsolatedDatabase(async () => {
     sessionsDb.createAppSession('app-3', 'claude', '/workspace/demo');

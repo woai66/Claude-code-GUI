@@ -2,7 +2,7 @@
   "name": "@cloudcli-ai/cloudcli",
   "version": "1.37.4",
   "productName": "Claude GUI",
-  "description": "A local desktop and web UI for Claude Code, Codex, Cursor and OpenCode",
+  "description": "A local desktop and web UI for Claude Code and Codex",
   "type": "module",
   "main": "dist-server/server/index.js",
   "bin": {
@@ -130,8 +130,6 @@
     "claude-code-ui",
     "cloudcli",
     "codex",
-    "cursor",
-    "cursor-cli",
     "anthropic",
     "openai",
     "google",

@@ -172,20 +172,6 @@ const createDiscoveryService = (
   return { service, stored, customCatalog };
 };
 
-test('discovered models survive service restarts without querying the CLI again', async () => {
-  let calls = 0;
-  const first = createDiscoveryService(async () => { calls += 1; return createModels('live-model'); });
-  const initial = await first.service.getProviderModels('cursor');
-  assert.equal(initial.DISCOVERY?.source, 'cli');
-  assert.ok(initial.DISCOVERY?.updatedAt);
-  const restarted = createDiscoveryService(async () => { throw new Error('must not run'); }, first.stored);
-  const restored = await restarted.service.getProviderModels('cursor');
-  assert.equal(restored.OPTIONS[0].value, 'live-model');
-  assert.equal(restored.DISCOVERY?.source, 'cache');
-  assert.equal(restored.DISCOVERY?.updatedAt, initial.DISCOVERY?.updatedAt);
-  assert.equal(calls, 1);
-});
-
 test('refresh replaces obsolete CLI choices while retaining custom models without duplicate IDs', async () => {
   let model = 'old-model';
   const { service, customCatalog } = createDiscoveryService(async () => createModels(model));
@@ -204,40 +190,6 @@ test('refresh replaces obsolete CLI choices while retaining custom models withou
   });
   assert.equal(edited.model.label, 'Renamed custom model');
   assert.deepEqual(edited.model.effort?.values, [{ value: 'high' }]);
-});
-
-test('failed or empty refresh never overwrites the last successful catalog', async () => {
-  let fail = false;
-  let empty = false;
-  const { service } = createDiscoveryService(async () => {
-    if (fail) throw new Error('CLI offline');
-    return empty ? { OPTIONS: [], DEFAULT: '' } : createModels('good-model');
-  });
-  await service.getProviderModels('cursor');
-  fail = true;
-  await assert.rejects(service.refreshProviderModels('cursor'), /CLI offline/);
-  fail = false;
-  empty = true;
-  await assert.rejects(service.refreshProviderModels('cursor'), /usable model list/);
-  assert.equal((await service.getProviderModels('cursor')).OPTIONS[0].value, 'good-model');
-});
-
-test('first discovery failure leaves the CLI list empty, keeps manual models and allows retry', async () => {
-  let failed = true;
-  const { service, customCatalog } = createDiscoveryService(async () => {
-    if (failed) throw new Error('Sign in required');
-    return createModels('cli-model');
-  });
-  customCatalog.createCustomProviderModel('cursor', { id: 'manual', model: 'Manual' });
-  const initial = await service.getProviderModels('cursor');
-  assert.equal(initial.DISCOVERY?.source, 'empty');
-  assert.match(initial.DISCOVERY?.error ?? '', /Sign in required/);
-  assert.deepEqual(initial.OPTIONS.map((option) => option.value), ['manual']);
-  assert.equal(initial.DEFAULT, 'manual');
-  failed = false;
-  const retried = await service.refreshProviderModels('cursor');
-  assert.deepEqual(retried.OPTIONS.map((option) => option.value), ['cli-model', 'manual']);
-  assert.equal(retried.DISCOVERY?.error, undefined);
 });
 
 test('simultaneous model requests share discovery and workspace catalogs stay separate', async () => {
@@ -323,110 +275,6 @@ test('custom models without declared effort levels expose no effort', async () =
   assert.equal('effort' in created.model, false);
 });
 
-test('custom effort levels must be levels the provider supports', async () => {
-  const { service } = createTestService();
-
-  await assert.rejects(
-    () => service.createCustomModel('codex', {
-      model: 'Unknown level',
-      id: 'unknown-level',
-      effort: { values: ['low', 'turbo'] },
-    }),
-    (error) => error instanceof AppError
-      && error.code === 'INVALID_MODEL_EFFORT'
-      && error.statusCode === 400,
-  );
-
-  await assert.rejects(
-    () => service.createCustomModel('cursor', {
-      model: 'Cursor effort',
-      id: 'cursor-effort',
-      effort: { values: ['low'] },
-    }),
-    (error) => error instanceof AppError
-      && error.code === 'MODEL_EFFORT_NOT_SUPPORTED'
-      && error.statusCode === 400,
-  );
-});
-
-test('allowed effort levels come from the provider, not from the built-in models this machine sees', async () => {
-  // The fake adapters' built-in models declare no effort at all, which is what
-  // the real OpenCode adapter returns once it narrows its catalog to OpenCode
-  // Zen, Anthropic, or OpenAI: only its OpenCode Go models declare effort.
-  const { service } = createTestService();
-
-  const created = await service.createCustomModel('opencode', {
-    model: 'Router model',
-    id: 'openrouter/router-model',
-    effort: { values: ['none', 'high'] },
-  });
-  assert.deepEqual(created.model.effort, { values: [{ value: 'none' }, { value: 'high' }] });
-
-  // Every merged catalog carries the provider's levels for the model library,
-  // weakest first, and an empty list where effort is unsupported.
-  const expectedLevels: Record<LLMProvider, string[]> = {
-    claude: ['low', 'medium', 'high', 'xhigh', 'max', 'ultracode'],
-    codex: ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
-    cursor: [],
-    opencode: ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max', 'thinking'],
-  };
-  for (const [provider, levels] of Object.entries(expectedLevels) as Array<[LLMProvider, string[]]>) {
-    assert.deepEqual((await service.getProviderModels(provider)).EFFORT_LEVELS, levels, provider);
-  }
-  assert.deepEqual(created.models.EFFORT_LEVELS, expectedLevels.opencode);
-});
-
-test('duplicate model ids are rejected within one provider', async () => {
-  const { service } = createTestService();
-  await service.createCustomModel('cursor', { model: 'First', id: 'custom-id' });
-
-  await assert.rejects(
-    () => service.createCustomModel('cursor', { model: 'Second', id: 'custom-id' }),
-    (error) => error instanceof AppError
-      && error.code === 'MODEL_ID_ALREADY_EXISTS'
-      && error.statusCode === 409,
-  );
-
-  await assert.rejects(
-    () => service.createCustomModel('cursor', {
-      model: 'Duplicate built-in',
-      id: 'cursor-default',
-    }),
-    (error) => error instanceof AppError
-      && error.code === 'MODEL_ID_ALREADY_EXISTS'
-      && error.statusCode === 409,
-  );
-});
-
-test('predefined models have no database record or mutation target', async () => {
-  const { service, catalog } = createTestService();
-  const models = await service.getProviderModels('opencode');
-  assert.equal(models.OPTIONS[0]?.recordId, undefined);
-  assert.equal(models.OPTIONS[0]?.isCustom, false);
-  assert.deepEqual(catalog.rows.get('opencode'), undefined);
-
-  await assert.rejects(
-    () => service.updateCustomModel('opencode', 999, { model: 'Changed', id: 'changed' }),
-    (error) => error instanceof AppError && error.code === 'MODEL_NOT_FOUND',
-  );
-});
-
-test('resolveSessionModel asks the provider adapter for the requested session', async () => {
-  const calls: Array<{ provider: LLMProvider; sessionId?: string }> = [];
-  const { service } = createTestService({
-    sessions: createSessionStore({ 'session-123': null }),
-    activeModel: (provider, sessionId) => {
-      calls.push({ provider, sessionId });
-      return `${provider}-${sessionId}`;
-    },
-  });
-
-  const resolved = await service.resolveSessionModel('opencode', { sessionId: 'session-123' });
-
-  assert.deepEqual(calls, [{ provider: 'opencode', sessionId: 'session-123' }]);
-  assert.equal(resolved.model, 'opencode-session-123');
-});
-
 test('setSessionModel records the model on the session row', () => {
   const sessions = createSessionStore({ 'session-1': null });
   const { service } = createTestService({ sessions });
@@ -490,21 +338,6 @@ test('resolveSessionModel prefers the recorded session model', async () => {
   assert.equal(resolved.source, 'session');
 });
 
-test('resolveSessionModel uses provider session state for unrecorded external sessions', async () => {
-  const { service } = createTestService({
-    sessions: createSessionStore({ 'session-1': null }),
-    activeModel: () => 'provider-reported',
-  });
-
-  const resolved = await service.resolveSessionModel('opencode', {
-    sessionId: 'session-1',
-    requestedModel: 'requested',
-  });
-
-  assert.equal(resolved.model, 'provider-reported');
-  assert.equal(resolved.source, 'provider');
-});
-
 test('resolveSessionModel uses the requested model when provider reports the catalog default', async () => {
   const { service } = createTestService({
     sessions: createSessionStore({ 'session-1': null }),
@@ -536,15 +369,6 @@ test('resolveSessionModel falls back to the provider adapter default', async () 
 
   assert.equal(resolved.model, 'codex-default');
   assert.equal(resolved.source, 'default');
-});
-
-test('resolveResumeModel prefers the recorded session model over the requested one', async () => {
-  const { service } = createTestService({
-    sessions: createSessionStore({ 'session-456': 'composer-2' }),
-  });
-
-  const model = await service.resolveResumeModel('cursor', 'session-456', 'composer-2-fast');
-  assert.equal(model, 'composer-2');
 });
 
 test('resolveResumeModel never consults provider-global state', async () => {

@@ -5,7 +5,6 @@ export {
   findProviderModelOption,
   parseOptionalProviderFilter,
   resolveCodexExecutablePath,
-  resolveCursorCliLaunch,
   readCodexContextUsage,
 } from './utils.js';
 export type { AnyRecord, ProviderRuntimeContext, ProviderRuntimeWriter } from './types.js';

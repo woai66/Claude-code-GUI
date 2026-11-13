@@ -68,19 +68,6 @@ function createService(providers: IProvider[]) {
   });
 }
 
-test('providerRegistry owns one runtime for every registered provider', () => {
-  const providers = providerRegistry.listProviders();
-
-  assert.deepEqual(providers.map((provider) => provider.id), [
-    'claude',
-    'codex',
-    'cursor',
-    'opencode',
-  ]);
-  assert.equal(providers.every((provider) => typeof provider.runtime.run === 'function'), true);
-  assert.equal(providers.every((provider) => typeof provider.runtime.abort === 'function'), true);
-});
-
 test('dispatches runs and aborts through the runtime owned by providerRegistry', async () => {
   const calls: unknown[][] = [];
   const runtime = createRuntime({
@@ -108,31 +95,5 @@ test('dispatches runs and aborts through the runtime owned by providerRegistry',
   assert.deepEqual(calls, [
     ['run', 'hello', { model: 'sonnet' }, writer],
     ['abort', 'session-1'],
-  ]);
-});
-
-test('routes permission decisions through provider-owned runtime capabilities', () => {
-  const decisions: unknown[][] = [];
-  const claudeRuntime = createRuntime({
-    permissions: {
-      resolve(requestId, decision) {
-        decisions.push([requestId, decision]);
-      },
-      listPending(sessionId) {
-        return [{ requestId: 'request-1', sessionId }];
-      },
-    },
-  });
-  const service = createService([
-    createProvider('claude', claudeRuntime),
-    createProvider('cursor', createRuntime()),
-  ]);
-  const decision = { allow: true, message: 'approved' };
-
-  service.resolveToolApproval('request-1', decision);
-
-  assert.deepEqual(decisions, [['request-1', decision]]);
-  assert.deepEqual(service.getPendingApprovalsForSession('session-1'), [
-    { requestId: 'request-1', sessionId: 'session-1' },
   ]);
 });

@@ -99,7 +99,7 @@ export function useSidebarController({
   // Remember the navigation scope independently of the agent selected in the chat composer.
   const [providerFilter, setProviderFilter] = useState<SidebarProviderFilter>(() => {
     const stored = localStorage.getItem('sidebar-provider-filter');
-    return stored === 'claude' || stored === 'codex' || stored === 'cursor' || stored === 'opencode' ? stored : 'all';
+    return stored === 'claude' || stored === 'codex' ? stored : 'all';
   });
   const {
     projects: providerProjects,

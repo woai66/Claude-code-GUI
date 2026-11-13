@@ -21,7 +21,7 @@ Claude GUI 是基于 **[CloudCLI UI (https://github.com/siteboon/claudecodeui)](
 ![Claude GUI 工作区：项目侧边栏、多 CLI 会话和 Claude 对话](public/screenshots/workspace.png)
 
 <details>
-<summary>查看模型库、Codex Fast 和 Cursor 参数截图</summary>
+<summary>查看模型库和 Codex Fast 截图</summary>
 
 ### 动态模型库
 
@@ -31,20 +31,7 @@ Claude GUI 是基于 **[CloudCLI UI (https://github.com/siteboon/claudecodeui)](
 
 ### 模型参数
 
-<table>
-  <tr>
-    <th>Codex：Fast 与思考等级</th>
-    <th>Cursor：同一模型下调整参数</th>
-  </tr>
-  <tr>
-    <td align="center" valign="top">
-      <img src="public/screenshots/codex-fast.png" alt="Codex Fast 开关、跟随 CLI 设置和思考等级" width="340">
-    </td>
-    <td align="center" valign="top">
-      <img src="public/screenshots/cursor-parameters.png" alt="Cursor 模型的思考等级、1M 上下文和 Fast 开关" width="230">
-    </td>
-  </tr>
-</table>
+<img src="public/screenshots/codex-fast.png" alt="Codex Fast 开关、跟随 CLI 设置和思考等级" width="340">
 
 </details>
 
@@ -67,9 +54,8 @@ Claude GUI 是基于 **[CloudCLI UI (https://github.com/siteboon/claudecodeui)](
 | --- | --- |
 | Claude Code | 动态读取模型，识别已有会话的模型和权限模式，兼容原生 `auto` 权限模式 |
 | Codex | 从原生会话恢复上次实际使用的模型和思考等级；通过本机 CLI 获取模型；提供 Fast 开关和「跟随 CLI 设置」 |
-| Cursor CLI | 将同一模型的已识别变体合并展示，按实际返回的组合选择思考等级、上下文、Thinking 或 Fast |
 
-Codex 和 Cursor 的模型列表来自 CLI 查询，不维护固定模型预设。Cursor 的参数选择最终对应 CLI 返回的真实模型 ID；界面仅展示当前模型实际支持的选项。
+Codex 的模型列表来自 CLI 查询，不维护固定模型预设；界面仅展示当前模型实际支持的选项。
 
 ## 开始使用
 
@@ -79,11 +65,10 @@ Codex 和 Cursor 的模型列表来自 CLI 查询，不维护固定模型预设�
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code)
 - [Codex](https://developers.openai.com/codex)
-- [Cursor CLI](https://docs.cursor.com/en/cli/overview)
 
 Claude GUI 管理本地工作区和 CLI 会话，模型访问权限与用量由对应服务及账户决定。
 
-Claude Code、Codex 和 Cursor 的聊天、模型查询及安装检查使用本机 CLI。找不到本机 Claude Code 或 Codex 时会提示安装，不再自动使用依赖附带的版本。可在设置的 Agent 账户页查看实际 CLI 路径和版本；需要指定安装时，可设置 `CLAUDE_CLI_PATH` 或 `CODEX_CLI_PATH`。
+Claude Code 和 Codex 的聊天、模型查询及安装检查使用本机 CLI。找不到本机 Claude Code 或 Codex 时会提示安装，不再自动使用依赖附带的版本。可在设置的 Agent 账户页查看实际 CLI 路径和版本；需要指定安装时，可设置 `CLAUDE_CLI_PATH` 或 `CODEX_CLI_PATH`。
 
 ### 2. 安装 Windows 桌面版
 
@@ -130,12 +115,6 @@ Codex 聊天通过本机官方 `codex app-server` 的标准输入输出协议运
 - 审批与提问：在界面处理命令执行、文件变更、临时权限请求和原生用户提问，决定通过同一连接回传 CLI。GUI 审批只针对当前请求或当前轮次，永久规则仍由官方 CLI 管理。
 
 这些能力取决于本机 CLI 版本。遇到尚未支持的交互会明确提示，可继续使用官方 CLI；项目不会自动批准未知请求。当前已在本机 Codex 0.162.1 验证连接、新建、恢复和参数协议。
-
-### Cursor 模型参数
-
-先选择模型，再按需调整思考等级、上下文或速度。同一模型的变体集中在一个模型条目下，避免长列表重复展示。
-
-只有一种已知上下文容量时直接显示容量；存在多个容量时提供选择。参数切换会匹配真实存在的 CLI 模型变体，自定义模型保持独立条目。
 
 ### 在 PowerShell 中恢复 Claude 对话
 
@@ -202,7 +181,7 @@ docs/architecture/   聊天运行时架构说明
 
 ## 数据与兼容
 
-CLI 原有的会话和配置仍使用各自的数据目录，例如 `~/.claude`、`~/.codex` 和 `~/.cursor`。Claude GUI 自身的数据库默认位于 `~/.cloudcli/auth.db`，可通过 `DATABASE_PATH` 调整；Windows 桌面设置继续使用 `%APPDATA%/CloudCLI/`，便于沿用已有安装的数据。
+CLI 原有的会话和配置仍使用各自的数据目录，例如 `~/.claude` 和 `~/.codex`。Claude GUI 自身的数据库默认位于 `~/.cloudcli/auth.db`，可通过 `DATABASE_PATH` 调整；Windows 桌面设置继续使用 `%APPDATA%/CloudCLI/`，便于沿用已有安装的数据。
 
 部分内部标识仍保留上游名称，包括 npm 包名 `@cloudcli-ai/cloudcli`、兼容命令 `cloudcli`、部分环境变量及数据目录。**本分支的使用入口是本仓库的安装包或源码**；从 npm 安装同名包会获取上游发布的版本。
 

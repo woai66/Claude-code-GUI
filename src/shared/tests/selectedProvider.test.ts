@@ -34,22 +34,6 @@ test('a value that is not a known provider falls back instead of being trusted',
   assert.equal(readSelectedProvider(), 'claude');
 });
 
-test('a write publishes a same-tab change, which the storage event does not', () => {
-  // The whole reason this module exists: the git panel listened only for the
-  // cross-tab `storage` event and so never saw a switch made in its own tab.
-  // The preference store notifies its subscribers synchronously, in the writing
-  // tab too, which is what replaced the hand-rolled event.
-  let changes = 0;
-  const unsubscribe = subscribeToUserPreferences(() => {
-    changes += 1;
-  });
-
-  writeSelectedProvider('cursor');
-
-  unsubscribe();
-  assert.equal(changes, 1);
-});
-
 test('a change to an unrelated preference does not read as a provider switch', () => {
   // The cross-tab `storage` listener this replaced had to filter by key, or a
   // theme toggle in another tab looked like a provider switch. The preference

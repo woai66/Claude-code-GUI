@@ -68,7 +68,7 @@ test('restores the native Claude ID in this project, sharing the existing ID loo
   expect(fetchProviderId).toHaveBeenCalledTimes(1);
 });
 
-test.each<LLMProvider>(['codex', 'cursor', 'opencode'])('does not offer PowerShell restore for %s', async (provider) => {
+test.each<LLMProvider>(['codex'])('does not offer PowerShell restore for %s', async (provider) => {
   renderOptions(provider);
   fireEvent.click(screen.getByRole('button', { name: 'Session options for My conversation' }));
   await waitFor(() => expect(fetchProviderId).toHaveBeenCalled());

@@ -35,9 +35,7 @@ type AgentRouterDependencies = {
   /** The live-run registry the chat socket uses; registering here is what puts an API run on the running-sessions list. */
   runs: Pick<typeof import('../websocket/index.js').chatRunRegistry, 'startRun' | 'completeRunIfCurrent' | 'isProcessing'>;
   queryClaude: ProviderRunFunction;
-  queryCursor: ProviderRunFunction;
   queryCodex: ProviderRunFunction;
-  queryOpenCode: ProviderRunFunction;
   GithubClient: typeof import('@octokit/rest').Octokit;
 };
 
@@ -59,9 +57,7 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): expres
   const sessionGateway = dependencies.sessions;
   const runRegistry = dependencies.runs;
   const queryClaudeSDK = dependencies.queryClaude;
-  const spawnCursor = dependencies.queryCursor;
   const queryCodex = dependencies.queryCodex;
-  const spawnOpenCode = dependencies.queryOpenCode;
   const Octokit = dependencies.GithubClient;
   const router = express.Router();
 
@@ -628,7 +624,7 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): expres
    *                          - Source for auto-generated branch names (if createBranch=true and no branchName)
    *                          - Fallback for PR title if no commits are made
    *
-   * @param {string} provider - (Optional) AI provider to use. Options: 'claude' | 'cursor' | 'codex' | 'opencode'
+   * @param {string} provider - (Optional) AI provider to use. Options: 'claude' | 'codex'
    *                           Default: 'claude'
    *
    * @param {boolean} stream - (Optional) Enable Server-Sent Events (SSE) streaming for real-time updates.
@@ -644,10 +640,6 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): expres
    * @param {string} model - (Optional) Model identifier for providers.
    *
    *                        Claude models: 'default', 'sonnet', 'opus', 'haiku', 'sonnet[1m]', 'opus[1m]', 'fable'
-   *                        Cursor models: 'gpt-5' (default), 'gpt-5.2', 'gpt-5.2-high', 'sonnet-4.5', 'opus-4.5',
-   *                                       'composer-1', 'auto', 'gpt-5.1', 'gpt-5.1-high',
-   *                                       'gpt-5.1-codex', 'gpt-5.1-codex-high', 'gpt-5.1-codex-max',
-   *                                       'gpt-5.1-codex-max-high', 'opus-4.1', 'grok', and thinking variants
    *                        Codex models: 'gpt-5.4' (default), 'gpt-5.5', 'gpt-5.4-mini'
    *
    * @param {string} effort - (Optional) Reasoning effort for providers/models that support it.
@@ -756,7 +748,7 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): expres
    * Input Validations (400 Bad Request):
    *   - Either githubUrl OR projectPath must be provided (not neither)
    *   - message must be non-empty string
-   *   - provider must be 'claude', 'cursor', 'codex', or 'opencode'
+   *   - provider must be 'claude' or 'codex'
    *   - createBranch/createPR requires githubUrl OR projectPath (not neither)
    *   - branchName must pass Git naming rules (if provided)
    *
@@ -886,8 +878,8 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): expres
       return res.status(400).json({ error: 'message is required' });
     }
 
-    if (requestedProvider !== null && !['claude', 'cursor', 'codex', 'opencode'].includes(requestedProvider)) {
-      return res.status(400).json({ error: 'provider must be "claude", "cursor", "codex", or "opencode"' });
+    if (requestedProvider !== null && !['claude', 'codex'].includes(requestedProvider)) {
+      return res.status(400).json({ error: 'provider must be "claude" or "codex"' });
     }
 
     // Validate GitHub branch/PR creation requirements
@@ -1017,7 +1009,6 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): expres
       writer.send({ type: 'session-id', sessionId: appSessionId });
 
       const codexModels = await providerModelsService.getProviderModels('codex');
-      const opencodeModels = await providerModelsService.getProviderModels('opencode');
 
       // Start the appropriate session
       if (provider === 'claude') {
@@ -1033,16 +1024,6 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): expres
           unattended: true // No person is there to answer an MCP server's request for input
         }, run.writer);
 
-      } else if (provider === 'cursor') {
-        console.log('🖱️ Starting Cursor CLI session');
-
-        await spawnCursor(message.trim(), {
-          projectPath: finalProjectPath,
-          cwd: finalProjectPath,
-          sessionId: appSessionId,
-          model: model || undefined,
-          skipPermissions: true // Bypass permissions for Cursor
-        }, run.writer);
       } else if (provider === 'codex') {
         console.log('🤖 Starting Codex SDK session');
 
@@ -1053,17 +1034,6 @@ export function createAgentRouter(dependencies: AgentRouterDependencies): expres
           model: model || codexModels.DEFAULT,
           effort,
           permissionMode: 'bypassPermissions'
-        }, run.writer);
-      } else if (provider === 'opencode') {
-        console.log('Starting OpenCode CLI session');
-
-        await spawnOpenCode(message.trim(), {
-          projectPath: finalProjectPath,
-          cwd: finalProjectPath,
-          sessionId: appSessionId,
-          model: model || opencodeModels.DEFAULT,
-          effort,
-          permissionMode: 'bypassPermissions' // Agent runs are non-interactive, like the other providers above
         }, run.writer);
       }
 

@@ -33,21 +33,6 @@ async function withIsolatedDatabase(runTest: () => void | Promise<void>): Promis
   }
 }
 
-test('recent feeds and title searches respect the same provider scope', { concurrency: false }, async () => {
-  await withIsolatedDatabase(async () => {
-    sessionsDb.createSession('claude-filter', 'claude', '/tmp/provider-filter', 'matching title');
-    sessionsDb.createSession('codex-filter', 'codex', '/tmp/provider-filter', 'matching title');
-    sessionsDb.createSession('cursor-filter', 'cursor', '/tmp/provider-filter', 'matching title');
-    const page = sessionsService.listRecentSessions(40, 0, 'claude');
-    assert.equal(page.total, 1);
-    assert.equal(page.hasMore, false);
-    assert.deepEqual(page.conversations.map((row) => row.sessionId), ['claude-filter']);
-    const search = await searchConversations('matching', 50, null, null, null, 'cursor');
-    assert.deepEqual(search.titleResults.map((row) => row.sessionId), ['cursor-filter']);
-    assert.equal(search.totalMatches, 0);
-  });
-});
-
 test('provider session id returns the mapped native id', { concurrency: false }, async () => {
   await withIsolatedDatabase(() => {
     sessionsDb.createAppSession('app-session-id', 'codex', '/tmp/session-id-copy-project');

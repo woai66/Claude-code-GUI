@@ -379,16 +379,6 @@ test('custom model routes accept, validate, and return reasoning-effort levels',
       ['low', 'medium', 'high', 'xhigh', 'max', 'ultracode'],
     );
 
-    // OpenCode's allowed levels do not depend on which upstream providers the
-    // machine running the tests has connected.
-    const openCodeModel = await postModel('opencode', {
-      model: 'Router model',
-      id: 'openrouter/router-model',
-      effort: { values: ['none', 'high'] },
-    });
-    assert.equal(openCodeModel.status, 201, JSON.stringify(openCodeModel.payload));
-    assert.deepEqual(openCodeModel.payload.data?.model.effort, { values: [{ value: 'none' }, { value: 'high' }] });
-
     // A PATCH from a client that predates effort metadata keeps the levels.
     const renameResponse = await fetch(
       `${baseUrl}/api/providers/claude/models/${created.payload.data?.model.recordId}`,
@@ -408,7 +398,6 @@ test('custom model routes accept, validate, and return reasoning-effort levels',
       { provider: 'claude', effort: { values: ['low'], default: 'high' }, code: 'INVALID_MODEL_EFFORT' },
       { provider: 'claude', effort: { values: ['turbo'] }, code: 'INVALID_MODEL_EFFORT' },
       { provider: 'claude', effort: 'high', code: 'INVALID_MODEL_EFFORT' },
-      { provider: 'cursor', effort: { values: ['low'] }, code: 'MODEL_EFFORT_NOT_SUPPORTED' },
     ];
     for (const [index, invalid] of invalidPayloads.entries()) {
       const rejected = await postModel(invalid.provider, {
