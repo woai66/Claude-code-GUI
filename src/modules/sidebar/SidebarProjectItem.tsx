@@ -4,9 +4,7 @@ import type { TFunction } from 'i18next';
 
 import { ActionMenu, Button } from '@/shared/ui';
 import { cn } from '@/shared/utils';
-import type { LLMProvider, MCPServerStatus, Project, ProjectSession, SessionWithProvider, SidebarSessionSelection } from '@/shared/types';
-import { getTaskIndicatorStatus } from '@/modules/sidebar/utils/sidebarProjectFormatting';
-import TaskIndicator from '@/modules/sidebar/TaskIndicator';
+import type { LLMProvider, Project, ProjectSession, SessionWithProvider, SidebarSessionSelection } from '@/shared/types';
 import SidebarProjectSessions from '@/modules/sidebar/SidebarProjectSessions';
 import { useCompactSidebar } from '@/modules/sidebar/hooks/useCompactSidebar';
 
@@ -26,8 +24,6 @@ type SidebarProjectItemProps = {
   currentTime: Date;
   sessionRenameId: string | null;
   sessionRenameDraft: string;
-  tasksEnabled: boolean;
-  mcpServerStatus: MCPServerStatus;
   onRenameDraftChange: (name: string) => void;
   onToggleProject: (projectId: string) => void;
   onProjectSelect: (project: Project) => void;
@@ -72,8 +68,6 @@ function SidebarProjectItem({
   currentTime,
   sessionRenameId,
   sessionRenameDraft,
-  tasksEnabled,
-  mcpServerStatus,
   onRenameDraftChange,
   onToggleProject,
   onProjectSelect,
@@ -103,7 +97,6 @@ function SidebarProjectItem({
 }: SidebarProjectItemProps) {
   const isSelected = selectedProject?.projectId === project.projectId;
   const totalSessionCount = Number(project.sessionMeta?.total ?? sessions.length);
-  const taskStatus = getTaskIndicatorStatus(project, mcpServerStatus);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const isCompact = useCompactSidebar();
 
@@ -234,8 +227,6 @@ function SidebarProjectItem({
               <Folder className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{project.displayName}</span>
               {isStarred && <Star className="h-3 w-3 flex-shrink-0 fill-current text-amber-500" />}
-              {/* A project without TaskMaster has nothing to report; its "×" badge read as a delete button. */}
-              {tasksEnabled && taskStatus !== 'not-configured' && <TaskIndicator status={taskStatus} size="xs" />}
               <span className="text-[10px] tabular-nums text-muted-foreground/60" title={sessionCountLabel}>
                 {totalSessionCount}
               </span>

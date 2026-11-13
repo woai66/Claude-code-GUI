@@ -170,14 +170,6 @@
       "dontAsk": "从不请求权限；未预先允许的工具调用会被拒绝。"
     }
   },
-  "voice": {
-    "input": "语音输入",
-    "stopRecording": "停止录音",
-    "transcribing": "转写中…",
-    "speak": "朗读",
-    "stopSpeaking": "停止",
-    "loading": "加载中…"
-  },
   "input": {
     "placeholder": "输入 / 调用命令，@ 选择文件，或向 {{provider}} 提问...",
     "placeholderDefault": "输入您的消息...",
@@ -321,9 +313,6 @@
   },
   "projectSelection": {
     "startChatWithProvider": "选择一个项目以开始与 {{provider}} 聊天"
-  },
-  "tasks": {
-    "nextTaskPrompt": "开始下一个任务"
   },
   "message": {
     "editAndResend": "编辑并重新发送",

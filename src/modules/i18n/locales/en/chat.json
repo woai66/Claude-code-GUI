@@ -181,14 +181,6 @@
       "dontAsk": "Never prompt for permission. Tools that are not already allowed are denied."
     }
   },
-  "voice": {
-    "input": "Voice input",
-    "stopRecording": "Stop recording",
-    "transcribing": "Transcribing…",
-    "speak": "Read aloud",
-    "stopSpeaking": "Stop",
-    "loading": "Loading…"
-  },
   "input": {
     "placeholder": "Type / for commands, @ for files, or ask {{provider}} anything...",
     "placeholderDefault": "Type your message...",
@@ -349,9 +341,6 @@
   },
   "projectSelection": {
     "startChatWithProvider": "Select a project to start chatting with {{provider}}"
-  },
-  "tasks": {
-    "nextTaskPrompt": "Start the next task"
   },
   "message": {
     "editAndResend": "Edit and resend",

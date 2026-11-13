@@ -50,21 +50,6 @@
     "resetToDefaults": "Reset ke Default",
     "cancelChanges": "Batalkan Perubahan"
   },
-  "voiceSettings": {
-    "title": "Suara",
-    "description": "Input speech-to-text dan fitur bacakan melalui backend audio yang kompatibel dengan OpenAI.",
-    "enable": "Aktifkan suara",
-    "enableDescription": "Tampilkan tombol mikrofon dan tombol bacakan pada pesan.",
-    "backendTitle": "Backend",
-    "backendDescription": "Arahkan ke OpenAI, Groq, atau server lokal (LocalAI, Speaches, Kokoro-FastAPI). Kosongkan untuk menggunakan default server.",
-    "baseUrl": "URL Dasar",
-    "apiKey": "Kunci API",
-    "sttModel": "Model speech-to-text",
-    "ttsModel": "Model text-to-speech",
-    "voice": "Suara",
-    "format": "Format audio",
-    "note": "URL dasar kustom dipanggil langsung oleh browser dan harus mengizinkan permintaan CORS browser. Kosongkan untuk menggunakan backend yang dikonfigurasi di server."
-  },
   "quickSettings": {
     "title": "Pengaturan Cepat",
     "sections": {
@@ -128,11 +113,7 @@
     "appearance": "Tampilan",
     "git": "Git",
     "apiTokens": "API & Token",
-    "voice": "Suara",
-    "tasks": "Tugas",
-    "browser": "Browser",
     "notifications": "Notifikasi",
-    "plugins": "Plugin",
     "about": "Tentang"
   },
   "notifications": {
@@ -355,25 +336,6 @@
       "updateAvailable": "Pembaruan tersedia: v{{version}}"
     }
   },
-  "tasks": {
-    "checking": "Memeriksa instalasi TaskMaster...",
-    "notInstalled": {
-      "title": "TaskMaster AI CLI Belum Terpasang",
-      "description": "TaskMaster CLI diperlukan untuk menggunakan fitur manajemen tugas. Instal untuk memulai:",
-      "installCommand": "npm install -g task-master-ai",
-      "viewOnGitHub": "Lihat di GitHub",
-      "afterInstallation": "Setelah instalasi:",
-      "steps": {
-        "restart": "Mulai ulang aplikasi ini",
-        "autoAvailable": "Fitur TaskMaster akan otomatis tersedia",
-        "initCommand": "Gunakan task-master init di direktori proyek"
-      }
-    },
-    "settings": {
-      "enableLabel": "Aktifkan Integrasi TaskMaster",
-      "enableDescription": "Tampilkan tugas, banner, dan indikator sidebar TaskMaster di seluruh antarmuka"
-    }
-  },
   "agents": {
     "authStatus": {
       "checking": "Memeriksa...",
@@ -543,108 +505,6 @@
       "description": "Codex mendukung server MCP berbasis stdio. Tambahkan server untuk memperluas kemampuan Codex dengan tool dan resource tambahan."
     }
   },
-  "pluginSettings": {
-    "title": "Plugin",
-    "description": "Perluas antarmuka dengan plugin kustom. Instal dari Git atau letakkan folder di ~/.claude-code-ui/plugins/",
-    "installPlaceholder": "https://github.com/user/my-plugin",
-    "installButton": "Instal",
-    "installing": "Menginstal…",
-    "securityWarning": "Hanya instal plugin yang kode sumbernya sudah ditinjau atau berasal dari pembuat yang dipercaya.",
-    "scanningPlugins": "Memindai plugin…",
-    "noPluginsInstalled": "Belum ada plugin terinstal",
-    "pullLatest": "Pull versi terbaru dari Git",
-    "noGitRemote": "Tidak ada remote Git — pembaruan tidak tersedia",
-    "uninstallPlugin": "Uninstal plugin",
-    "confirmUninstall": "Klik lagi untuk mengonfirmasi",
-    "confirmUninstallMessage": "Hapus {{name}}? Tindakan ini tidak dapat dibatalkan.",
-    "cancel": "Batal",
-    "remove": "Hapus",
-    "updateFailed": "Pembaruan gagal",
-    "installFailed": "Instalasi gagal",
-    "uninstallFailed": "Uninstal gagal",
-    "toggleFailed": "Gagal mengubah status",
-    "starterPluginLabel": "Plugin Starter",
-    "starter": "Starter",
-    "docs": "Dokumentasi",
-    "sections": {
-      "officialTitle": "Plugin Resmi",
-      "officialDescription": "Dikelola oleh tim Claude GUI dan siap langsung diinstal.",
-      "unofficialTitle": "Plugin Lainnya",
-      "unofficialDescription": "Plugin dan integrasi tidak resmi dari pengguna lain. Tinjau kode sumber sebelum menginstal."
-    },
-    "starterPlugin": {
-      "name": "Project Stats",
-      "badge": "starter",
-      "description": "Jumlah file, baris kode, rincian jenis file, dan aktivitas terbaru proyek.",
-      "install": "Instal"
-    },
-    "terminalPlugin": {
-      "name": "Terminal",
-      "badge": "resmi",
-      "description": "Terminal terintegrasi dengan akses shell penuh langsung di dalam antarmuka.",
-      "install": "Instal"
-    },
-    "scheduledPromptPlugin": {
-      "name": "Scheduled Prompts",
-      "badge": "tidak resmi",
-      "description": "Jadwalkan prompt workspace, tinjau riwayat proses, dan kelola tugas lokal berulang.",
-      "install": "Instal"
-    },
-    "claudeWatchPlugin": {
-      "name": "Claude Watch",
-      "badge": "tidak resmi",
-      "description": "Pantau sesi Claude Code yang berjalan lama untuk mendeteksi hang dan menyediakan kontrol proses.",
-      "install": "Instal"
-    },
-    "prismCloudCLI": {
-      "name": "PRISM CloudCLI",
-      "badge": "tidak resmi",
-      "description": "Intelijen sesi untuk Claude Code di dalam Claude GUI. Lihat penyebab penggunaan token tinggi tanpa meninggalkan browser.",
-      "install": "Instal"
-    },
-    "sessionManagerPlugin": {
-      "name": "Sessions",
-      "badge": "tidak resmi",
-      "description": "Lihat, kelola, dan hentikan sesi Claude Code yang aktif.",
-      "install": "Instal"
-    },
-    "tokenCostCalculatorPlugin": {
-      "name": "Token Cost Calculator",
-      "badge": "tidak resmi",
-      "description": "Hitung biaya API dari harga model dan penggunaan token, dengan dukungan preset harga model.",
-      "install": "Instal"
-    },
-    "taskQueuePlugin": {
-      "name": "Task Queue",
-      "badge": "tidak resmi",
-      "description": "Dasbor antrean tugas untuk melihat, memfilter, dan menjalankan tugas agen.",
-      "install": "Instal"
-    },
-    "githubIssuesBoardPlugin": {
-      "name": "GitHub Issues Board",
-      "badge": "tidak resmi",
-      "description": "Board Kanban untuk GitHub Issues dengan sinkronisasi dua arah TaskMaster dan instalasi otomatis skill CLI /github-task",
-      "install": "Instal"
-    },
-    "claudeUsagePlugin": {
-      "name": "Claude Usage",
-      "badge": "tidak resmi",
-      "description": "Pantau batas paket Claude Code secara langsung dan jelajahi riwayat token serta biaya 30 hari.",
-      "install": "Instal"
-    },
-    "codexUsagePlugin": {
-      "name": "Codex Usage",
-      "badge": "tidak resmi",
-      "description": "Pantau batas paket Codex secara langsung, waktu reset, dan aktivitas token akun selama 30 hari.",
-      "install": "Instal"
-    },
-    "morePlugins": "Lainnya",
-    "enable": "Aktifkan",
-    "disable": "Nonaktifkan",
-    "installAriaLabel": "URL repositori Git plugin",
-    "tab": "tab",
-    "runningStatus": "berjalan"
-  },
   "skillsPage": {
     "description": "Kelola skill {{provider}} dari file lokal, folder lengkap, dan lokasi yang terkait proyek.",
     "searchPlaceholder": "Cari skill...",
@@ -704,88 +564,6 @@
       "system": "Sistem"
     }
   },
-  "browserUse": {
-    "title": "Browser",
-    "subtitle": "Pantau sesi browser yang dibuka oleh agen AI.",
-    "openSettings": "Buka pengaturan Browser",
-    "refreshSessions": "Segarkan sesi browser",
-    "runtimeDisabled": "Nonaktif",
-    "runtimeReady": "Siap",
-    "runtimeInstalling": "Menginstal",
-    "runtimeSetupRequired": "Perlu penyiapan",
-    "loadFailed": "Gagal memuat Browser",
-    "actionFailed": "Tindakan Browser gagal",
-    "requestFailed": "Permintaan gagal ({{status}})",
-    "never": "Tidak Pernah",
-    "unknown": "Tidak Diketahui",
-    "justNow": "Baru saja",
-    "secondsAgo": "{{n}} dtk lalu",
-    "minutesAgo": "{{n}} mnt lalu",
-    "hoursAgo": "{{n}} jam lalu",
-    "daysAgo": "{{n}} hari lalu",
-    "noPageLoaded": "Belum ada halaman dimuat",
-    "waitingAction": "Menunggu",
-    "emptyTitleEnabled": "Belum ada sesi browser",
-    "emptyTitleDisabled": "Browser dinonaktifkan",
-    "emptyDescEnabled": "Sesi browser agen akan muncul di sini saat tugas AI menggunakan Browser.",
-    "emptyDescDisabled": "Aktifkan Browser di pengaturan agar agen dapat membuka sesi browser yang dipantau.",
-    "runtimeSetupTitle": "Penyiapan runtime diperlukan",
-    "installing": "Menginstal...",
-    "installRuntime": "Instal Runtime",
-    "promptLabel": "Prompt",
-    "prompt1": "Gunakan Browser untuk memeriksa alur checkout dan laporkan status UI yang bermasalah.",
-    "prompt2": "Buka <url> dengan Browser, berinteraksi dengan halaman, lalu rangkum perubahan setelah setiap langkah.",
-    "screenshotAlt": "Screenshot sesi browser",
-    "waitingScreenshot": "Menunggu screenshot",
-    "waitingScreenshotHint": "Snapshot browser agen berikutnya akan ditampilkan di sini.",
-    "activeCount": "{{n}} aktif",
-    "totalCount": "total {{n}}",
-    "updated": "Diperbarui {{time}}",
-    "statusEmpty": "kosong",
-    "fullScreen": "Layar penuh",
-    "stopSession": "Hentikan sesi",
-    "deleteSession": "Hapus sesi",
-    "sessions": "Sesi",
-    "noSessions": "Tidak ada sesi browser agen.",
-    "selected": "Dipilih",
-    "statusLabel": "Status",
-    "none": "Tidak Ada",
-    "lastAction": "Tindakan terakhir",
-    "profileLabel": "Profil",
-    "temporaryProfile": "Sementara",
-    "stop": "Hentikan",
-    "delete": "Hapus",
-    "sessionFallback": "Sesi browser",
-    "close": "Tutup",
-    "statusReadySession": "siap",
-    "statusStoppedSession": "dihentikan",
-    "statusUnavailableSession": "tidak tersedia",
-    "installFailed": "Gagal menginstal runtime browser"
-  },
-  "browserUseSettings": {
-    "sectionTitle": "Browser",
-    "sectionDescription": "Izinkan agen membuat sesi browser Playwright terproteksi yang dapat dipantau dari tab Browser.",
-    "enableLabel": "Aktifkan Browser",
-    "enableDescription": "Mendaftarkan Browser untuk agen yang didukung. Agen dapat membuat sesi browser; sesi dapat dipantau, dihentikan, dan dihapus.",
-    "enableAriaLabel": "Aktifkan Browser",
-    "playwrightLabel": "Playwright",
-    "chromiumLabel": "Chromium",
-    "statusPrefix": "Status",
-    "checking": "memeriksa...",
-    "installed": "terinstal",
-    "missing": "tidak ada",
-    "ready": "siap",
-    "setupRequired": "perlu penyiapan",
-    "disabled": "nonaktif",
-    "runtimeRequiredTitle": "Runtime Browser diperlukan",
-    "runtimeRequiredFallback": "Instal runtime browser sebelum agen dapat membuat sesi Browser.",
-    "installing": "Menginstal...",
-    "installRuntime": "Instal Runtime",
-    "loadSettingsFailed": "Gagal memuat pengaturan Browser",
-    "loadStatusFailed": "Gagal memuat status Browser",
-    "saveFailed": "Gagal menyimpan pengaturan Browser",
-    "installFailed": "Gagal menginstal runtime browser"
-  },
   "mcpServersAdd": {
     "menuLabel": "Tambah Server MCP",
     "globalButtonLabel": "Tambah Server MCP Global",
@@ -797,11 +575,6 @@
     "loadingServers": "Memuat server MCP...",
     "configCwd": "Cwd",
     "configEnvVars": "Env Vars"
-  },
-  "mcpTeamCard": {
-    "title": "Konfigurasi MCP Tim",
-    "description": "Bagikan konfigurasi server MCP di seluruh tim. Semua anggota tetap tersinkron otomatis.",
-    "proLink": "Tersedia dengan CloudCLI Pro"
   },
   "mcpServersAddErrors": {
     "loadFailedProvider": "Gagal memuat server MCP {{provider}}",

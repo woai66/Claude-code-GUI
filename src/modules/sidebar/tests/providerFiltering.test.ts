@@ -31,7 +31,7 @@ const renderController = () => renderHook(({ projects }: { projects: Project[] }
   activeSessions: new Set<string>(), backgroundSessionIds: new Set<string>(),
   isLoading: false, isMobile: false, t: ((key: string) => key) as unknown as TFunction,
   onRefresh: vi.fn(), onProjectSelect: vi.fn(), onSessionSelect: vi.fn(),
-  setCurrentProject: vi.fn(), setSidebarVisible: vi.fn(), sidebarVisible: true,
+  setSidebarVisible: vi.fn(), sidebarVisible: true,
 }), { initialProps: { projects: globalProjects } });
 
 beforeEach(() => {

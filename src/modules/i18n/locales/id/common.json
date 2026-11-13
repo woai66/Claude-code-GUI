@@ -21,10 +21,7 @@
     "chat": "Chat",
     "shell": "Shell",
     "files": "File",
-    "git": "Kontrol Sumber",
-    "tasks": "Tugas",
-    "browser": "Browser",
-    "computer": "Komputer"
+    "git": "Kontrol Sumber"
   },
   "status": {
     "loading": "Memuat...",
@@ -307,7 +304,6 @@
     "navFiles": "Buka File",
     "navShell": "Buka Shell",
     "navGit": "Buka Git",
-    "navTasks": "Buka Tugas",
     "gitFetch": "Git: Fetch",
     "gitPull": "Git: Pull",
     "gitPush": "Git: Push",

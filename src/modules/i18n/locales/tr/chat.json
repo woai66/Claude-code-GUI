@@ -232,9 +232,6 @@
   "projectSelection": {
     "startChatWithProvider": "{{provider}} ile sohbet etmeye başlamak için bir proje seç"
   },
-  "tasks": {
-    "nextTaskPrompt": "Sonraki görevi başlat"
-  },
   "message": {
     "editAndResend": "Düzenle ve yeniden gönder",
     "forkFromHere": "Buradan çatalla",

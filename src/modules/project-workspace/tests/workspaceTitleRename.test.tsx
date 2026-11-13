@@ -22,10 +22,6 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@/modules/plugins', () => ({
-  usePlugins: () => ({ plugins: [] }),
-}));
-
 vi.mock('@/shared/ui', () => ({
   LLMProviderLogo: () => null,
 }));
@@ -56,7 +52,6 @@ const renderTitle = (overrides: { selectedSession?: ProjectSession | null; activ
     activeTab={overrides.activeTab ?? 'chat'}
     selectedProject={project}
     selectedSession={overrides.selectedSession === undefined ? session : overrides.selectedSession}
-    shouldShowTasksTab={false}
     onRenameSession={onRenameSession}
   />,
 );

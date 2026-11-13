@@ -234,9 +234,6 @@
   "projectSelection": {
     "startChatWithProvider": "Sélectionnez un projet pour commencer à chatter avec {{provider}}"
   },
-  "tasks": {
-    "nextTaskPrompt": "Commencer la prochaine tâche"
-  },
   "message": {
     "editAndResend": "Modifier et renvoyer",
     "forkFromHere": "Dupliquer à partir d’ici",

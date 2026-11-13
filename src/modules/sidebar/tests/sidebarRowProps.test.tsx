@@ -31,7 +31,6 @@ vi.mock('@/modules/sidebar/SidebarSessionItem', () => ({
   },
 }));
 
-vi.mock('@/modules/sidebar/GitHubStarBadge', () => ({ default: () => null }));
 
 const { default: SidebarProjectList } = await import('@/modules/sidebar/SidebarProjectList');
 const { default: SidebarHeader } = await import('@/modules/sidebar/SidebarHeader');
@@ -78,8 +77,6 @@ const listProps = (
   initialSessionsLoaded: new Set(),
   currentTime: NOW,
   deletingProjects: new Set(),
-  tasksEnabled: false,
-  mcpServerStatus: null,
   getProjectSessions: getAllSessions,
   onLoadMoreSessions: noop,
   loadingMoreProjects: new Set(),

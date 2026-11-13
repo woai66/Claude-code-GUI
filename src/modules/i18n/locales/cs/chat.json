@@ -145,14 +145,6 @@
     },
     "technicalDetails": "Technické podrobnosti"
   },
-  "voice": {
-    "input": "Hlasový vstup",
-    "stopRecording": "Zastavit nahrávání",
-    "transcribing": "Přepisování…",
-    "speak": "Přečíst nahlas",
-    "stopSpeaking": "Zastavit",
-    "loading": "Načítání…"
-  },
   "input": {
     "placeholder": "Napište / pro příkazy, @ pro soubory nebo dotaz, na který odpoví {{provider}}...",
     "placeholderDefault": "Napište zprávu...",
@@ -316,9 +308,6 @@
   },
   "projectSelection": {
     "startChatWithProvider": "Vyberte projekt a zahajte konverzaci ({{provider}})"
-  },
-  "tasks": {
-    "nextTaskPrompt": "Začněte další úkol"
   },
   "message": {
     "editAndResend": "Upravit a znovu odeslat",

@@ -21,10 +21,7 @@
     "chat": "Chat",
     "shell": "Shell",
     "files": "Arquivos",
-    "git": "Controle de origem",
-    "tasks": "Tarefas",
-    "browser": "Navegador",
-    "computer": "Computador"
+    "git": "Controle de origem"
   },
   "status": {
     "loading": "Carregando...",
@@ -311,7 +308,6 @@
     "navFiles": "Ir para arquivos",
     "navShell": "Ir para Shell",
     "navGit": "Ir para Git",
-    "navTasks": "Ir para tarefas",
     "gitFetch": "Git: Fetch",
     "gitPull": "Git: Pull",
     "gitPush": "Git: Push",

@@ -22,9 +22,6 @@
     "shell": "终端",
     "files": "文件",
     "git": "源代码管理",
-    "tasks": "任务",
-    "browser": "浏览器",
-    "computer": "计算机",
     "views": "工作区视图"
   },
   "status": {
@@ -379,7 +376,6 @@
     "navFiles": "前往文件",
     "navShell": "前往终端",
     "navGit": "前往源代码管理",
-    "navTasks": "前往任务",
     "gitFetch": "Git：获取",
     "gitPull": "Git：拉取",
     "gitPush": "Git：推送",

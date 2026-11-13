@@ -22,9 +22,6 @@
     "shell": "Shell",
     "files": "קבצים",
     "git": "ניהול גרסאות",
-    "tasks": "משימות",
-    "browser": "דפדפן",
-    "computer": "מחשב",
     "views": "תצוגות סביבת העבודה"
   },
   "status": {
@@ -357,7 +354,6 @@
     "navFiles": "מעבר לקבצים",
     "navShell": "מעבר ל-Shell",
     "navGit": "מעבר ל-Git",
-    "navTasks": "מעבר למשימות",
     "gitFetch": "Git: Fetch",
     "gitPull": "Git: Pull",
     "gitPush": "Git: Push",

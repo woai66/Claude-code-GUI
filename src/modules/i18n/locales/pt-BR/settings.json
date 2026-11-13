@@ -50,21 +50,6 @@
     "resetToDefaults": "Restaurar padrões",
     "cancelChanges": "Cancelar alterações"
   },
-  "voiceSettings": {
-    "title": "Voz",
-    "description": "Entrada de fala-para-texto e leitura em voz alta, via backend de áudio compatível com OpenAI.",
-    "enable": "Ativar voz",
-    "enableDescription": "Mostrar o botão do microfone e o botão de leitura em voz alta nas mensagens.",
-    "backendTitle": "Backend",
-    "backendDescription": "Aponte para OpenAI, Groq ou um servidor local (LocalAI, Speaches, Kokoro-FastAPI). Deixe em branco para usar o backend padrão do servidor.",
-    "baseUrl": "URL base",
-    "apiKey": "Chave da API",
-    "sttModel": "Modelo de fala-para-texto",
-    "ttsModel": "Modelo de texto-para-fala",
-    "voice": "Voz",
-    "format": "Formato de áudio",
-    "note": "Uma URL base personalizada é chamada diretamente pelo seu navegador e deve permitir requisições CORS do navegador. Deixe em branco para usar o backend configurado no servidor."
-  },
   "quickSettings": {
     "title": "Configurações rápidas",
     "sections": {
@@ -128,11 +113,7 @@
     "appearance": "Aparência",
     "git": "Git",
     "apiTokens": "API & Tokens",
-    "voice": "Voz",
-    "tasks": "Tarefas",
-    "browser": "Navegador",
     "notifications": "Notificações",
-    "plugins": "Plugins",
     "about": "Sobre"
   },
   "notifications": {
@@ -355,25 +336,6 @@
       "updateAvailable": "Atualização disponível: v{{version}}"
     }
   },
-  "tasks": {
-    "checking": "Verificando instalação do TaskMaster...",
-    "notInstalled": {
-      "title": "TaskMaster AI CLI não instalado",
-      "description": "O CLI do TaskMaster é necessário para usar recursos de gerenciamento de tarefas. Instale-o para começar:",
-      "installCommand": "npm install -g task-master-ai",
-      "viewOnGitHub": "Ver no GitHub",
-      "afterInstallation": "Após a instalação:",
-      "steps": {
-        "restart": "Reinicie este aplicativo",
-        "autoAvailable": "Os recursos do TaskMaster ficarão disponíveis automaticamente",
-        "initCommand": "Use task-master init no diretório do seu projeto"
-      }
-    },
-    "settings": {
-      "enableLabel": "Ativar integração com TaskMaster",
-      "enableDescription": "Mostrar tarefas, banners e indicadores da barra lateral do TaskMaster em toda a interface"
-    }
-  },
   "agents": {
     "authStatus": {
       "checking": "Verificando...",
@@ -556,120 +518,6 @@
       "description": "O Codex suporta servidores MCP baseados em stdio. Você pode adicionar servidores que ampliam as capacidades do Codex com ferramentas e recursos adicionais."
     }
   },
-  "pluginSettings": {
-    "title": "Plugins",
-    "description": "Estenda a interface com plugins personalizados. Instale a partir do Git ou coloque uma pasta em ~/.claude-code-ui/plugins/",
-    "installPlaceholder": "https://github.com/usuario/meu-plugin",
-    "installButton": "Instalar",
-    "installing": "Instalando…",
-    "securityWarning": "Instale apenas plugins cujo código-fonte você revisou ou de autores em quem confia.",
-    "scanningPlugins": "Escaneando plugins…",
-    "noPluginsInstalled": "Nenhum plugin instalado",
-    "pullLatest": "Fazer pull das atualizações do git",
-    "noGitRemote": "Sem remote git — atualização não disponível",
-    "uninstallPlugin": "Desinstalar plugin",
-    "confirmUninstall": "Clique novamente para confirmar",
-    "confirmUninstallMessage": "Remover {{name}}? Isso não pode ser desfeito.",
-    "cancel": "Cancelar",
-    "remove": "Remover",
-    "updateFailed": "Atualização falhou",
-    "installFailed": "Instalação falhou",
-    "uninstallFailed": "Desinstalação falhou",
-    "toggleFailed": "Alternância falhou",
-    "starterPluginLabel": "Plugin inicial",
-    "starter": "Inicial",
-    "docs": "Docs",
-    "sections": {
-      "officialTitle": "Plugins oficiais",
-      "officialDescription": "Mantidos pela equipe do Claude GUI e prontos para instalação direta.",
-      "unofficialTitle": "Outros plugins",
-      "unofficialDescription": "Plugins e integrações não oficiais de outros usuários. Revise o código-fonte antes de instalar."
-    },
-    "starterPlugin": {
-      "name": "Estatísticas do projeto",
-      "badge": "inicial",
-      "description": "Contagem de arquivos, linhas de código, detalhamento por tipo de arquivo e atividade recente do seu projeto.",
-      "install": "Instalar"
-    },
-    "terminalPlugin": {
-      "name": "Terminal",
-      "badge": "oficial",
-      "description": "Terminal integrado com acesso completo ao shell diretamente na interface.",
-      "install": "Instalar"
-    },
-    "scheduledPromptPlugin": {
-      "name": "Prompts agendados",
-      "badge": "não oficial",
-      "description": "Agende prompts de espaço de trabalho, revise histórico de execuções e gerencie tarefas locais recorrentes.",
-      "install": "Instalar"
-    },
-    "claudeWatchPlugin": {
-      "name": "Claude Watch",
-      "badge": "não oficial",
-      "description": "Monitore sessões longas do Claude Code para travamentos e exponha controles de processo.",
-      "install": "Instalar"
-    },
-    "prismCloudCLI": {
-      "name": "PRISM CloudCLI",
-      "badge": "não oficial",
-      "description": "Inteligência de sessão para o Claude Code, dentro do Claude GUI. Veja por que suas sessões estão queimando tokens sem sair do navegador.",
-      "install": "Instalar"
-    },
-    "sessionManagerPlugin": {
-      "name": "Sessões",
-      "badge": "não oficial",
-      "description": "Visualize, gerencie e encerre sessões ativas do Claude Code.",
-      "install": "Instalar"
-    },
-    "tokenCostCalculatorPlugin": {
-      "name": "Calculadora de custo de tokens",
-      "badge": "não oficial",
-      "description": "Calcule custos de API a partir de preços de modelos e uso de tokens, com suporte a preços predefinidos de modelos.",
-      "install": "Instalar"
-    },
-    "taskQueuePlugin": {
-      "name": "Fila de tarefas",
-      "badge": "não oficial",
-      "description": "Dashboard de fila de tarefas para visualizar, filtrar e iniciar tarefas de agentes.",
-      "install": "Instalar"
-    },
-    "githubIssuesBoardPlugin": {
-      "name": "Quadro de Issues do GitHub",
-      "badge": "não oficial",
-      "description": "Quadro Kanban para Issues do GitHub com sincronização bidirecional com TaskMaster e auto-instalação da skill CLI /github-task",
-      "install": "Instalar"
-    },
-    "claudeUsagePlugin": {
-      "name": "Uso do Claude",
-      "badge": "não oficial",
-      "description": "Acompanhe limites do plano do Claude Code em tempo real e explore histórico de 30 dias de tokens e custos.",
-      "install": "Instalar"
-    },
-    "codexUsagePlugin": {
-      "name": "Uso do Codex",
-      "badge": "não oficial",
-      "description": "Acompanhe limites do plano do Codex em tempo real, tempo de reset e atividade de tokens da conta nos últimos 30 dias.",
-      "install": "Instalar"
-    },
-    "glmUsagePlugin": {
-      "name": "Uso do GLM",
-      "badge": "não oficial",
-      "description": "Acompanhe cotas do plano de codificação GLM/Zhipu em tempo real e histórico de 30 dias de tokens.",
-      "install": "Instalar"
-    },
-    "agentMonitorPlugin": {
-      "name": "Monitor de agentes",
-      "badge": "não oficial",
-      "description": "Veja subagentes e shells em segundo plano que continuam rodando após o fim de um chat e pare-os.",
-      "install": "Instalar"
-    },
-    "morePlugins": "Mais",
-    "enable": "Ativar",
-    "disable": "Desativar",
-    "installAriaLabel": "URL do repositório git do plugin",
-    "tab": "aba",
-    "runningStatus": "em execução"
-  },
   "skillsPage": {
     "description": "Gerencie skills do {{provider}} a partir de arquivos locais, pastas completas e locais cientes de projeto.",
     "searchPlaceholder": "Pesquisar skills...",
@@ -732,88 +580,6 @@
       "system": "Sistema"
     }
   },
-  "browserUse": {
-    "title": "Navegador",
-    "subtitle": "Monitore sessões de navegador abertas por agentes de IA.",
-    "openSettings": "Abrir configurações do Navegador",
-    "refreshSessions": "Atualizar sessões do navegador",
-    "runtimeDisabled": "Desativado",
-    "runtimeReady": "Pronto",
-    "runtimeInstalling": "Instalando",
-    "runtimeSetupRequired": "Configuração necessária",
-    "loadFailed": "Falha ao carregar Navegador",
-    "actionFailed": "Ação do navegador falhou",
-    "requestFailed": "Requisição falhou ({{status}})",
-    "never": "Nunca",
-    "unknown": "Desconhecido",
-    "justNow": "Agora mesmo",
-    "secondsAgo": "{{n}}s atrás",
-    "minutesAgo": "{{n}}min atrás",
-    "hoursAgo": "{{n}}h atrás",
-    "daysAgo": "{{n}}d atrás",
-    "noPageLoaded": "Nenhuma página carregada",
-    "waitingAction": "Aguardando",
-    "emptyTitleEnabled": "Nenhuma sessão de navegador ainda",
-    "emptyTitleDisabled": "Navegador desativado",
-    "emptyDescEnabled": "Sessões de navegador de agentes aparecem aqui enquanto uma tarefa de IA está usando o Navegador.",
-    "emptyDescDisabled": "Ative o Navegador nas configurações para permitir que agentes abram sessões de navegador monitoradas.",
-    "runtimeSetupTitle": "Configuração do runtime necessária",
-    "installing": "Instalando...",
-    "installRuntime": "Instalar Runtime",
-    "promptLabel": "Prompt",
-    "prompt1": "Use o Navegador para inspecionar o fluxo de checkout e reporte quaisquer estados de UI quebrados.",
-    "prompt2": "Abra <url> com o Navegador, interaja com a página e resuma o que mudou após cada passo.",
-    "screenshotAlt": "Captura de tela da sessão do navegador",
-    "waitingScreenshot": "Aguardando captura de tela",
-    "waitingScreenshotHint": "O próximo snapshot do navegador do agente será renderizado aqui.",
-    "activeCount": "{{n}} ativas",
-    "totalCount": "{{n}} total",
-    "updated": "Atualizado {{time}}",
-    "statusEmpty": "vazio",
-    "fullScreen": "Tela cheia",
-    "stopSession": "Parar sessão",
-    "deleteSession": "Excluir sessão",
-    "sessions": "Sessões",
-    "noSessions": "Nenhuma sessão de navegador de agente.",
-    "selected": "Selecionado",
-    "statusLabel": "Status",
-    "none": "Nenhum",
-    "lastAction": "Última ação",
-    "profileLabel": "Perfil",
-    "temporaryProfile": "Temporário",
-    "stop": "Parar",
-    "delete": "Excluir",
-    "sessionFallback": "Sessão do navegador",
-    "close": "Fechar",
-    "statusReadySession": "pronto",
-    "statusStoppedSession": "parado",
-    "statusUnavailableSession": "indisponível",
-    "installFailed": "Falha ao instalar runtime do navegador"
-  },
-  "browserUseSettings": {
-    "sectionTitle": "Navegador",
-    "sectionDescription": "Permita que agentes criem sessões de navegador Playwright protegidas que você pode monitorar na aba Navegador.",
-    "enableLabel": "Ativar Navegador",
-    "enableDescription": "Registra o Navegador para agentes suportados. Agentes podem criar sessões de navegador; você pode assistir, parar e excluí-las.",
-    "enableAriaLabel": "Ativar Navegador",
-    "playwrightLabel": "Playwright",
-    "chromiumLabel": "Chromium",
-    "statusPrefix": "Status",
-    "checking": "verificando...",
-    "installed": "instalado",
-    "missing": "ausente",
-    "ready": "pronto",
-    "setupRequired": "configuração necessária",
-    "disabled": "desativado",
-    "runtimeRequiredTitle": "Runtime do navegador necessário",
-    "runtimeRequiredFallback": "Instale o runtime do navegador antes que agentes possam criar sessões do Navegador.",
-    "installing": "Instalando...",
-    "installRuntime": "Instalar Runtime",
-    "loadSettingsFailed": "Falha ao carregar configurações do Navegador",
-    "loadStatusFailed": "Falha ao carregar status do Navegador",
-    "saveFailed": "Falha ao salvar configurações do Navegador",
-    "installFailed": "Falha ao instalar runtime do navegador"
-  },
   "mcpServersAdd": {
     "menuLabel": "Adicionar servidor MCP",
     "globalButtonLabel": "Adicionar servidor MCP global",
@@ -825,11 +591,6 @@
     "loadingServers": "Carregando servidores MCP...",
     "configCwd": "Cwd",
     "configEnvVars": "Vars de ambiente"
-  },
-  "mcpTeamCard": {
-    "title": "Configs MCP da equipe",
-    "description": "Compartilhe configurações de servidores MCP com sua equipe. Todos ficam em sincronia automaticamente.",
-    "proLink": "Disponível com CloudCLI Pro"
   },
   "mcpServersAddErrors": {
     "loadFailedProvider": "Falha ao carregar servidores MCP do {{provider}}",

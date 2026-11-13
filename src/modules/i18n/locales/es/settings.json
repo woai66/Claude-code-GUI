@@ -50,21 +50,6 @@
     "resetToDefaults": "Restablecer valores por defecto",
     "cancelChanges": "Cancelar cambios"
   },
-  "voiceSettings": {
-    "title": "Voz",
-    "description": "Entrada de voz a texto y lectura en voz alta, mediante un backend de audio compatible con OpenAI.",
-    "enable": "Activar voz",
-    "enableDescription": "Muestra el botón del micrófono y el botón de lectura en voz alta en los mensajes.",
-    "backendTitle": "Backend",
-    "backendDescription": "Apunta a OpenAI, Groq o un servidor local (LocalAI, Speaches, Kokoro-FastAPI). Déjalo en blanco para usar el valor por defecto del servidor.",
-    "baseUrl": "URL base",
-    "apiKey": "Clave API",
-    "sttModel": "Modelo de voz a texto",
-    "ttsModel": "Modelo de texto a voz",
-    "voice": "Voz",
-    "format": "Formato de audio",
-    "note": "Una URL base personalizada la llama directamente tu navegador y debe permitir solicitudes CORS. Déjala en blanco para usar el backend configurado en el servidor."
-  },
   "quickSettings": {
     "title": "Ajustes rápidos",
     "sections": {
@@ -128,11 +113,7 @@
     "appearance": "Apariencia",
     "git": "Git",
     "apiTokens": "API y tokens",
-    "voice": "Voz",
-    "tasks": "Tareas",
-    "browser": "Navegador",
     "notifications": "Notificaciones",
-    "plugins": "Plugins",
     "about": "Acerca de"
   },
   "notifications": {
@@ -338,25 +319,6 @@
       "updateAvailable": "Actualización disponible: v{{version}}"
     }
   },
-  "tasks": {
-    "checking": "Comprobando la instalación de TaskMaster...",
-    "notInstalled": {
-      "title": "La CLI de TaskMaster AI no está instalada",
-      "description": "La CLI de TaskMaster es necesaria para usar las funciones de gestión de tareas. Instálala para empezar:",
-      "installCommand": "npm install -g task-master-ai",
-      "viewOnGitHub": "Ver en GitHub",
-      "afterInstallation": "Después de la instalación:",
-      "steps": {
-        "restart": "Reinicia esta aplicación",
-        "autoAvailable": "Las funciones de TaskMaster estarán disponibles automáticamente",
-        "initCommand": "Usa task-master init en el directorio de tu proyecto"
-      }
-    },
-    "settings": {
-      "enableLabel": "Activar integración con TaskMaster",
-      "enableDescription": "Muestra tareas, banners e indicadores de TaskMaster en la barra lateral y el resto de la interfaz"
-    }
-  },
   "agents": {
     "authStatus": {
       "checking": "Comprobando...",
@@ -525,101 +487,5 @@
       "title": "Acerca de MCP en Codex",
       "description": "Codex admite servidores MCP basados en stdio. Puedes añadir servidores que amplíen las capacidades de Codex con herramientas y recursos adicionales."
     }
-  },
-  "pluginSettings": {
-    "title": "Plugins",
-    "description": "Amplía la interfaz con plugins personalizados. Instala desde git o suelta una carpeta en ~/.claude-code-ui/plugins/",
-    "installPlaceholder": "https://github.com/usuario/mi-plugin",
-    "installButton": "Instalar",
-    "installing": "Instalando…",
-    "securityWarning": "Instala solo plugins cuyo código fuente hayas revisado o de autores en los que confíes.",
-    "scanningPlugins": "Buscando plugins…",
-    "noPluginsInstalled": "No hay plugins instalados",
-    "pullLatest": "Traer lo último desde git",
-    "noGitRemote": "Sin remoto de git — actualización no disponible",
-    "uninstallPlugin": "Desinstalar plugin",
-    "confirmUninstall": "Haz clic de nuevo para confirmar",
-    "confirmUninstallMessage": "¿Quitar {{name}}? Esto no se puede deshacer.",
-    "cancel": "Cancelar",
-    "remove": "Quitar",
-    "updateFailed": "La actualización falló",
-    "installFailed": "La instalación falló",
-    "uninstallFailed": "La desinstalación falló",
-    "toggleFailed": "El cambio de estado falló",
-    "starterPluginLabel": "Plugin de inicio",
-    "starter": "Inicio",
-    "docs": "Docs",
-    "sections": {
-      "officialTitle": "Plugins oficiales",
-      "officialDescription": "Mantenidos por el equipo de Claude GUI y listos para instalar directamente.",
-      "unofficialTitle": "Otros plugins",
-      "unofficialDescription": "Plugins e integraciones no oficiales de otros usuarios. Revisa el código fuente antes de instalar."
-    },
-    "starterPlugin": {
-      "name": "Estadísticas del proyecto",
-      "badge": "inicio",
-      "description": "Recuento de archivos, líneas de código, desglose por tipo de archivo y actividad reciente de tu proyecto.",
-      "install": "Instalar"
-    },
-    "terminalPlugin": {
-      "name": "Terminal",
-      "badge": "oficial",
-      "description": "Terminal integrada con acceso completo a la shell directamente en la interfaz.",
-      "install": "Instalar"
-    },
-    "scheduledPromptPlugin": {
-      "name": "Prompts programados",
-      "badge": "no oficial",
-      "description": "Programa prompts del espacio de trabajo, revisa el historial de ejecuciones y gestiona tareas locales recurrentes.",
-      "install": "Instalar"
-    },
-    "claudeWatchPlugin": {
-      "name": "Claude Watch",
-      "badge": "no oficial",
-      "description": "Vigila sesiones largas de Claude Code por si se cuelgan y expone controles del proceso.",
-      "install": "Instalar"
-    },
-    "prismCloudCLI": {
-      "name": "PRISM CloudCLI",
-      "badge": "no oficial",
-      "description": "Inteligencia de sesiones para Claude Code, dentro de Claude GUI. Descubre por qué tus sesiones queman tokens sin salir del navegador.",
-      "install": "Instalar"
-    },
-    "sessionManagerPlugin": {
-      "name": "Sesiones",
-      "badge": "no oficial",
-      "description": "Ver, gestionar y terminar sesiones activas de Claude Code.",
-      "install": "Instalar"
-    },
-    "tokenCostCalculatorPlugin": {
-      "name": "Calculadora de costes de tokens",
-      "badge": "no oficial",
-      "description": "Calcula costes de API a partir de precios de modelos y uso de tokens, con precios de modelos predefinidos.",
-      "install": "Instalar"
-    },
-    "taskQueuePlugin": {
-      "name": "Cola de tareas",
-      "badge": "no oficial",
-      "description": "Panel de cola de tareas para ver, filtrar y lanzar tareas de agentes.",
-      "install": "Instalar"
-    },
-    "githubIssuesBoardPlugin": {
-      "name": "Tablero de GitHub Issues",
-      "badge": "no oficial",
-      "description": "Tablero Kanban para GitHub Issues con sincronización bidireccional con TaskMaster e instalación automática de la skill CLI /github-task",
-      "install": "Instalar"
-    },
-    "claudeUsagePlugin": {
-      "name": "Uso de Claude",
-      "badge": "no oficial",
-      "description": "Sigue en vivo los límites del plan de Claude Code y explora el historial de tokens y costes de 30 días.",
-      "install": "Instalar"
-    },
-    "morePlugins": "Más",
-    "enable": "Activar",
-    "disable": "Desactivar",
-    "installAriaLabel": "URL del repositorio git del plugin",
-    "tab": "pestaña",
-    "runningStatus": "en ejecución"
   }
 }

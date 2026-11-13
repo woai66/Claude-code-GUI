@@ -22,11 +22,6 @@ vi.mock('@/modules/auth', () => ({
   useAuth: () => AUTH,
 }));
 
-vi.mock('@/modules/plugins', () => ({
-  usePlugins: () => ({ plugins: [] }),
-  PluginIcon: () => null,
-}));
-
 class FakeWebSocket {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
@@ -81,8 +76,6 @@ const header = (activeTab: AppTab) => (
       setActiveTab={() => undefined}
       selectedProject={PROJECT}
       selectedSession={null}
-      shouldShowTasksTab={false}
-      shouldShowBrowserTab={false}
       isMobile={false}
       onMenuClick={() => undefined}
       onRenameSession={async () => true}

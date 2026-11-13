@@ -4,7 +4,6 @@ import {
   storeAuthToken,
 } from '@/shared/authToken';
 import { IS_PLATFORM } from '@/shared/utils';
-import { readVoiceConfig, voiceConfigHeaders } from '@/shared/voiceConfig';
 import type { LLMProvider } from '@/shared/types';
 
 // Headers are a plain record rather than the full `HeadersInit` union so the
@@ -189,9 +188,6 @@ export const sessionMessagesUrl = (
 const fileContentPath = (projectId: string, filePath: string) =>
   `/api/file-tree/projects/${projectId}/files/content${query({ path: filePath })}`;
 
-const pluginAssetPath = (pluginName: string, assetFile: string) =>
-  `/api/plugins/${encodeURIComponent(pluginName)}/assets/${encodeURIComponent(assetFile)}`;
-
 // ─── API endpoints ──────────────────────────────────────────────────────────
 // Every `/api/...` path the frontend talks to is declared here; components
 // import a named method instead of assembling URLs of their own.
@@ -237,8 +233,6 @@ export const api = {
       `/api/projects/${encodeURIComponent(projectId)}/sessions${query({ limit, offset, provider })}`,
       options,
     ),
-  projectTaskmaster: (projectId: string) =>
-    get(`/api/projects/${encodeURIComponent(projectId)}/taskmaster`),
   renameProject: (projectId: string, displayName: string) =>
     put(`/api/projects/${projectId}/rename`, { displayName }),
   restoreProject: (projectId: string) =>
@@ -507,23 +501,6 @@ export const api = {
       get(`/api/assets/images/${encodeURIComponent(filename)}`, options),
   },
 
-  // TaskMaster endpoints — all addressed by DB projectId post-migration.
-  taskmaster: {
-    // Update a task
-    updateTask: (projectId: string, taskId: string | number, updates: unknown) =>
-      put(`/api/taskmaster/update-task/${projectId}/${taskId}`, updates),
-
-    tasks: (projectId: string) => get(`/api/taskmaster/tasks/${encodeURIComponent(projectId)}`),
-    mcpStatus: () => get('/api/taskmaster/mcp-status'),
-    installationStatus: () => get('/api/taskmaster/installation-status'),
-
-    prdFiles: (projectId: string) => get(`/api/taskmaster/prd/${encodeURIComponent(projectId)}`),
-    prdFile: (projectId: string, fileName: string) =>
-      get(`/api/taskmaster/prd/${encodeURIComponent(projectId)}/${encodeURIComponent(fileName)}`),
-    savePrd: (projectId: string, { fileName, content }: { fileName: string; content: string }) =>
-      post(`/api/taskmaster/prd/${encodeURIComponent(projectId)}`, { fileName, content }),
-  },
-
   // User endpoints
   user: {
     gitConfig: () => get('/api/user/git-config'),
@@ -575,119 +552,8 @@ export const api = {
     },
   },
 
-  plugins: {
-    list: () => get('/api/plugins'),
-    install: (url: string) => post('/api/plugins/install', { url }),
-    uninstall: (name: string) => del(`/api/plugins/${encodeURIComponent(name)}`),
-    update: (name: string) => post(`/api/plugins/${encodeURIComponent(name)}/update`),
-    toggle: (name: string, enabled: boolean) =>
-      put(`/api/plugins/${encodeURIComponent(name)}/enable`, { enabled }),
-    // Plugin bundles/icons are fetched with auth headers and handed to the
-    // browser as blobs, so a bare asset URL is never requested unauthenticated.
-    asset: (pluginName: string, assetFile: string) => get(pluginAssetPath(pluginName, assetFile)),
-    // Exposed so the icon cache can key on the resolved asset path.
-    assetUrl: pluginAssetPath,
-    rpc: (pluginName: string, method: string, path: string, body?: unknown) =>
-      authenticatedFetch(
-        `/api/plugins/${encodeURIComponent(pluginName)}/rpc/${String(path).replace(/^\//, '')}`,
-        {
-          method: method || 'GET',
-          ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-        },
-      ),
-  },
-
-  browserUse: {
-    status: () => get('/api/browser-use/status'),
-    settings: () => get('/api/browser-use/settings'),
-    saveSettings: (settings: unknown) => put('/api/browser-use/settings', settings),
-    sessions: () => get('/api/browser-use/sessions'),
-    stopSession: (sessionId: string) => post(`/api/browser-use/sessions/${sessionId}/stop`),
-    deleteSession: (sessionId: string) => del(`/api/browser-use/sessions/${sessionId}`),
-    installRuntime: () => post('/api/browser-use/runtime/install'),
-  },
-
-  voice: {
-    health: () => get('/api/voice/health'),
-    transcribe: (formData: FormData, headers: Record<string, string> = {}) =>
-      authenticatedFetch('/api/voice/transcribe', {
-        method: 'POST',
-        headers,
-        body: formData,
-      }),
-    tts: (text: string, options: ApiRequestOptions = {}) => post('/api/voice/tts', { text }, options),
-  },
-
   system: {
     update: () => post('/api/system/update'),
   },
 };
 
-// ---------------------------
-
-//----------------- VOICE TRANSCRIPTION AND SPEECH ------------
-
-/**
- * Builds a URL against the user's own OpenAI-compatible voice endpoint. Private to the
- * voice helpers below, which bypass the CloudCLI proxy when a base URL is configured.
- */
-function voiceDirectUrl(baseUrl: string, path: string): string {
-  return `${baseUrl.replace(/\/$/, '')}${path}`;
-}
-
-/**
- * Serializes the active voice configuration so callers can detect a settings change and
- * drop cached synthesized audio.
- */
-export function voiceConfigSignature(): string {
-  return JSON.stringify(readVoiceConfig());
-}
-
-/**
- * Transcribes recorded audio, posting directly to the user's configured OpenAI-compatible
- * endpoint when one is set and otherwise going through the CloudCLI voice proxy.
- */
-export function transcribeVoice(blob: Blob, filename: string): Promise<Response> {
-  const config = readVoiceConfig();
-  const body = new FormData();
-
-  if (config.baseUrl.trim()) {
-    body.append('file', blob, filename);
-    body.append('model', config.sttModel || 'whisper-1');
-    return fetch(voiceDirectUrl(config.baseUrl.trim(), '/audio/transcriptions'), {
-      method: 'POST',
-      headers: config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {},
-      body,
-    });
-  }
-
-  body.append('audio', blob, filename);
-  return api.voice.transcribe(body, voiceConfigHeaders());
-}
-
-/**
- * Synthesizes speech for the given text, using the user's configured OpenAI-compatible
- * endpoint when one is set and otherwise the CloudCLI voice proxy.
- */
-export function synthesizeVoice(text: string, signal: AbortSignal): Promise<Response> {
-  const config = readVoiceConfig();
-
-  if (config.baseUrl.trim()) {
-    return fetch(voiceDirectUrl(config.baseUrl.trim(), '/audio/speech'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}),
-      },
-      body: JSON.stringify({
-        model: config.ttsModel || 'tts-1',
-        voice: config.ttsVoice || 'alloy',
-        input: text,
-        ...(config.ttsFormat.trim() ? { response_format: config.ttsFormat.trim() } : {}),
-      }),
-      signal,
-    });
-  }
-
-  return api.voice.tts(text, { headers: voiceConfigHeaders(), signal });
-}

@@ -109,14 +109,6 @@
     },
     "technicalDetails": "פרטים טכניים"
   },
-  "voice": {
-    "input": "קלט קולי",
-    "stopRecording": "עצירת הקלטה",
-    "transcribing": "מתמלל…",
-    "speak": "הקראה",
-    "stopSpeaking": "עצירה",
-    "loading": "טוען…"
-  },
   "input": {
     "placeholder": "/ לפקודות, @ לקבצים, או כל שאלה ל-{{provider}}…",
     "placeholderDefault": "הקלדת הודעה…",
@@ -277,9 +269,6 @@
   },
   "projectSelection": {
     "startChatWithProvider": "יש לבחור פרויקט כדי להתחיל צ'אט עם {{provider}}"
-  },
-  "tasks": {
-    "nextTaskPrompt": "להתחיל את המשימה הבאה"
   },
   "message": {
     "editAndResend": "עריכה ושליחה מחדש",

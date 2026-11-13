@@ -111,10 +111,8 @@
     "appearance": "Görünüm",
     "git": "Git",
     "apiTokens": "API ve Token'lar",
-    "tasks": "Görevler",
     "computer": "Bilgisayar Kullanımı",
     "notifications": "Bildirimler",
-    "plugins": "Eklentiler",
     "about": "Hakkında"
   },
   "notifications": {
@@ -313,25 +311,6 @@
       "updateAvailable": "Güncelleme mevcut: v{{version}}"
     }
   },
-  "tasks": {
-    "checking": "TaskMaster kurulumu kontrol ediliyor...",
-    "notInstalled": {
-      "title": "TaskMaster AI CLI Kurulu Değil",
-      "description": "Görev yönetim özelliklerini kullanmak için TaskMaster CLI gereklidir. Başlamak için kur:",
-      "installCommand": "npm install -g task-master-ai",
-      "viewOnGitHub": "GitHub'da Görüntüle",
-      "afterInstallation": "Kurulumdan sonra:",
-      "steps": {
-        "restart": "Bu uygulamayı yeniden başlat",
-        "autoAvailable": "TaskMaster özellikleri otomatik olarak kullanılabilir hale gelecek",
-        "initCommand": "Proje dizininde task-master init komutunu kullan"
-      }
-    },
-    "settings": {
-      "enableLabel": "TaskMaster Entegrasyonunu Etkinleştir",
-      "enableDescription": "TaskMaster görevlerini, banner'larını ve kenar çubuğu göstergelerini arayüz genelinde göster"
-    }
-  },
   "agents": {
     "authStatus": {
       "checking": "Kontrol ediliyor...",
@@ -492,47 +471,5 @@
       "title": "Codex MCP Hakkında",
       "description": "Codex stdio tabanlı MCP sunucularını destekler. Codex'in yeteneklerini ek araçlar ve kaynaklarla genişleten sunucular ekleyebilirsin."
     }
-  },
-  "pluginSettings": {
-    "title": "Eklentiler",
-    "description": "Arayüzü özel eklentilerle genişlet. Git'ten yükle veya ~/.claude-code-ui/plugins/ klasörüne bir dizin bırak.",
-    "installPlaceholder": "https://github.com/kullanici/benim-eklentim",
-    "installButton": "Yükle",
-    "installing": "Yükleniyor…",
-    "securityWarning": "Yalnızca kaynak kodunu incelediğin veya güvendiğin geliştiricilerin eklentilerini yükle.",
-    "scanningPlugins": "Eklentiler taranıyor…",
-    "noPluginsInstalled": "Yüklü eklenti yok",
-    "pullLatest": "Git'ten en güncelini çek",
-    "noGitRemote": "Git uzak sunucusu yok — güncelleme kullanılamıyor",
-    "uninstallPlugin": "Eklentiyi kaldır",
-    "confirmUninstall": "Onaylamak için tekrar tıkla",
-    "confirmUninstallMessage": "{{name}} kaldırılsın mı? Bu işlem geri alınamaz.",
-    "cancel": "İptal",
-    "remove": "Kaldır",
-    "updateFailed": "Güncelleme başarısız",
-    "installFailed": "Yükleme başarısız",
-    "uninstallFailed": "Kaldırma başarısız",
-    "toggleFailed": "Açıp kapama başarısız",
-    "starterPluginLabel": "Başlangıç Eklentisi",
-    "starter": "Başlangıç",
-    "docs": "Dokümanlar",
-    "starterPlugin": {
-      "name": "Proje İstatistikleri",
-      "badge": "başlangıç",
-      "description": "Projen için dosya sayıları, kod satırları, dosya türü dağılımı ve son etkinlik.",
-      "install": "Yükle"
-    },
-    "terminalPlugin": {
-      "name": "Terminal",
-      "badge": "resmi",
-      "description": "Arayüzün içinde tam shell erişimiyle entegre terminal.",
-      "install": "Yükle"
-    },
-    "morePlugins": "Daha Fazla",
-    "enable": "Etkinleştir",
-    "disable": "Devre Dışı Bırak",
-    "installAriaLabel": "Eklenti git deposu URL'si",
-    "tab": "sekme",
-    "runningStatus": "çalışıyor"
   }
 }

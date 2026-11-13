@@ -50,21 +50,6 @@
     "resetToDefaults": "Reset to Defaults",
     "cancelChanges": "Cancel Changes"
   },
-  "voiceSettings": {
-    "title": "Voice",
-    "description": "Speech-to-text input and read-aloud, via an OpenAI-compatible audio backend.",
-    "enable": "Enable voice",
-    "enableDescription": "Show the mic button and the read-aloud button on messages.",
-    "backendTitle": "Backend",
-    "backendDescription": "Point at OpenAI, Groq, or a local server (LocalAI, Speaches, Kokoro-FastAPI). Leave blank to use the server default.",
-    "baseUrl": "Base URL",
-    "apiKey": "API key",
-    "sttModel": "Speech-to-text model",
-    "ttsModel": "Text-to-speech model",
-    "voice": "Voice",
-    "format": "Audio format",
-    "note": "A custom base URL is called directly by your browser and must allow browser CORS requests. Leave it blank to use the server-configured backend."
-  },
   "quickSettings": {
     "title": "Quick Settings",
     "sections": {
@@ -128,11 +113,7 @@
     "appearance": "Appearance",
     "git": "Git",
     "apiTokens": "API & Tokens",
-    "voice": "Voice",
-    "tasks": "Tasks",
-    "browser": "Browser",
     "notifications": "Notifications",
-    "plugins": "Plugins",
     "about": "About"
   },
   "notifications": {
@@ -355,25 +336,6 @@
       "updateAvailable": "Update available: v{{version}}"
     }
   },
-  "tasks": {
-    "checking": "Checking TaskMaster installation...",
-    "notInstalled": {
-      "title": "TaskMaster AI CLI Not Installed",
-      "description": "TaskMaster CLI is required to use task management features. Install it to get started:",
-      "installCommand": "npm install -g task-master-ai",
-      "viewOnGitHub": "View on GitHub",
-      "afterInstallation": "After installation:",
-      "steps": {
-        "restart": "Restart this application",
-        "autoAvailable": "TaskMaster features will automatically become available",
-        "initCommand": "Use task-master init in your project directory"
-      }
-    },
-    "settings": {
-      "enableLabel": "Enable TaskMaster Integration",
-      "enableDescription": "Show TaskMaster tasks, banners, and sidebar indicators across the interface"
-    }
-  },
   "agents": {
     "authStatus": {
       "checking": "Checking...",
@@ -557,120 +519,6 @@
       "description": "Codex supports stdio-based MCP servers. You can add servers that extend Codex's capabilities with additional tools and resources."
     }
   },
-  "pluginSettings": {
-    "title": "Plugins",
-    "description": "Extend the interface with custom plugins. Install from git or drop a folder in ~/.claude-code-ui/plugins/",
-    "installPlaceholder": "https://github.com/user/my-plugin",
-    "installButton": "Install",
-    "installing": "Installing…",
-    "securityWarning": "Only install plugins whose source code you have reviewed or from authors you trust.",
-    "scanningPlugins": "Scanning plugins…",
-    "noPluginsInstalled": "No plugins installed",
-    "pullLatest": "Pull latest from git",
-    "noGitRemote": "No git remote — update not available",
-    "uninstallPlugin": "Uninstall plugin",
-    "confirmUninstall": "Click again to confirm",
-    "confirmUninstallMessage": "Remove {{name}}? This cannot be undone.",
-    "cancel": "Cancel",
-    "remove": "Remove",
-    "updateFailed": "Update failed",
-    "installFailed": "Installation failed",
-    "uninstallFailed": "Uninstall failed",
-    "toggleFailed": "Toggle failed",
-    "starterPluginLabel": "Starter Plugin",
-    "starter": "Starter",
-    "docs": "Docs",
-    "sections": {
-      "officialTitle": "Official Plugins",
-      "officialDescription": "Maintained by the Claude GUI team and ready for direct install.",
-      "unofficialTitle": "Other Plugins",
-      "unofficialDescription": "Unofficial plugins and integrations from other users. Review the source before installing."
-    },
-    "starterPlugin": {
-      "name": "Project Stats",
-      "badge": "starter",
-      "description": "File counts, lines of code, file-type breakdown, and recent activity for your project.",
-      "install": "Install"
-    },
-    "terminalPlugin": {
-      "name": "Terminal",
-      "badge": "official",
-      "description": "Integrated terminal with full shell access directly within the interface.",
-      "install": "Install"
-    },
-    "scheduledPromptPlugin": {
-      "name": "Scheduled Prompts",
-      "badge": "unofficial",
-      "description": "Schedule workspace prompts, review run history, and manage recurring local tasks.",
-      "install": "Install"
-    },
-    "claudeWatchPlugin": {
-      "name": "Claude Watch",
-      "badge": "unofficial",
-      "description": "Watch long-running Claude Code sessions for hangs and expose process controls.",
-      "install": "Install"
-    },
-    "prismCloudCLI": {
-      "name": "PRISM CloudCLI",
-      "badge": "unofficial",
-      "description": "Session intelligence for Claude Code, inside Claude GUI. See why your sessions are burning tokens without leaving the browser.",
-      "install": "Install"
-    },
-    "sessionManagerPlugin": {
-      "name": "Sessions",
-      "badge": "unofficial",
-      "description": "View, manage, and kill active Claude Code sessions.",
-      "install": "Install"
-    },
-    "tokenCostCalculatorPlugin": {
-      "name": "Token Cost Calculator",
-      "badge": "unofficial",
-      "description": "Calculate API costs from model prices and token usage, with preset model pricing support.",
-      "install": "Install"
-    },
-    "taskQueuePlugin": {
-      "name": "Task Queue",
-      "badge": "unofficial",
-      "description": "Task queue dashboard to view, filter, and launch agent tasks.",
-      "install": "Install"
-    },
-    "githubIssuesBoardPlugin": {
-      "name": "GitHub Issues Board",
-      "badge": "unofficial",
-      "description": "Kanban board for GitHub Issues with bidirectional TaskMaster sync and /github-task CLI skill auto-install",
-      "install": "Install"
-    },
-    "claudeUsagePlugin": {
-      "name": "Claude Usage",
-      "badge": "unofficial",
-      "description": "Track live Claude Code plan limits and explore 30-day token and cost history.",
-      "install": "Install"
-    },
-    "codexUsagePlugin": {
-      "name": "Codex Usage",
-      "badge": "unofficial",
-      "description": "Track live Codex plan limits, reset timing, and 30-day account token activity.",
-      "install": "Install"
-    },
-    "glmUsagePlugin": {
-      "name": "GLM Usage",
-      "badge": "unofficial",
-      "description": "Track live GLM/Zhipu coding-plan quotas and 30-day token history.",
-      "install": "Install"
-    },
-    "agentMonitorPlugin": {
-      "name": "Agent Monitor",
-      "badge": "unofficial",
-      "description": "See background subagents and shells that keep running after a chat ends, and stop them.",
-      "install": "Install"
-    },
-    "morePlugins": "More",
-    "enable": "Enable",
-    "disable": "Disable",
-    "installAriaLabel": "Plugin git repository URL",
-    "tab": "tab",
-    "runningStatus": "running"
-  },
   "skillsPage": {
     "description": "Manage {{provider}} skills from local files, complete folders, and project-aware locations.",
     "searchPlaceholder": "Search skills...",
@@ -730,88 +578,6 @@
       "system": "System"
     }
   },
-  "browserUse": {
-    "title": "Browser",
-    "subtitle": "Monitor browser sessions opened by AI agents.",
-    "openSettings": "Open Browser settings",
-    "refreshSessions": "Refresh browser sessions",
-    "runtimeDisabled": "Disabled",
-    "runtimeReady": "Ready",
-    "runtimeInstalling": "Installing",
-    "runtimeSetupRequired": "Setup required",
-    "loadFailed": "Failed to load Browser",
-    "actionFailed": "Browser action failed",
-    "requestFailed": "Request failed ({{status}})",
-    "never": "Never",
-    "unknown": "Unknown",
-    "justNow": "Just now",
-    "secondsAgo": "{{n}}s ago",
-    "minutesAgo": "{{n}}m ago",
-    "hoursAgo": "{{n}}h ago",
-    "daysAgo": "{{n}}d ago",
-    "noPageLoaded": "No page loaded",
-    "waitingAction": "Waiting",
-    "emptyTitleEnabled": "No browser sessions yet",
-    "emptyTitleDisabled": "Browser is disabled",
-    "emptyDescEnabled": "Agent browser sessions appear here while an AI task is using Browser.",
-    "emptyDescDisabled": "Enable Browser in settings to let agents open monitored browser sessions.",
-    "runtimeSetupTitle": "Runtime setup required",
-    "installing": "Installing...",
-    "installRuntime": "Install Runtime",
-    "promptLabel": "Prompt",
-    "prompt1": "Use Browser to inspect the checkout flow and report any broken UI states.",
-    "prompt2": "Open <url> with Browser, interact with the page, and summarize what changed after each step.",
-    "screenshotAlt": "Browser session screenshot",
-    "waitingScreenshot": "Waiting for screenshot",
-    "waitingScreenshotHint": "The next agent browser snapshot will render here.",
-    "activeCount": "{{n}} active",
-    "totalCount": "{{n}} total",
-    "updated": "Updated {{time}}",
-    "statusEmpty": "empty",
-    "fullScreen": "Full screen",
-    "stopSession": "Stop session",
-    "deleteSession": "Delete session",
-    "sessions": "Sessions",
-    "noSessions": "No agent browser sessions.",
-    "selected": "Selected",
-    "statusLabel": "Status",
-    "none": "None",
-    "lastAction": "Last action",
-    "profileLabel": "Profile",
-    "temporaryProfile": "Temporary",
-    "stop": "Stop",
-    "delete": "Delete",
-    "sessionFallback": "Browser session",
-    "close": "Close",
-    "statusReadySession": "ready",
-    "statusStoppedSession": "stopped",
-    "statusUnavailableSession": "unavailable",
-    "installFailed": "Failed to install browser runtime"
-  },
-  "browserUseSettings": {
-    "sectionTitle": "Browser",
-    "sectionDescription": "Allow agents to create guarded Playwright browser sessions that you can monitor from the Browser tab.",
-    "enableLabel": "Enable Browser",
-    "enableDescription": "Registers Browser for supported agents. Agents can create browser sessions; you can watch, stop, and delete them.",
-    "enableAriaLabel": "Enable Browser",
-    "playwrightLabel": "Playwright",
-    "chromiumLabel": "Chromium",
-    "statusPrefix": "Status",
-    "checking": "checking...",
-    "installed": "installed",
-    "missing": "missing",
-    "ready": "ready",
-    "setupRequired": "setup required",
-    "disabled": "disabled",
-    "runtimeRequiredTitle": "Browser runtime required",
-    "runtimeRequiredFallback": "Install the browser runtime before agents can create Browser sessions.",
-    "installing": "Installing...",
-    "installRuntime": "Install Runtime",
-    "loadSettingsFailed": "Failed to load Browser settings",
-    "loadStatusFailed": "Failed to load Browser status",
-    "saveFailed": "Failed to save Browser settings",
-    "installFailed": "Failed to install browser runtime"
-  },
   "mcpServersAdd": {
     "menuLabel": "Add MCP Server",
     "globalButtonLabel": "Add Global MCP Server",
@@ -823,11 +589,6 @@
     "loadingServers": "Loading MCP servers...",
     "configCwd": "Cwd",
     "configEnvVars": "Env Vars"
-  },
-  "mcpTeamCard": {
-    "title": "Team MCP Configs",
-    "description": "Share MCP server configurations across your team. Everyone stays in sync automatically.",
-    "proLink": "Available with CloudCLI Pro"
   },
   "mcpServersAddErrors": {
     "loadFailedProvider": "Failed to load {{provider}} MCP servers",

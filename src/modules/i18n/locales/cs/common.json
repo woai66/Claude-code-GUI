@@ -22,9 +22,6 @@
     "shell": "Shell",
     "files": "Soubory",
     "git": "Správa verzí",
-    "tasks": "Úkoly",
-    "browser": "Prohlížeč",
-    "computer": "Počítač",
     "views": "Zobrazení pracovního prostoru"
   },
   "status": {
@@ -364,7 +361,6 @@
     "navFiles": "Přejít na Soubory",
     "navShell": "Přejít na Shell",
     "navGit": "Přejít na Git",
-    "navTasks": "Přejít na Úkoly",
     "gitFetch": "Git: Fetch",
     "gitPull": "Git: Pull",
     "gitPush": "Git: Push",

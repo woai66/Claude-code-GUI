@@ -112,14 +112,6 @@
     },
     "technicalDetails": "기술 상세"
   },
-  "voice": {
-    "input": "음성 입력",
-    "stopRecording": "녹음 중지",
-    "transcribing": "받아쓰는 중…",
-    "speak": "소리 내어 읽기",
-    "stopSpeaking": "중지",
-    "loading": "로딩 중…"
-  },
   "input": {
     "placeholder": "/를 입력하여 명령어, @를 입력하여 파일, 또는 {{provider}}에게 무엇이든 물어보세요...",
     "placeholderDefault": "메시지를 입력하세요...",
@@ -246,9 +238,6 @@
   },
   "projectSelection": {
     "startChatWithProvider": "{{provider}}와 채팅을 시작하려면 프로젝트를 선택하세요"
-  },
-  "tasks": {
-    "nextTaskPrompt": "다음 작업 시작"
   },
   "message": {
     "editAndResend": "수정 후 다시 보내기",

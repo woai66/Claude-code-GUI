@@ -131,14 +131,6 @@
     },
     "technicalDetails": "Detalhes técnicos"
   },
-  "voice": {
-    "input": "Entrada de voz",
-    "stopRecording": "Parar gravação",
-    "transcribing": "Transcrevendo…",
-    "speak": "Ler em voz alta",
-    "stopSpeaking": "Parar",
-    "loading": "Carregando…"
-  },
   "input": {
     "placeholder": "Digite / para comandos, @ para arquivos, ou pergunte ao {{provider}} qualquer coisa...",
     "placeholderDefault": "Digite sua mensagem...",
@@ -294,9 +286,6 @@
   },
   "projectSelection": {
     "startChatWithProvider": "Selecione um projeto para começar a conversar com {{provider}}"
-  },
-  "tasks": {
-    "nextTaskPrompt": "Iniciar a próxima tarefa"
   },
   "message": {
     "editAndResend": "Editar e reenviar",

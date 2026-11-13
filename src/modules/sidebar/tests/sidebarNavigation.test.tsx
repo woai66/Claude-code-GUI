@@ -51,7 +51,7 @@ function renderProject(overrides: Partial<ComponentProps<typeof SidebarProjectIt
     isDeleting={false} isStarred={false} isEditing={false} renameDraft=""
     sessions={[{ id: 'a1', summary: 'Existing conversation', __provider: 'claude' }]}
     initialSessionsLoaded isLoadingMoreSessions={false} currentTime={new Date('2026-10-11T12:00:00Z')}
-    sessionRenameId={null} sessionRenameDraft="" tasksEnabled={false} mcpServerStatus={null}
+    sessionRenameId={null} sessionRenameDraft=""
     onRenameDraftChange={noop} onToggleProject={noop} onProjectSelect={noop} onToggleStarProject={noop}
     onStartEditingProject={noop} onCancelEditingProject={noop} onSaveProjectName={noop}
     onDeleteProject={noop} onSessionSelect={noop} onDeleteSession={noop} onLoadMoreSessions={noop}

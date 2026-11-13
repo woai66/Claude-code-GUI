@@ -1505,81 +1505,9 @@ export type FileTreeServices = {
 };
 
 // ---------------------------
-//----------------- VOICE MODULE CONTRACTS ------------
-/**
- * Per-request voice settings parsed from authenticated HTTP headers.
- *
- * The Voice routes create this value from the optional `x-voice-*` headers and
- * pass it to the Voice service. Empty values mean "use the server-configured
- * default"; the backend base URL is intentionally absent because clients must
- * never control the server's outbound destination.
- */
-export type VoiceRequestOverrides = {
-  apiKey?: string;
-  sttModel?: string;
-  ttsModel?: string;
-  ttsVoice?: string;
-  ttsFormat?: string;
-};
-
-/**
- * Uploaded audio accepted by the Voice transcription service.
- *
- * Routes translate Multer's transport-specific file object into this minimal
- * shape so the service does not depend on Express or Multer types.
- */
-export type VoiceAudioUpload = {
-  bytes: Buffer;
-  mimeType: string;
-  fileName: string;
-};
-
-/**
- * Successful speech payload returned by the Voice service.
- *
- * The route copies `contentType` to the client response and pipes `body`
- * without buffering the complete synthesized audio in application memory.
- */
-export type VoiceSpeechPayload = {
-  contentType: string;
-  body: ReadableStream<Uint8Array> | null;
-};
-
-/**
- * Explicit service result used by Voice routes instead of transport-aware
- * exceptions.
- *
- * Services return `ok: false` with the exact client status/message for expected
- * backend, validation, and timeout failures. Routes only translate the result
- * into HTTP output, while unexpected programming errors still reject normally.
- */
-export type VoiceServiceResult<TValue> =
-  | { ok: true; value: TValue }
-  | { ok: false; status: number; error: string };
-
-/**
- * Complete application-service surface consumed by the Voice HTTP router.
- *
- * The composition root supplies a concrete implementation with environment
- * configuration and an injected outbound HTTP adapter. Unit tests use the same
- * contract with handwritten fetch fakes and never patch global state.
- */
-export type VoiceService = {
-  getHealth(): { configured: boolean };
-  transcribe(input: {
-    audio: VoiceAudioUpload;
-    overrides: VoiceRequestOverrides;
-  }): Promise<VoiceServiceResult<{ text: string }>>;
-  synthesizeSpeech(input: {
-    text: string;
-    overrides: VoiceRequestOverrides;
-  }): Promise<VoiceServiceResult<VoiceSpeechPayload>>;
-};
-
-// ---------------------------
 //----------------- CLI MODULE CONTRACTS ------------
 /**
- * Output boundary used by the CLI and Sandbox services.
+ * Output boundary used by the CLI service.
  *
  * Production wiring delegates to the real console. Unit tests collect these
  * calls in arrays, which keeps command assertions deterministic and avoids
@@ -1591,8 +1519,7 @@ export type CliOutput = {
 };
 
 /**
- * Minimal synchronous filesystem surface shared by CLI status reporting and
- * sandbox workspace validation.
+ * Minimal synchronous filesystem surface used by CLI status reporting.
  *
  * The production composition root adapts Node's filesystem module. Tests supply
  * path-keyed fakes, so service tests never inspect or modify the real machine.
@@ -1634,13 +1561,3 @@ export type CliApplication = {
   run(argumentsList: string[]): Promise<number>;
 };
 
-/**
- * Sandbox command service consumed by the top-level CLI command dispatcher.
- *
- * Keeping this behind one required dependency lets CLI tests use a tiny fake,
- * while focused Sandbox tests exercise subprocess and filesystem behavior with
- * their own handwritten adapters.
- */
-export type SandboxCommandService = {
-  execute(argumentsList: string[]): Promise<number>;
-};

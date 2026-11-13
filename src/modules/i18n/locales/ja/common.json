@@ -21,10 +21,7 @@
     "chat": "チャット",
     "shell": "シェル",
     "files": "ファイル",
-    "git": "ソース管理",
-    "tasks": "タスク",
-    "browser": "Browser",
-    "computer": "Computer"
+    "git": "ソース管理"
   },
   "status": {
     "loading": "読み込み中...",

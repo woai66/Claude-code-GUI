@@ -21,10 +21,7 @@
     "chat": "Chat",
     "shell": "Shell",
     "files": "Files",
-    "git": "Source Control",
-    "tasks": "Tasks",
-    "browser": "Browser",
-    "computer": "Computer"
+    "git": "Source Control"
   },
   "status": {
     "loading": "Loading...",
@@ -336,7 +333,6 @@
     "navFiles": "Go to Files",
     "navShell": "Go to Shell",
     "navGit": "Go to Git",
-    "navTasks": "Go to Tasks",
     "gitFetch": "Git: Fetch",
     "gitPull": "Git: Pull",
     "gitPush": "Git: Push",

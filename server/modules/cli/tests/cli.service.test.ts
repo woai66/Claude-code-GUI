@@ -14,7 +14,6 @@ function createHarness() {
     error: (message = '') => errorMessages.push(message),
   };
   let serverStarts = 0;
-  let sandboxArguments: string[] = [];
   const service = createCliService({
     applicationRoot: '/application',
     defaultDatabasePath: '/home/user/.cloudcli/auth.db',
@@ -30,17 +29,10 @@ function createHarness() {
       getFileStats: () => ({ size: 0, modifiedAt: new Date(0) }),
     },
     output,
-    sandboxService: {
-      execute: async (argumentsList) => {
-        sandboxArguments = argumentsList;
-        return 7;
-      },
-    },
     getLatestPackageVersion: async () => '1.2.3',
     startServer: async () => {
       serverStarts += 1;
     },
-    startBrowserUseMcp: async () => undefined,
   });
 
   return {
@@ -49,7 +41,6 @@ function createHarness() {
     logMessages,
     errorMessages,
     getServerStarts: () => serverStarts,
-    getSandboxArguments: () => sandboxArguments,
   };
 }
 
@@ -66,15 +57,6 @@ test('applies CLI options to the injected environment before starting the server
   assert.equal(harness.environment.SERVER_PORT, '8080');
   assert.equal(harness.environment.DATABASE_PATH, '/data/app.db');
   assert.equal(harness.getServerStarts(), 1);
-});
-
-test('passes only sandbox arguments to the injected sandbox service', async () => {
-  const harness = createHarness();
-
-  const exitCode = await harness.service.run(['sandbox', 'ls']);
-
-  assert.equal(exitCode, 7);
-  assert.deepEqual(harness.getSandboxArguments(), ['ls']);
 });
 
 test('returns a failure code for an unknown command without exiting the process', async () => {

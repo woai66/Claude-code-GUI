@@ -119,14 +119,6 @@
     },
     "technicalDetails": "Detail teknis"
   },
-  "voice": {
-    "input": "Input suara",
-    "stopRecording": "Hentikan rekaman",
-    "transcribing": "Mentranskripsikan…",
-    "speak": "Bacakan",
-    "stopSpeaking": "Hentikan",
-    "loading": "Memuat…"
-  },
   "input": {
     "placeholder": "Ketik / untuk perintah, @ untuk file, atau tanyakan apa saja kepada {{provider}}...",
     "placeholderDefault": "Ketik pesan...",
@@ -274,9 +266,6 @@
   },
   "projectSelection": {
     "startChatWithProvider": "Pilih proyek untuk mulai chat dengan {{provider}}"
-  },
-  "tasks": {
-    "nextTaskPrompt": "Mulai tugas berikutnya"
   },
   "message": {
     "editAndResend": "Edit dan kirim ulang",

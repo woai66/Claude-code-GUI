@@ -232,9 +232,6 @@
   "projectSelection": {
     "startChatWithProvider": "Wähl ein Projekt, um mit {{provider}} zu chatten"
   },
-  "tasks": {
-    "nextTaskPrompt": "Nächste Aufgabe starten"
-  },
   "message": {
     "editAndResend": "Bearbeiten und erneut senden",
     "forkFromHere": "Ab hier verzweigen",
