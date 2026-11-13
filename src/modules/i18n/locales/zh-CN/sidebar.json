@@ -182,11 +182,11 @@
     "matches_other": "{{count}} 个匹配",
     "projectsScanned_one": "{{count}} 个项目已扫描",
     "projectsScanned_other": "{{count}} 个项目已扫描",
-    "runningTooltip": "运行中的会话",
     "runningPlaceholder": "搜索运行中的会话…",
-    "archiveOnlyTooltip": "归档",
     "archivedPlaceholder": "搜索归档的会话…",
-    "retry": "重试"
+    "retry": "重试",
+    "modeRunning": "运行中",
+    "modeArchived": "归档"
   },
   "deleteConfirmation": {
     "deleteProject": "移除项目",

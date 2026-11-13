@@ -48,8 +48,11 @@ describe('native Codex controls', () => {
     expect(screen.getByText('12K / 400K')).toBeTruthy();
     rerender(<TokenUsageSummary provider="codex" usage={{ used: 12000 }} />);
     expect(screen.getByText('12K / ?')).toBeTruthy();
-    rerender(<TokenUsageSummary provider="codex" usage={{ used: 0, unsupported: true }} />);
-    expect(screen.getByText('— / ?')).toBeTruthy();
+    rerender(<TokenUsageSummary provider="codex" usage={{ used: 0, unsupported: true, total: 400000 }} />);
+    expect(screen.getByText('— / 400K')).toBeTruthy();
+    // Before the first turn nothing is known, so the readout stays out of the toolbar.
+    rerender(<TokenUsageSummary provider="codex" usage={null} />);
+    expect(screen.queryByRole('button')).toBeNull();
   });
 
   it('keeps Claude token usage as the existing single total', () => {

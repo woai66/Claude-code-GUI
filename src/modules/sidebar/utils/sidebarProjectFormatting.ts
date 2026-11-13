@@ -1,3 +1,4 @@
+import i18next from 'i18next';
 import type { TFunction } from 'i18next';
 
 import type {
@@ -27,11 +28,21 @@ export const formatCompactAge = (
   if (Number.isNaN(date.getTime())) return '';
 
   const minutes = Math.floor(Math.max(0, currentTime.getTime() - date.getTime()) / 60000);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  // Chinese has no customary one-letter unit, so it gets short words instead of "m/hr/d".
+  const language = i18next.language || '';
+  if (language.startsWith('zh')) {
+    const traditional = language === 'zh-TW';
+    if (minutes < 1) return traditional ? '剛剛' : '刚刚';
+    if (minutes < 60) return `${minutes} ${traditional ? '分鐘' : '分钟'}`;
+    return hours < 24 ? `${hours} ${traditional ? '小時' : '小时'}` : `${days} 天`;
+  }
+
   if (minutes < 1) return '<1m';
   if (minutes < 60) return `${minutes}m`;
-
-  const hours = Math.floor(minutes / 60);
-  return hours < 24 ? `${hours}hr` : `${Math.floor(hours / 24)}d`;
+  return hours < 24 ? `${hours}hr` : `${days}d`;
 };
 
 const getCreatedTimestamp = (session: SessionWithProvider): string => {

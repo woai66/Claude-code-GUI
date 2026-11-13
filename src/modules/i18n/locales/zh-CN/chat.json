@@ -72,7 +72,10 @@
   },
   "thinking": {
     "title": "思考中...",
-    "emoji": "💭 思考中..."
+    "emoji": "💭 思考中...",
+    "inProgress": "思考中…",
+    "fewSeconds": "思考了几秒",
+    "seconds_other": "思考了 {{count}} 秒"
   },
   "json": {
     "response": "JSON 响应"
@@ -199,8 +202,8 @@
     }
   },
   "providerSelection": {
-    "title": "选择您的 AI 助手",
-    "description": "选择一个供应商以开始新对话",
+    "title": "开始新对话",
+    "description": "选好模型和文件夹，在下方输入消息即可开始",
     "selectModel": "选择模型",
     "providerInfo": {
       "anthropic": "由 Anthropic 提供",
@@ -466,6 +469,7 @@
     "expandImage": "放大 {{name}}",
     "tokensLabel_other": "tokens",
     "escClosesModal": "按 Esc 关闭窗口。",
-    "close": "关闭"
+    "close": "关闭",
+    "userDeniedTool": "用户拒绝了工具调用"
   }
 }

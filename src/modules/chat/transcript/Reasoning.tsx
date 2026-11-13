@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { BrainIcon, ChevronDownIcon } from 'lucide-react';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/shared/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger, Shimmer } from '@/shared/ui';
@@ -132,14 +134,14 @@ export type ReasoningTriggerProps = {
   getThinkingMessage?: (isStreaming: boolean, duration?: number) => React.ReactNode;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>;
 
-const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number): React.ReactNode => {
+const describeThinking = (t: TFunction, isStreaming: boolean, duration?: number): React.ReactNode => {
   if (isStreaming || duration === 0) {
-    return <Shimmer>Thinking...</Shimmer>;
+    return <Shimmer>{t('thinking.inProgress', { defaultValue: 'Thinking...' })}</Shimmer>;
   }
   if (duration === undefined) {
-    return <p>Thought for a few seconds</p>;
+    return <p>{t('thinking.fewSeconds', { defaultValue: 'Thought for a few seconds' })}</p>;
   }
-  return <p>Thought for {duration} seconds</p>;
+  return <p>{t('thinking.seconds', { count: duration, defaultValue: 'Thought for {{count}} seconds' })}</p>;
 };
 
 /** Toggle of Reasoning, used by MessageComponent. */
@@ -147,9 +149,10 @@ export const ReasoningTrigger = React.memo<ReasoningTriggerProps>(
   ({
     className,
     children,
-    getThinkingMessage = defaultGetThinkingMessage,
+    getThinkingMessage,
     ...props
   }) => {
+    const { t } = useTranslation('chat');
     const { isStreaming, isOpen, duration } = useReasoning();
 
     return (
@@ -163,7 +166,9 @@ export const ReasoningTrigger = React.memo<ReasoningTriggerProps>(
         {children ?? (
           <>
             <BrainIcon className="h-4 w-4" />
-            {getThinkingMessage(isStreaming, duration)}
+            {getThinkingMessage
+              ? getThinkingMessage(isStreaming, duration)
+              : describeThinking(t, isStreaming, duration)}
             <ChevronDownIcon
               className={cn(
                 'h-4 w-4 transition-transform',

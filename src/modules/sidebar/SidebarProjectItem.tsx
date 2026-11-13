@@ -218,7 +218,7 @@ function SidebarProjectItem({
               aria-expanded={isExpanded}
               aria-label={project.displayName}
               title={project.fullPath}
-              className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-2 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border"
+              className="flex min-h-8 min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border"
               onClick={selectAndToggleProject}
             >
               {isExpanded

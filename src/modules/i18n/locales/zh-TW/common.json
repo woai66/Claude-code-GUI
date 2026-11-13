@@ -21,7 +21,8 @@
     "chat": "聊天",
     "shell": "終端機",
     "files": "檔案",
-    "git": "版本控制"
+    "git": "版本控制",
+    "views": "工作區檢視"
   },
   "status": {
     "loading": "載入中...",
@@ -52,7 +53,9 @@
     "back": "返回",
     "next": "下一步",
     "previous": "上一步",
-    "logout": "登出"
+    "logout": "登出",
+    "scrollTabsLeft": "向左滾動標籤",
+    "scrollTabsRight": "向右滾動標籤"
   },
   "common": {
     "language": "語言",
@@ -67,7 +70,10 @@
     "version": "版本",
     "select": "選取",
     "selectAll": "全選",
-    "deselectAll": "取消全選"
+    "deselectAll": "取消全選",
+    "cancel": "取消",
+    "done": "完成",
+    "failed": "失敗"
   },
   "time": {
     "justNow": "剛剛",
@@ -99,7 +105,9 @@
     "createProjectDesktop": "點擊側邊欄中的資料夾圖示以建立新專案",
     "newSession": "新工作階段",
     "untitledSession": "未命名工作階段",
-    "projectFiles": "專案檔案"
+    "projectFiles": "專案檔案",
+    "renameSessionHint": "{{title}}（雙擊重新命名）",
+    "renameSessionLabel": "工作階段標題"
   },
   "fileTree": {
     "loading": "正在載入檔案...",
@@ -136,6 +144,37 @@
       "refresh": "重新整理",
       "menuLabel": "檔案右鍵選單",
       "loading": "載入中..."
+    },
+    "delete": {
+      "confirm": "刪除",
+      "fileWarning": "這個檔案將被永久刪除。",
+      "folderWarning": "這個資料夾及其全部內容將被永久刪除。",
+      "title": "刪除{{type}}"
+    },
+    "dropToUpload": "拖放檔案以上傳",
+    "dropToUploadTo": "拖放檔案上傳到“{{folder}}”",
+    "loadFailed": "無法載入檔案",
+    "toast": {
+      "copyFailed": "複製路徑失敗",
+      "fileCreated": "檔案已建立",
+      "fileDeleted": "檔案已刪除",
+      "folderCreated": "資料夾已建立",
+      "folderDeleted": "資料夾已刪除",
+      "folderDownloaded": "資料夾已打包為 ZIP 下載",
+      "pathCopied": "路徑已複製到剪貼簿",
+      "renamed": "重新命名成功"
+    },
+    "uploadComplete": "上傳完成",
+    "uploadFailed": "上傳失敗",
+    "uploadFiles": "上傳檔案（單個不超過 {{size}}）",
+    "uploadToFolder": "上傳檔案到“{{folder}}”",
+    "uploadedCount": "已上傳 {{uploaded}} / {{total}} 個{{label}}",
+    "uploadingFiles": "正在上傳檔案",
+    "validation": {
+      "dotsOnly": "檔名不能只有點號",
+      "emptyName": "檔名不能為空",
+      "invalidChars": "檔名包含無效字元",
+      "reserved": "這個檔名是系統保留名稱"
     }
   },
   "projectWizard": {
@@ -211,9 +250,9 @@
       "usingProvidedToken": "使用提供的權杖",
       "noAuthentication": "無身分驗證",
       "sshKey": "SSH 金鑰",
-      "existingInfo": "工作區將加入您的專案列表，並可用於 Claude/Cursor 工作階段。",
+      "existingInfo": "工作區將加入您的專案列表，並可用於 Claude/Codex 工作階段。",
       "newWithClone": "儲存庫將從此資料夾複製。",
-      "newEmpty": "工作區將加入您的專案列表，並可用於 Claude/Cursor 工作階段。",
+      "newEmpty": "工作區將加入您的專案列表，並可用於 Claude/Codex 工作階段。",
       "cloningRepository": "正在複製儲存庫..."
     },
     "buttons": {
@@ -290,6 +329,130 @@
       "updateAvailable": "有可用更新",
       "closeSidebar": "關閉側邊欄",
       "resizeSidebar": "調整側邊欄寬度"
+    },
+    "connectionInterrupted": "與伺服器的連線中斷，可能正在重啟以應用更新。",
+    "refreshIn_other": "視窗將在 {{count}} 秒後重新整理。如果更新沒有生效，請重啟環境。",
+    "refreshNow": "正在重新整理視窗…",
+    "startingUpdate": "正在開始更新…",
+    "unexpectedResponse": "更新介面返回了意外的響應（HTTP {{status}}）。請用下面的命令手動更新。",
+    "unknownError": "未知錯誤",
+    "updateStartedRestarting": "更新已開始，伺服器正在重啟以應用更新。"
+  },
+  "cancel": "取消",
+  "claudeStatus": {
+    "backgroundTask": {
+      "agent": "子代理 {{description}}",
+      "command": "命令 {{description}}",
+      "workflow": "工作流 {{name}}"
     }
+  },
+  "commandPalette": {
+    "backToAll": "返回全部",
+    "backspaceHint": "按退格鍵返回",
+    "browseAllBranches": "瀏覽全部分支（{{count}}）",
+    "browseAllCommits": "瀏覽全部提交（{{count}}）",
+    "browseAllFiles": "瀏覽全部檔案（{{count}}）",
+    "browseAllSessions": "瀏覽全部工作階段（{{count}}）",
+    "gitFetch": "Git：獲取",
+    "gitPull": "Git：拉取",
+    "gitPush": "Git：推送",
+    "groupActions": "操作",
+    "groupBranches": "分支",
+    "groupCommits": "提交",
+    "groupFiles": "檔案",
+    "groupGit": "Git",
+    "groupNavigate": "跳轉",
+    "groupSessions": "工作階段",
+    "groupSettings": "設定",
+    "navChat": "前往聊天",
+    "navFiles": "前往檔案",
+    "navGit": "前往原始碼管理",
+    "navShell": "前往終端",
+    "noResults": "沒有結果。",
+    "openSettings": "開啟設定",
+    "pages": {
+      "actions": "操作",
+      "branches": "分支",
+      "commits": "提交",
+      "files": "檔案",
+      "sessions": "工作階段"
+    },
+    "searchAnything": "輸入內容開始搜尋…",
+    "searchPage": "搜尋{{page}}…",
+    "selectProjectFirst": "請先選擇專案",
+    "settingsItem": "設定：{{label}}",
+    "startNewChat": "新建對話",
+    "switchTo": "切換到：{{name}}",
+    "title": "命令面板",
+    "toggleTheme": "切換主題"
+  },
+  "folderBrowser": {
+    "create": "建立",
+    "createFailed": "建立資料夾失敗",
+    "createNew": "新建資料夾",
+    "hideHidden": "不顯示隱藏資料夾",
+    "loadFailed": "載入資料夾失敗",
+    "newFolderPlaceholder": "新資料夾名稱",
+    "noSubfolders": "沒有子資料夾",
+    "pathLabel": "路徑：",
+    "select": "選擇",
+    "showHidden": "顯示隱藏資料夾",
+    "title": "選擇資料夾",
+    "useThisFolder": "使用這個資料夾"
+  },
+  "misc": {
+    "browseFolders": "瀏覽資料夾",
+    "close": "關閉",
+    "closeLoginModal": "關閉登入視窗",
+    "completedBadge": "（已完成）",
+    "errorDescription": "載入聊天介面時發生錯誤。",
+    "errorDetails": "錯誤詳情",
+    "errorTitle": "出錯了",
+    "hideToken": "隱藏權杖",
+    "noProjectSelected": "未選擇專案",
+    "openMenu": "開啟選單",
+    "pluginLoadFailed": "外掛載入失敗：{{error}}",
+    "projectFallback": "專案",
+    "projectRequiredForShell": "需要先選擇專案才能開啟終端",
+    "showToken": "顯示權杖",
+    "tryAgain": "重試",
+    "unknownProvider": "未知"
+  },
+  "workflow": {
+    "agentStatus": {
+      "completed": "已完成",
+      "failed": "失敗",
+      "queued": "排隊中",
+      "running": "執行中",
+      "stopped": "無結果"
+    },
+    "agentTimelineEmpty": "還沒有記錄",
+    "agentTimelineLoading": "正在讀取子代理的步驟…",
+    "agentTimelineUnavailable": "無法顯示步驟：{{reason}}",
+    "agentTokens": "{{tokens}} tokens",
+    "agentToolCalls_other": "{{count}} 次工具呼叫",
+    "agents": "子代理",
+    "agentsFailed": "{{count}} 個失敗",
+    "agentsFinished_other": "{{count}} 個子代理中已完成 {{finished}} 個",
+    "agentsProgress_other": "{{finished}}/{{count}} 個子代理",
+    "backgroundAgent": "子代理",
+    "backgroundCommand": "命令",
+    "backgroundTasks": "後臺任務",
+    "currentAgent": "當前：{{label}}",
+    "phases": "階段",
+    "result": "結果",
+    "script": "指令碼",
+    "status": {
+      "completed": "已完成",
+      "failed": "失敗",
+      "running": "執行中",
+      "stopped": "無結果"
+    },
+    "stopTask": "停止",
+    "stoppedHint": "這個工作流還沒彙報，執行就結束了",
+    "taskOfAgent": "由這個工作階段的某個子代理啟動",
+    "taskRowNotLoaded": "在這個對話較早的位置啟動；點選載入",
+    "title": "工作流",
+    "usage": "{{toolUses}} 次工具呼叫 · {{elapsed}}"
   }
 }

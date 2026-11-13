@@ -107,9 +107,11 @@ export default function AccountContent({ agent, authStatus, onLogin }: AccountCo
                 {authStatus.loading ? (
                   t('agents.authStatus.checkingAuth')
                 ) : authStatus.authenticated ? (
-                  t('agents.authStatus.loggedInAs', {
-                    email: authStatus.email || t('agents.authStatus.authenticatedUser'),
-                  })
+                  // The server sends the placeholder "Authenticated" when the CLI's login
+                  // carries no account name; "logged in as Authenticated" says nothing.
+                  authStatus.email && authStatus.email !== 'Authenticated'
+                    ? t('agents.authStatus.loggedInAs', { email: authStatus.email })
+                    : t('agents.authStatus.loggedIn', { defaultValue: 'Logged in' })
                 ) : (
                   t('agents.authStatus.notConnected')
                 )}

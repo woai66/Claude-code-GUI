@@ -217,7 +217,8 @@ function ChatMessagesPane({
           </div>
         </div>
       )}
-      <div className="mx-auto w-full max-w-[54.25rem] space-y-3 px-4 sm:space-y-4">
+      {/* Below xl the column reaches the pane's edge, so it keeps clear of the floating export button. */}
+      <div className="mx-auto w-full max-w-[54.25rem] space-y-3 px-4 max-xl:pr-14 sm:space-y-4">
       {(isLoadingSessionMessages || isProcessing) && chatMessages.length === 0 ? (
         <div className="mt-8 text-center text-gray-500 dark:text-gray-400">
           <div className="flex items-center justify-center space-x-2">

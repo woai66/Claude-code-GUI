@@ -17,8 +17,8 @@ import SidebarModeTabs from '@/modules/sidebar/SidebarModeTabs';
 const LABELS: Record<string, string> = {
   'search.modeProjects': 'Projects',
   'search.modeConversations': 'Conversations',
-  'search.runningTooltip': 'Running sessions',
-  'search.archiveOnlyTooltip': 'Archive only',
+  'search.modeRunning': 'Running',
+  'search.modeArchived': 'Archive',
   'search.modeMore': 'More',
 };
 
@@ -53,8 +53,8 @@ test('a wide row shows every tab and no overflow menu', () => {
 
   assert.ok(screen.getByRole('button', { name: 'Projects' }));
   assert.ok(screen.getByRole('button', { name: 'Conversations' }));
-  assert.ok(screen.getByRole('button', { name: 'Running sessions' }));
-  assert.ok(screen.getByRole('button', { name: 'Archive only' }));
+  assert.ok(screen.getByRole('button', { name: 'Running' }));
+  assert.ok(screen.getByRole('button', { name: 'Archive' }));
   assert.equal(screen.queryByRole('button', { name: 'More' }), null);
 });
 
@@ -65,8 +65,8 @@ test('a narrow row moves the tabs that no longer fit into the dropdown', () => {
   assert.equal(screen.queryByRole('button', { name: 'Conversations' }), null);
 
   fireEvent.click(screen.getByRole('button', { name: 'More' }));
-  assert.ok(screen.getByRole('menuitem', { name: 'Running sessions' }));
-  assert.ok(screen.getByRole('menuitem', { name: 'Archive only' }));
+  assert.ok(screen.getByRole('menuitem', { name: 'Running' }));
+  assert.ok(screen.getByRole('menuitem', { name: 'Archive' }));
 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Conversations' }));
   assert.deepEqual(changes, ['conversations']);
@@ -77,7 +77,7 @@ test('the section on screen keeps its place in the row', () => {
 
   // Archive is the last tab and the first to be dropped on width alone, but it
   // is the open section, so the strip has to keep showing it as pressed.
-  const archive = screen.getByRole('button', { name: 'Archive only' });
+  const archive = screen.getByRole('button', { name: 'Archive' });
   assert.equal(archive.getAttribute('aria-pressed'), 'true');
   assert.equal(screen.queryByRole('button', { name: 'Conversations' }), null);
   assert.ok(screen.getByRole('button', { name: 'More' }));

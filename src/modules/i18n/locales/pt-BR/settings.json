@@ -606,16 +606,6 @@
   "about": {
     "tagline": "Interface de assistente de codificação com IA de código aberto",
     "starOnGitHub": "Dar estrela no GitHub",
-    "docs": "Docs",
-    "hostedTitle": "Experimente o Claude GUI hospedado",
-    "hostedDescription": "Colaboração em equipe, configs MCP compartilhados, sincronização de configurações entre ambientes e infraestrutura gerenciada.",
-    "learnMore": "Saiba mais",
-    "proFeaturesTitle": "Recursos do CloudCLI Pro",
-    "syncSettingsTitle": "Sincronizar configurações",
-    "syncSettingsDescription": "Mantenha suas preferências, configs MCP e tema em sincronia em todos os seus ambientes.",
-    "teamManagementTitle": "Gerenciamento de equipe",
-    "teamManagementDescription": "Múltiplos usuários, acesso baseado em funções e projetos compartilhados para sua equipe.",
-    "licensed": "Licenciado sob AGPL-3.0",
-    "proCta": "Disponível com CloudCLI Pro"
+    "licensed": "Licenciado sob AGPL-3.0"
   }
 }

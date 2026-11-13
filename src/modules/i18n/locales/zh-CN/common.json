@@ -250,9 +250,9 @@
       "usingProvidedToken": "使用提供的令牌",
       "noAuthentication": "无身份验证",
       "sshKey": "SSH 密钥",
-      "existingInfo": "工作区将被添加到您的项目列表中，并可用于 Claude/Cursor 会话。",
+      "existingInfo": "工作区将被添加到您的项目列表中，并可用于 Claude/Codex 会话。",
       "newWithClone": "仓库将从此文件夹克隆。",
-      "newEmpty": "工作区将被添加到您的项目列表中，并可用于 Claude/Cursor 会话。",
+      "newEmpty": "工作区将被添加到您的项目列表中，并可用于 Claude/Codex 会话。",
       "cloningRepository": "正在克隆仓库..."
     },
     "buttons": {
@@ -443,6 +443,16 @@
     "stoppedHint": "这个工作流还没汇报，运行就结束了",
     "taskOfAgent": "由这个会话的某个子代理启动",
     "taskRowNotLoaded": "在这个对话较早的位置启动；点击加载",
-    "usage": "{{toolUses}} 次工具调用 · {{elapsed}}"
+    "usage": "{{toolUses}} 次工具调用 · {{elapsed}}",
+    "agentStatus": {
+      "completed": "已完成",
+      "failed": "失败",
+      "queued": "排队中",
+      "running": "运行中",
+      "stopped": "无结果"
+    },
+    "agentToolCalls_other": "{{count}} 次工具调用",
+    "agentsFinished_other": "{{count}} 个子代理中已完成 {{finished}} 个",
+    "agentsProgress_other": "{{finished}}/{{count}} 个子代理"
   }
 }

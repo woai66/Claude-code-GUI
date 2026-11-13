@@ -10,7 +10,7 @@
   </p>
 </div>
 
-Claude GUI 是基于 **[CloudCLI UI (https://github.com/siteboon/claudecodeui)](https://github.com/siteboon/claudecodeui)** 持续二次开发的个人维护版本，重点面向 Windows 本地桌面使用。项目围绕 Claude Code、Codex 和 Cursor CLI 的日常使用重新整理了界面、会话管理和模型设置。
+Claude GUI 是基于 **[CloudCLI UI (https://github.com/siteboon/claudecodeui)](https://github.com/siteboon/claudecodeui)** 持续二次开发的个人维护版本，重点面向 Windows 本地桌面使用。项目只面向 Claude Code 和 Codex 两个官方 CLI，围绕它们的日常使用重新整理了界面、会话管理和模型设置，并移除了上游的任务管理、插件、浏览器自动化、语音等附加功能。
 
 安装后直接进入本地工作区，无需 Cloud 服务账户；在同一个项目目录里，可以选择不同 CLI 创建各自的对话。AI 服务使用你已有的 CLI 登录、订阅或 API 配置。
 
@@ -18,7 +18,7 @@ Claude GUI 是基于 **[CloudCLI UI (https://github.com/siteboon/claudecodeui)](
 
 项目、不同 CLI 的历史会话和当前对话集中在同一个工作区。
 
-![Claude GUI 工作区：项目侧边栏、多 CLI 会话和 Claude 对话](public/screenshots/workspace.png)
+![Claude GUI 工作区：项目侧边栏、Claude Code 与 Codex 会话](public/screenshots/workspace.png)
 
 <details>
 <summary>查看模型库和 Codex Fast 截图</summary>
@@ -89,8 +89,8 @@ npm run desktop:dist:win -- --publish never
 
 ### 3. 添加项目并开始对话
 
-1. 新建项目，选择本地目录；桌面版也可以从资源管理器拖入一个文件夹。
-2. 通过侧边栏顶部的「新建会话」选择项目和 CLI，或打开已有对话继续。
+1. 启动后直接进入最近使用项目的新对话页。在页面中间的文件夹菜单里切换到其他项目，或「选择其他文件夹…」直接打开任意目录。
+2. 也可以通过侧边栏顶部的「新建会话」选择项目，或打开已有对话继续。
 
 不常用的目录可在项目的三点菜单中选择「隐藏项目」。点击「新建会话」旁的「已隐藏的项目」图标可恢复显示；隐藏状态会保留，目录与历史对话不受影响，仍可从「对话」页访问，运行中的任务也会继续显示。
 3. 打开「模型库」，选择提供商并点击「获取模型列表」。已有缓存时可以手动刷新。

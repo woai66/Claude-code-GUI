@@ -238,7 +238,24 @@
       "saving": "保存中...",
       "addServer": "添加服务器",
       "updateServer": "更新服务器"
-    }
+    },
+    "addToProvider": "{{action}}到 {{provider}}",
+    "bearerTokenEnvVar": "Bearer 令牌的环境变量名",
+    "envVarNames": "环境变量名",
+    "scopes": {
+      "local": "Claude 本地",
+      "localDesc": "保存在所选项目对应的 Claude 用户设置里",
+      "project": "项目",
+      "projectAllProviders": "项目（所有智能体）",
+      "projectAllProvidersDesc": "为每个智能体写入所选项目的工作区",
+      "projectDesc": "保存在所选项目的工作区里",
+      "userAllProviders": "用户（所有智能体）",
+      "userAllProvidersDesc": "写入每个智能体的用户配置，本机所有项目都可用",
+      "userGlobal": "用户（全局）",
+      "userGlobalDesc": "本机所有项目都可用"
+    },
+    "unsupportedTransport": "为所有智能体添加 MCP 服务器时只支持 stdio 和 http，不支持 {{transport}}。",
+    "workingDirectory": "工作目录"
   },
   "saveStatus": {
     "success": "设置保存成功！",
@@ -312,7 +329,7 @@
     "apiDocsLink": "API 文档",
     "documentation": {
       "title": "外部 API 文档",
-      "description": "了解如何使用外部 API 从您的应用程序触发 Claude/Cursor 会话。",
+      "description": "了解如何使用外部 API 从您的应用程序触发 Claude/Codex 会话。",
       "viewLink": "查看 API 文档 →"
     },
     "loading": "加载中...",
@@ -328,7 +345,8 @@
       "disconnected": "已断开",
       "checkingAuth": "正在检查认证状态...",
       "loggedInAs": "登录为 {{email}}",
-      "authenticatedUser": "已认证用户"
+      "authenticatedUser": "已认证用户",
+      "loggedIn": "已登录"
     },
     "account": {
       "claude": {
@@ -354,7 +372,20 @@
       "button": "登录",
       "reLoginButton": "重新登录"
     },
-    "error": "错误：{{error}}"
+    "error": "错误：{{error}}",
+    "subscriptionOverride": {
+      "title": "当前没有使用你的订阅登录",
+      "description": "{{source}} 里设置了 {{variable}}，所以 Claude Code 的每次请求都按这个密钥的 API 用量计费，而不是使用你的订阅登录。",
+      "descriptionWithEmail": "{{source}} 里设置了 {{variable}}，所以 Claude Code 的每次请求都按这个密钥的 API 用量计费，而不是使用你的订阅登录（{{email}}）。",
+      "fix": {
+        "process_env": "要改用订阅，请在启动服务器的地方（.env、shell 配置、服务单元）取消设置 {{variable}}，然后重启服务器。",
+        "settings_file": "要改用订阅，请从 ~/.claude/settings.json 的 \"env\" 里删除 {{variable}}。"
+      },
+      "source": {
+        "process_env": "服务器环境变量",
+        "settings_file": "~/.claude/settings.json"
+      }
+    }
   },
   "permissions": {
     "title": "权限设置",
@@ -495,5 +526,84 @@
     "starOnGitHub": "在 GitHub 上点星",
     "basedOn": "基于 CloudCLI UI",
     "licensed": "以 AGPL-3.0 许可发布"
+  },
+  "mcpServersAdd": {
+    "configCwd": "工作目录",
+    "configEnvVars": "环境变量",
+    "globalAddDescription": "“添加全局 MCP 服务器”会把同一个 stdio 或 HTTP 服务器写入 Claude 和 Codex。",
+    "globalButtonLabel": "添加全局 MCP 服务器",
+    "globalModalDescription": "把这个 MCP 服务器添加到所有智能体（Claude 和 Codex）。同一份配置要在各智能体里都能用，所以只支持 stdio 和 HTTP。",
+    "loadingServers": "正在加载 MCP 服务器…",
+    "menuLabel": "添加 MCP 服务器",
+    "providerAddDescription": "{{button}}只会修改 {{provider}}。",
+    "providerButtonLabel": "添加 {{provider}} MCP 服务器",
+    "refreshingScopes": "正在刷新项目范围…"
+  },
+  "mcpServersAddErrors": {
+    "deleteConfirm": "确定要删除这个 MCP 服务器吗？",
+    "deleteFailed": "删除 MCP 服务器失败",
+    "globalAddFailed": "无法把 MCP 服务器添加到所有智能体。{{details}}",
+    "globalScopeUnsupported": "为所有智能体添加 MCP 服务器时只支持用户或项目范围。",
+    "loadFailedProvider": "加载 {{provider}} 的 MCP 服务器失败",
+    "saveFailed": "保存 MCP 服务器失败",
+    "saveGlobalFailed": "无法把 MCP 服务器保存到所有智能体",
+    "selectProjectRequired": "项目范围的 MCP 服务器需要先选择项目",
+    "unknownError": "未知错误"
+  },
+  "skillsPage": {
+    "addDialogDescription": "上传一个 SKILL.md 文件，或一个完整的技能文件夹。",
+    "addDialogTitle": "添加 {{provider}} 技能",
+    "addSkill": "添加技能",
+    "clearSearch": "清除技能搜索",
+    "closeDialog": "关闭添加技能窗口",
+    "count_other": "{{count}} 个技能",
+    "description": "管理 {{provider}} 的技能：本地文件、完整文件夹，以及各项目里的技能。",
+    "emptyDescription": "在上方添加全局技能，或在工作区里创建项目专用的技能文件夹。",
+    "emptyTitle": "还没有发现技能",
+    "errors": {
+      "addFirst": "请先添加一个或多个 Markdown 文件。",
+      "couldNotReadSkillMd": "无法读取 {{folder}} 里的 SKILL.md。",
+      "dropMarkdown": "请拖入一个或多个 Markdown 文件，或包含 SKILL.md 的文件夹。",
+      "importFailed": "导入技能失败",
+      "noSkillMd": "所选文件夹里没有 SKILL.md 文件。",
+      "readFailed": "读取技能文件夹失败",
+      "tooLarge": "所选技能文件夹的总大小不能超过 30 MB。",
+      "tooManyFiles": "一个技能文件夹最多包含 {{max}} 个文件。"
+    },
+    "footerHint": "上传文件夹时沿用文件夹名；单个文件使用 `SKILL.md` 里的 `name`。",
+    "installPlain": "安装技能",
+    "installWithCount_other": "安装 {{count}} 个技能",
+    "loading": "正在加载 {{provider}} 技能…",
+    "noDescription": "技能的前置信息里没有填写说明。",
+    "noMatchDescription": "换一个命令、名称、范围、项目或来源路径试试。",
+    "noMatchTitle": "没有匹配的技能",
+    "pluginBadge": "插件：{{name}}",
+    "projectBadge": "项目：{{name}}",
+    "refresh": "刷新",
+    "savedSuccessfully": "技能已保存。",
+    "scanningProjectSkills": "正在扫描项目技能…",
+    "scopes": {
+      "admin": "管理员",
+      "plugin": "插件",
+      "project": "项目",
+      "repo": "仓库",
+      "system": "系统",
+      "user": "用户"
+    },
+    "searchAriaLabel": "搜索技能",
+    "searchPlaceholder": "搜索技能…",
+    "source": "来源",
+    "upload": {
+      "chooseFiles": "选择文件",
+      "chooseFolder": "选择文件夹",
+      "dropHint": "文件夹里可以包含脚本、参考资料和资源文件。",
+      "dropTitle": "拖入技能文件夹或 SKILL.md",
+      "filesCount_other": "{{count}} 个文件",
+      "hideInstallLocation": "隐藏安装位置",
+      "markdownFile": "Markdown 文件",
+      "readyToInstall": "可以安装",
+      "removeFile": "移除 {{name}}",
+      "whereToInstall": "会安装到哪里？"
+    }
   }
 }

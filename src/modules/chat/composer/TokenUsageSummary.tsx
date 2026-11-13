@@ -49,6 +49,12 @@ function TokenUsageSummary({ provider, usage, onClick }: TokenUsageSummaryProps)
   const outputTokens = readUsageNumber(usage?.outputTokens ?? breakdown?.output);
   const usedTokens = readUsageNumber(usage?.used) || inputTokens + outputTokens;
   const capacity = readUsageNumber(usage?.total);
+  // Before the first turn there is no usage and no known capacity; a "— / ?" readout
+  // would only be noise in the toolbar.
+  if (usedTokens <= 0 && capacity <= 0) {
+    return null;
+  }
+
   const contextLabel = provider === 'codex'
     ? `${usage && !usage.unsupported ? formatTokenCount(usedTokens) : '—'} / ${capacity > 0 ? formatTokenCount(capacity) : '?'}`
     : formatTokenCount(usedTokens);

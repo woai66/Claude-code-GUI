@@ -22,7 +22,10 @@
     "saved": "已儲存！",
     "exitFullscreen": "離開全螢幕",
     "fullscreen": "全螢幕",
-    "close": "關閉"
+    "close": "關閉",
+    "editMarkdown": "編輯 Markdown",
+    "previewHtml": "在新標籤頁預覽 HTML",
+    "previewMarkdown": "預覽 Markdown"
   },
   "footer": {
     "lines": "行數：",
@@ -36,5 +39,10 @@
   "unsavedChanges": {
     "confirmClose": "您有未儲存的變更。關閉此檔案並放棄這些變更？",
     "indicator": "未儲存的變更"
+  },
+  "filePreview": {
+    "error": "無法顯示此檔案。",
+    "loading": "正在載入預覽...",
+    "openInNewTab": "在新標籤頁中開啟"
   }
 }

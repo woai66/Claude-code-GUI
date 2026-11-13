@@ -590,16 +590,6 @@
   "about": {
     "tagline": "Antarmuka asisten coding AI open source",
     "starOnGitHub": "Beri Bintang di GitHub",
-    "docs": "Dokumentasi",
-    "hostedTitle": "Coba Claude GUI Hosted",
-    "hostedDescription": "Kolaborasi tim, konfigurasi MCP bersama, sinkronisasi pengaturan antar-environment, dan infrastruktur terkelola.",
-    "learnMore": "Pelajari lebih lanjut",
-    "proFeaturesTitle": "Fitur CloudCLI Pro",
-    "syncSettingsTitle": "Sinkronkan Pengaturan",
-    "syncSettingsDescription": "Jaga preferensi, konfigurasi MCP, dan tema tetap sinkron di semua environment.",
-    "teamManagementTitle": "Manajemen Tim",
-    "teamManagementDescription": "Banyak pengguna, akses berbasis peran, dan proyek bersama untuk tim.",
-    "licensed": "Dilisensikan di bawah AGPL-3.0",
-    "proCta": "Tersedia dengan CloudCLI Pro"
+    "licensed": "Dilisensikan di bawah AGPL-3.0"
   }
 }

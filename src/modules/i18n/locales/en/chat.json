@@ -83,7 +83,11 @@
   },
   "thinking": {
     "title": "Thinking...",
-    "emoji": "💭 Thinking..."
+    "emoji": "💭 Thinking...",
+    "inProgress": "Thinking...",
+    "fewSeconds": "Thought for a few seconds",
+    "seconds_one": "Thought for {{count}} second",
+    "seconds_other": "Thought for {{count}} seconds"
   },
   "json": {
     "response": "JSON Response"
@@ -227,8 +231,8 @@
     }
   },
   "providerSelection": {
-    "title": "Choose Your AI Assistant",
-    "description": "Select a provider to start a new conversation",
+    "title": "Start a new conversation",
+    "description": "Pick a model and a folder, then type your message below",
     "selectModel": "Select Model",
     "providerInfo": {
       "anthropic": "by Anthropic",

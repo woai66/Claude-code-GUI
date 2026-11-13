@@ -71,7 +71,7 @@ export default function SidebarProjectList({
   const showProjects = projects.length > 0 && filteredProjects.length > 0;
 
   return (
-      <div aria-busy={isLoading} className="pb-safe-area-inset-bottom md:space-y-1">
+      <div aria-busy={isLoading} className="pb-safe-area-inset-bottom md:space-y-0.5">
         {!showProjects
           ? state
           : filteredProjects.map((project) => {

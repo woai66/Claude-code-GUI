@@ -18,7 +18,12 @@
     "projects": "專案",
     "noMatchingProjects": "找不到符合的專案",
     "tryDifferentSearch": "嘗試調整您的搜尋詞",
-    "runClaudeCli": "在專案目錄中執行 Claude CLI 以開始使用"
+    "runClaudeCli": "在專案目錄中執行 Claude CLI 以開始使用",
+    "allHidden": "所有專案均已隱藏",
+    "hiddenProjects": "已隱藏的專案",
+    "hiddenProjectsHint": "點選專案即可恢復顯示，目錄和對話均保留。",
+    "hideProject": "隱藏專案",
+    "restoreHiddenHint": "點選“新建工作階段”旁的“已隱藏的專案”圖示可恢復顯示。"
   },
   "app": {
     "title": "Claude GUI",
@@ -52,7 +57,23 @@
     "selectAllLoaded": "全選已載入",
     "clearSelection": "清除選取",
     "deleteSelected_one": "刪除 {{count}} 個工作階段",
-    "deleteSelected_other": "刪除 {{count}} 個工作階段"
+    "deleteSelected_other": "刪除 {{count}} 個工作階段",
+    "archiveOrDelete": "歸檔或刪除工作階段",
+    "copyId": {
+      "copied": "已複製 {{provider}} 工作階段 ID",
+      "copy": "複製 {{provider}} 工作階段 ID",
+      "copyFailed": "無法複製 {{provider}} 工作階段 ID",
+      "loading": "正在讀取 {{provider}} 工作階段 ID…",
+      "retryHint": "點選重試。",
+      "unavailable": "沒有 {{provider}} 工作階段 ID"
+    },
+    "count": "{{count}} 個工作階段",
+    "fork": "分叉工作階段",
+    "forkHint": "從副本繼續，原工作階段保持不變。",
+    "options": "工作階段選項",
+    "optionsFor": "工作階段選項：{{name}}",
+    "providerSession": "{{provider}} 工作階段",
+    "rename": "重新命名工作階段"
   },
   "tooltips": {
     "viewEnvironments": "查看環境",
@@ -69,7 +90,10 @@
     "cancel": "取消",
     "clearSearch": "清除搜尋",
     "openCommandPalette": "開啟指令面板",
-    "attentionRequiredIndicator": "工作階段需要處理"
+    "attentionRequiredIndicator": "工作階段需要處理",
+    "activeSessionIndicator": "最近活躍的工作階段（最近 10 分鐘）",
+    "backgroundWorkIndicator": "後臺任務執行中",
+    "processingSessionIndicator": "工作階段處理中"
   },
   "navigation": {
     "chat": "聊天",
@@ -157,7 +181,12 @@
     "matches_one": "{{count}} 個符合",
     "matches_other": "{{count}} 個符合",
     "projectsScanned_one": "{{count}} 個專案已掃描",
-    "projectsScanned_other": "{{count}} 個專案已掃描"
+    "projectsScanned_other": "{{count}} 個專案已掃描",
+    "modeRunning": "執行中",
+    "modeArchived": "封存",
+    "archivedPlaceholder": "搜尋歸檔的工作階段…",
+    "retry": "重試",
+    "runningPlaceholder": "搜尋執行中的工作階段…"
   },
   "deleteConfirmation": {
     "deleteProject": "移除專案",
@@ -183,5 +212,36 @@
     "archiveSessions_other": "封存 {{count}} 個工作階段",
     "archiveSessionsNotice_one": "封存會將所選工作階段移出使用中清單，但保留其歷史記錄。",
     "archiveSessionsNotice_other": "封存會將所選工作階段移出使用中清單，但保留其歷史記錄。"
+  },
+  "archived": {
+    "deletePermanently": "永久刪除",
+    "emptyDescription": "從活動列表中隱藏的工作區和工作階段會出現在這裡。",
+    "emptyTitle": "沒有歸檔內容",
+    "loadingDescription": "正在讀取可以恢復的工作區和工作階段。",
+    "loadingTitle": "正在載入歸檔…",
+    "noMatchingSessions": "沒有匹配的歸檔內容",
+    "restore": "恢復工作階段",
+    "restoreAction": "恢復",
+    "restoreHint": "需要時可以隨時恢復",
+    "restoreProject": "恢復工作區",
+    "title": "歸檔",
+    "tryDifferentSearch": "換一個關鍵詞試試。"
+  },
+  "buttons": {
+    "retry": "重試"
+  },
+  "recent": {
+    "emptyDescription": "最近更新的對話會顯示在這裡。",
+    "emptyTitle": "還沒有對話",
+    "loadFailed": "無法載入最近對話",
+    "loadMore": "載入更早的對話",
+    "loadingMore": "正在載入…",
+    "title": "最近對話"
+  },
+  "running": {
+    "emptyDescription": "代理處理任務時，工作階段會顯示在這裡。",
+    "emptyTitle": "沒有正在執行的工作階段",
+    "noMatchingSessions": "沒有匹配的執行中工作階段。",
+    "title": "正在執行"
   }
 }

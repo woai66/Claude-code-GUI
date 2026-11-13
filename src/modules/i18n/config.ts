@@ -128,6 +128,7 @@ import zhTWAuth from '@/modules/i18n/locales/zh-TW/auth.json';
 import zhTWSidebar from '@/modules/i18n/locales/zh-TW/sidebar.json';
 import zhTWChat from '@/modules/i18n/locales/zh-TW/chat.json';
 import zhTWCodeEditor from '@/modules/i18n/locales/zh-TW/codeEditor.json';
+import zhTWGit from '@/modules/i18n/locales/zh-TW/git.json';
 // oxlint-disable-next-line importx/order
 
 import ptBRCommon from '@/modules/i18n/locales/pt-BR/common.json';
@@ -282,6 +283,7 @@ git: enGit,
         sidebar: zhTWSidebar,
         chat: zhTWChat,
         codeEditor: zhTWCodeEditor,
+        git: zhTWGit,
       },
       'pt-BR': {
         common: ptBRCommon,

@@ -4,7 +4,8 @@
     "account": "帳戶",
     "permissions": "權限",
     "mcpServers": "MCP 伺服器",
-    "appearance": "外觀"
+    "appearance": "外觀",
+    "skills": "技能"
   },
   "account": {
     "title": "帳戶",
@@ -88,7 +89,8 @@
         "skills": "技能"
       },
       "insertTitle": "將 {{command}} 插入聊天"
-    }
+    },
+    "voiceEnabled": "語音（麥克風 + 朗讀）"
   },
   "terminalShortcuts": {
     "title": "終端機快速鍵",
@@ -103,7 +105,8 @@
     "handle": {
       "closePanel": "關閉快速鍵面板",
       "openPanel": "開啟快速鍵面板"
-    }
+    },
+    "paste": "貼上"
   },
   "mainTabs": {
     "label": "設定",
@@ -138,6 +141,13 @@
       "actionRequired": "需要處理",
       "stop": "執行已停止",
       "error": "執行失敗"
+    },
+    "desktop": {
+      "disable": "關閉通知",
+      "enable": "啟用通知",
+      "enabled": "此桌面應用已啟用通知",
+      "title": "通知此桌面應用",
+      "unsupported": "此係統不支援桌面通知。"
     }
   },
   "appearanceSettings": {
@@ -229,7 +239,24 @@
       "saving": "儲存中...",
       "addServer": "新增伺服器",
       "updateServer": "更新伺服器"
-    }
+    },
+    "addToProvider": "{{action}}到 {{provider}}",
+    "bearerTokenEnvVar": "Bearer 權杖的環境變數名",
+    "envVarNames": "環境變數名",
+    "scopes": {
+      "local": "Claude 本地",
+      "localDesc": "儲存在所選專案對應的 Claude 使用者設定裡",
+      "project": "專案",
+      "projectAllProviders": "專案（所有代理）",
+      "projectAllProvidersDesc": "為每個代理寫入所選專案的工作區",
+      "projectDesc": "儲存在所選專案的工作區裡",
+      "userAllProviders": "使用者（所有代理）",
+      "userAllProvidersDesc": "寫入每個代理的使用者配置，本機所有專案都可用",
+      "userGlobal": "使用者（全域性）",
+      "userGlobalDesc": "本機所有專案都可用"
+    },
+    "unsupportedTransport": "為所有代理新增 MCP 伺服器時只支援 stdio 和 http，不支援 {{transport}}。",
+    "workingDirectory": "工作目錄"
   },
   "saveStatus": {
     "success": "設定儲存成功！",
@@ -303,7 +330,7 @@
     "apiDocsLink": "API 文件",
     "documentation": {
       "title": "外部 API 文件",
-      "description": "了解如何使用外部 API 從您的應用程式觸發 Claude/Cursor 工作階段。",
+      "description": "了解如何使用外部 API 從您的應用程式觸發 Claude/Codex 工作階段。",
       "viewLink": "查看 API 文件 →"
     },
     "loading": "載入中...",
@@ -319,7 +346,8 @@
       "disconnected": "已中斷連線",
       "checkingAuth": "正在檢查驗證狀態...",
       "loggedInAs": "登入為 {{email}}",
-      "authenticatedUser": "已驗證使用者"
+      "authenticatedUser": "已驗證使用者",
+      "loggedIn": "已登入"
     },
     "account": {
       "claude": {
@@ -330,6 +358,9 @@
       },
       "codex": {
         "description": "OpenAI Codex AI 助手"
+      },
+      "opencode": {
+        "description": "OpenCode CLI 助手"
       }
     },
     "connectionStatus": "連線狀態",
@@ -341,7 +372,21 @@
       "button": "登入",
       "reLoginButton": "重新登入"
     },
-    "error": "錯誤：{{error}}"
+    "error": "錯誤：{{error}}",
+    "localCli": "本機 CLI",
+    "subscriptionOverride": {
+      "description": "{{source}} 裡設定了 {{variable}}，所以 Claude Code 的每次請求都按這個金鑰的 API 用量計費，而不是使用你的訂閱登入。",
+      "descriptionWithEmail": "{{source}} 裡設定了 {{variable}}，所以 Claude Code 的每次請求都按這個金鑰的 API 用量計費，而不是使用你的訂閱登入（{{email}}）。",
+      "fix": {
+        "process_env": "要改用訂閱，請在啟動伺服器的地方（.env、shell 配置、服務單元）取消設定 {{variable}}，然後重啟伺服器。",
+        "settings_file": "要改用訂閱，請從 ~/.claude/settings.json 的 \"env\" 裡刪除 {{variable}}。"
+      },
+      "source": {
+        "process_env": "伺服器環境變數",
+        "settings_file": "~/.claude/settings.json"
+      },
+      "title": "當前沒有使用你的訂閱登入"
+    }
   },
   "permissions": {
     "title": "權限設定",
@@ -443,7 +488,8 @@
     "description": {
       "claude": "Model Context Protocol 伺服器為 Claude 提供額外的工具和資料來源",
       "cursor": "Model Context Protocol 伺服器為 Cursor 提供額外的工具和資料來源",
-      "codex": "Model Context Protocol 伺服器為 Codex 提供額外的工具和資料來源"
+      "codex": "Model Context Protocol 伺服器為 Codex 提供額外的工具和資料來源",
+      "opencode": "Model Context Protocol 伺服器為 OpenCode 提供額外的工具和資料來源"
     },
     "addButton": "新增 MCP 伺服器",
     "empty": "未設定 MCP 伺服器",
@@ -470,6 +516,10 @@
     "help": {
       "title": "關於 Codex MCP",
       "description": "Codex 支援基於 stdio 的 MCP 伺服器。您可以新增伺服器，透過額外的工具和資源來擴充 Codex 的功能。"
+    },
+    "managed": {
+      "badge": "已託管",
+      "hint": "由 Claude GUI 管理。"
     }
   },
   "about": {
@@ -477,5 +527,84 @@
     "starOnGitHub": "在 GitHub 上按星",
     "basedOn": "基於 CloudCLI UI",
     "licensed": "以 AGPL-3.0 授權發布"
+  },
+  "mcpServersAdd": {
+    "configCwd": "工作目錄",
+    "configEnvVars": "環境變數",
+    "globalAddDescription": "“新增全域性 MCP 伺服器”會把同一個 stdio 或 HTTP 伺服器寫入 Claude 和 Codex。",
+    "globalButtonLabel": "新增全域性 MCP 伺服器",
+    "globalModalDescription": "把這個 MCP 伺服器新增到所有代理（Claude 和 Codex）。同一份配置要在各代理裡都能用，所以只支援 stdio 和 HTTP。",
+    "loadingServers": "正在載入 MCP 伺服器…",
+    "menuLabel": "新增 MCP 伺服器",
+    "providerAddDescription": "{{button}}只會修改 {{provider}}。",
+    "providerButtonLabel": "新增 {{provider}} MCP 伺服器",
+    "refreshingScopes": "正在重新整理專案範圍…"
+  },
+  "mcpServersAddErrors": {
+    "deleteConfirm": "確定要刪除這個 MCP 伺服器嗎？",
+    "deleteFailed": "刪除 MCP 伺服器失敗",
+    "globalAddFailed": "無法把 MCP 伺服器新增到所有代理。{{details}}",
+    "globalScopeUnsupported": "為所有代理新增 MCP 伺服器時只支援使用者或專案範圍。",
+    "loadFailedProvider": "載入 {{provider}} 的 MCP 伺服器失敗",
+    "saveFailed": "儲存 MCP 伺服器失敗",
+    "saveGlobalFailed": "無法把 MCP 伺服器儲存到所有代理",
+    "selectProjectRequired": "專案範圍的 MCP 伺服器需要先選擇專案",
+    "unknownError": "未知錯誤"
+  },
+  "skillsPage": {
+    "addDialogDescription": "上傳一個 SKILL.md 檔案，或一個完整的技能資料夾。",
+    "addDialogTitle": "新增 {{provider}} 技能",
+    "addSkill": "新增技能",
+    "clearSearch": "清除技能搜尋",
+    "closeDialog": "關閉新增技能視窗",
+    "count_other": "{{count}} 個技能",
+    "description": "管理 {{provider}} 的技能：本地檔案、完整資料夾，以及各專案裡的技能。",
+    "emptyDescription": "在上方新增全域性技能，或在工作區裡建立專案專用的技能資料夾。",
+    "emptyTitle": "還沒有發現技能",
+    "errors": {
+      "addFirst": "請先新增一個或多個 Markdown 檔案。",
+      "couldNotReadSkillMd": "無法讀取 {{folder}} 裡的 SKILL.md。",
+      "dropMarkdown": "請拖入一個或多個 Markdown 檔案，或包含 SKILL.md 的資料夾。",
+      "importFailed": "匯入技能失敗",
+      "noSkillMd": "所選資料夾裡沒有 SKILL.md 檔案。",
+      "readFailed": "讀取技能資料夾失敗",
+      "tooLarge": "所選技能資料夾的總大小不能超過 30 MB。",
+      "tooManyFiles": "一個技能資料夾最多包含 {{max}} 個檔案。"
+    },
+    "footerHint": "上傳資料夾時沿用資料夾名；單個檔案使用 `SKILL.md` 裡的 `name`。",
+    "installPlain": "安裝技能",
+    "installWithCount_other": "安裝 {{count}} 個技能",
+    "loading": "正在載入 {{provider}} 技能…",
+    "noDescription": "技能的前置資訊裡沒有填寫說明。",
+    "noMatchDescription": "換一個命令、名稱、範圍、專案或來源路徑試試。",
+    "noMatchTitle": "沒有匹配的技能",
+    "pluginBadge": "外掛：{{name}}",
+    "projectBadge": "專案：{{name}}",
+    "refresh": "重新整理",
+    "savedSuccessfully": "技能已儲存。",
+    "scanningProjectSkills": "正在掃描專案技能…",
+    "scopes": {
+      "admin": "管理員",
+      "plugin": "外掛",
+      "project": "專案",
+      "repo": "儲存庫",
+      "system": "系統",
+      "user": "使用者"
+    },
+    "searchAriaLabel": "搜尋技能",
+    "searchPlaceholder": "搜尋技能…",
+    "source": "來源",
+    "upload": {
+      "chooseFiles": "選擇檔案",
+      "chooseFolder": "選擇資料夾",
+      "dropHint": "資料夾裡可以包含指令碼、參考資料和資原始檔。",
+      "dropTitle": "拖入技能資料夾或 SKILL.md",
+      "filesCount_other": "{{count}} 個檔案",
+      "hideInstallLocation": "隱藏安裝位置",
+      "markdownFile": "Markdown 檔案",
+      "readyToInstall": "可以安裝",
+      "removeFile": "移除 {{name}}",
+      "whereToInstall": "會安裝到哪裡？"
+    }
   }
 }
