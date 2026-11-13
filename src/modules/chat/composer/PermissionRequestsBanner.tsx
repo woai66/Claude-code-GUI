@@ -68,7 +68,9 @@ export default function PermissionRequestsBanner({
         const permissionEntry = isCodex ? null : buildClaudeToolPermissionEntry(request.toolName, rawInput);
         const settings = getClaudeSettings();
         const alreadyAllowed = permissionEntry ? settings.allowedTools.includes(permissionEntry) : false;
-        const rememberLabel = alreadyAllowed ? 'Allow (saved)' : 'Allow & remember';
+        const rememberLabel = alreadyAllowed
+          ? t('chat:permissionRequest.allowSaved', { defaultValue: 'Allow (saved)' })
+          : t('chat:permissionRequest.allowAndRemember', { defaultValue: 'Allow & remember' });
         const matchingRequestIds = permissionEntry
           ? pendingPermissionRequests
               .filter(
@@ -84,14 +86,16 @@ export default function PermissionRequestsBanner({
               <ShieldAlertIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <ConfirmationRequest>
                 <div>
-                  <span className="font-medium text-foreground">Permission required</span>
+                  <span className="font-medium text-foreground">
+                    {t('chat:permissionRequest.title', { defaultValue: 'Permission required' })}
+                  </span>
                   <span className="ml-2 text-muted-foreground">
-                    Tool: <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{request.toolName}</code>
+                    {t('chat:permissionRequest.tool', { defaultValue: 'Tool:' })} <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{request.toolName}</code>
                   </span>
                 </div>
                 {permissionEntry && (
                   <div className="mt-1 text-xs text-muted-foreground">
-                    Allow rule: <code className="rounded bg-muted px-1 py-0.5 text-xs">{permissionEntry}</code>
+                    {t('chat:permissionRequest.allowRule', { defaultValue: 'Allow rule:' })} <code className="rounded bg-muted px-1 py-0.5 text-xs">{permissionEntry}</code>
                   </div>
                 )}
               </ConfirmationRequest>
@@ -100,7 +104,7 @@ export default function PermissionRequestsBanner({
             {rawInput && (
               <details className="mt-2">
                 <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
-                  View tool input
+                  {t('chat:permissionRequest.viewInput', { defaultValue: 'View tool input' })}
                 </summary>
                 <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-md border bg-muted/50 p-2 text-xs text-muted-foreground">
                   {rawInput}
@@ -113,7 +117,7 @@ export default function PermissionRequestsBanner({
                 variant="outline"
                 onClick={() => handlePermissionDecision(request.requestId, { allow: false, message: t('chat:misc.userDeniedTool') })}
               >
-                Deny
+                {t('chat:permissionRequest.deny', { defaultValue: 'Deny' })}
               </ConfirmationAction>
               {!isCodex && <ConfirmationAction
                 variant="outline"
@@ -142,7 +146,7 @@ export default function PermissionRequestsBanner({
                 disabled={nativeContext?.allowOnce === false}
                 onClick={() => handlePermissionDecision(request.requestId, { allow: true })}
               >
-                Allow once
+                {t('chat:permissionRequest.allowOnce', { defaultValue: 'Allow once' })}
               </ConfirmationAction>
             </ConfirmationActions>
           </Confirmation>

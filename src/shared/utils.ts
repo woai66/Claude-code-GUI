@@ -96,6 +96,21 @@ export function selectCursorVariant(
 
 // ---------------------------
 
+//----------------- PROJECT ACTIVITY ------------
+
+/**
+ * Time of the newest session activity loaded for a project, in milliseconds since the
+ * epoch, or 0 when it has no sessions. Use it to order projects by how recently they were used.
+ */
+export const getProjectLastActivityTime = (project: Project): number => (
+  (project.sessions ?? []).reduce((latest, session) => {
+    const time = Date.parse(session.lastActivity || session.updated_at || session.createdAt || session.created_at || '');
+    return Number.isNaN(time) ? latest : Math.max(latest, time);
+  }, 0)
+);
+
+// ---------------------------
+
 //----------------- DEPLOYMENT MODE ------------
 
 /**

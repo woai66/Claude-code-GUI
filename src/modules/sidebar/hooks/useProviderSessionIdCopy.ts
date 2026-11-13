@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
+import type { TFunction } from 'i18next';
 
 import { api } from '@/shared/api';
 import { copyTextToClipboard } from '@/shared/utils';
@@ -18,7 +19,7 @@ type CopyState = 'loading' | 'idle' | 'copying' | 'copied' | 'error';
  * the former as `onOpenChange` and depends on it in two document-listener
  * effects, which would otherwise be torn down and rebuilt on every keystroke.
  */
-export function useProviderSessionIdCopy(sessionId: string, providerLabel: string) {
+export function useProviderSessionIdCopy(sessionId: string, providerLabel: string, t: TFunction) {
   // 菜单展示加载、复制及失败状态，防止 ID 查询未完成时操作剪贴板。
   const [copyState, setCopyState] = useState<CopyState>('idle');
   // 保存供应商原生 ID，复制和桌面恢复共用同一次查询，避免使用 GUI 内部编号。
@@ -84,15 +85,16 @@ export function useProviderSessionIdCopy(sessionId: string, providerLabel: strin
     }
   }, [copy, copyState, load, providerSessionId]);
 
+  const labelValues = { provider: providerLabel };
   const copyLabel = copyState === 'loading'
-    ? `Loading ${providerLabel} session ID…`
+    ? t('sessions.copyId.loading', { ...labelValues, defaultValue: 'Loading {{provider}} session ID…' })
     : copyState === 'copied'
-      ? `${providerLabel} session ID copied`
+      ? t('sessions.copyId.copied', { ...labelValues, defaultValue: '{{provider}} session ID copied' })
       : copyState === 'error'
         ? providerSessionId
-          ? `Couldn't copy ${providerLabel} session ID`
-          : `${providerLabel} session ID unavailable`
-        : `Copy ${providerLabel} session ID`;
+          ? t('sessions.copyId.copyFailed', { ...labelValues, defaultValue: "Couldn't copy {{provider}} session ID" })
+          : t('sessions.copyId.unavailable', { ...labelValues, defaultValue: '{{provider}} session ID unavailable' })
+        : t('sessions.copyId.copy', { ...labelValues, defaultValue: 'Copy {{provider}} session ID' });
 
   return {
     providerSessionId,

@@ -120,7 +120,8 @@
     "handle": {
       "closePanel": "关闭快捷键面板",
       "openPanel": "打开快捷键面板"
-    }
+    },
+    "paste": "粘贴"
   },
   "mainTabs": {
     "label": "设置",

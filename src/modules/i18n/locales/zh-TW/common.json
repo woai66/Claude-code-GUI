@@ -88,6 +88,11 @@
     "openInEditor": "在編輯器中開啟"
   },
   "mainContent": {
+    "chooseFolderToStart": "選擇資料夾開始",
+    "workInFolder": "在哪個資料夾裡工作",
+    "chooseOtherFolder": "選擇其他資料夾…",
+    "changeFolder": "更換工作資料夾",
+    "folderNotListed": "資料夾已加入，但還沒有出現在專案列表裡。請重新整理側邊欄後再試。",
     "loading": "正在載入 Claude GUI",
     "settingUpWorkspace": "正在設定您的工作區...",
     "chooseProject": "選擇您的專案",

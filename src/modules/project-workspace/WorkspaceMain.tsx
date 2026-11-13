@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, type Dispatch, type SetStateAction, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, type Dispatch, type SetStateAction, useState } from 'react';
 
 import { ChatInterface } from '@/modules/chat';
 import { FileTree } from '@/modules/file-tree';
@@ -12,6 +12,7 @@ import type { AppTab, DirectoryRevealRequest, Project, ProjectSession, SessionEs
 import { useUiPreferences } from '@/shared/context/UiPreferencesContext';
 import { useFileOpenResolver } from '@/modules/project-workspace/hooks/useFileOpenResolver';
 import { EditorSidebar, useEditorSidebar } from '@/modules/code-editor';
+import NewSessionFolderMenu from '@/modules/project-workspace/NewSessionFolderMenu';
 import WorkspaceHeader from '@/modules/project-workspace/WorkspaceHeader';
 import WorkspaceStateView from '@/modules/project-workspace/WorkspaceStateView';
 import WorkspaceErrorBoundary from '@/modules/project-workspace/WorkspaceErrorBoundary';
@@ -129,6 +130,10 @@ function WorkspaceMain({
     setRevealDirectory({ path: directoryPath });
   }, [setActiveTab]);
 
+  // One element for the component's lifetime, so React.memo(ChatInterface) still bails out.
+  // The menu reads the project state itself instead of taking props that change.
+  const newSessionFolderMenu = useMemo(() => <NewSessionFolderMenu />, []);
+
   // Stable arguments keep usePaletteOpsRegister's effect from tearing down and
   // rewriting the whole palette registry on every render.
   usePaletteOpsRegister({ openFile, openFileInEditor, openDirectory });
@@ -175,6 +180,7 @@ function WorkspaceMain({
                 externalMessageUpdate={externalMessageUpdate}
                 newSessionTrigger={newSessionTrigger}
                 onShowAllTasks={tasksEnabled ? showAllTasks : null}
+                newSessionFolderPicker={newSessionFolderMenu}
               />
             </WorkspaceErrorBoundary>
           </div>

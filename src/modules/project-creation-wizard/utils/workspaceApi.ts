@@ -144,6 +144,20 @@ export const createProjectRequest = async (payload: CreateProjectPayload) => {
   return data.project;
 };
 
+/**
+ * Registers a folder as a project without asking for a name. A folder that already is an
+ * active project counts as success: the caller only needs it to exist as a project.
+ */
+export const registerProjectFolder = async (folderPath: string) => {
+  const response = await api.createProject({ path: folderPath });
+  const data = await parseJson<CreateProjectResponse>(response);
+
+  // 409 is the server's PROJECT_ALREADY_EXISTS answer.
+  if (!response.ok && response.status !== 409) {
+    throw new Error(resolveCreateProjectErrorMessage(data) || 'Failed to create project');
+  }
+};
+
 type StartCloneResponse = {
   cloneId?: string;
   error?: string | CreateProjectApiError;

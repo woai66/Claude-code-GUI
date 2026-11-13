@@ -9,7 +9,9 @@
     "copied": "消息已复制",
     "selectFormat": "选择复制格式",
     "copyAsMarkdown": "复制为 Markdown",
-    "copyAsText": "复制为纯文本"
+    "copyAsText": "复制为纯文本",
+    "markdownShort": "MD",
+    "textShort": "TXT"
   },
   "messageTypes": {
     "user": "U",
@@ -221,7 +223,15 @@
       "opencode": "准备好使用带有 {{model}} 的 OpenCode。请在下方开始输入您的消息。",
       "default": "请在上方选择一个提供者以开始"
     },
-    "pressToSearch": "按 <kbd>{{shortcut}}</kbd> 搜索会话、文件和提交"
+    "pressToSearch": "按 <kbd>{{shortcut}}</kbd> 搜索会话、文件和提交",
+    "chooseModel": "选择模型",
+    "chooseModelDescription": "内置模型和自定义模型都在这里",
+    "addModel": "添加模型",
+    "searchModels": "搜索模型…",
+    "manageModels": "管理模型",
+    "noModelsFound": "没有找到模型。",
+    "loadingModels": "正在加载模型…",
+    "clickToChange": "点击更换模型"
   },
   "session": {
     "continue": {
@@ -299,6 +309,14 @@
     },
     "providers": {
       "assistant": "Assistant"
+    },
+    "backgroundWork": "后台任务",
+    "backgroundTask": {
+      "workflow": "工作流 {{name}}",
+      "agent": "子代理 {{description}}",
+      "command": "命令 {{description}}",
+      "count": "{{count}} 个任务",
+      "sendAnyway": "这个会话还有后台任务在运行：\n{{work}}\n\n发送新消息会开始新的一轮，并停止这些任务；它们还没汇报的内容会丢失。仍然发送吗？"
     }
   },
   "projectSelection": {
@@ -324,7 +342,10 @@
       "title": "正在替换先前的消息",
       "filesNotReverted": "已修改的文件不会被还原",
       "cancel": "取消"
-    }
+    },
+    "model": "模型",
+    "loadingModels": "正在加载模型…",
+    "modelMenu": "选择模型和推理强度"
   },
   "export": {
     "trigger": "导出对话",
@@ -377,5 +398,85 @@
     "effortLevels": "推理级别",
     "effortLevelsHint": "选择此模型支持的推理强度级别。若未选择任何级别，将无法在输入框中为此模型选择级别。",
     "effortSummary": "推理：{{levels}}"
+  },
+  "interactive": {
+    "title": "交互式提示",
+    "waiting": "正在等待你在 CLI 中回应",
+    "instruction": "请在运行 Claude 的终端里选择一个选项。",
+    "selectedOption": "✓ Claude 选择了选项 {{number}}",
+    "instructionDetail": "在 CLI 中，可以用方向键或输入数字来选择这个选项。"
+  },
+  "permissionRequest": {
+    "title": "需要授权",
+    "tool": "工具：",
+    "allowRule": "允许规则：",
+    "viewInput": "查看工具输入",
+    "deny": "拒绝",
+    "allowOnce": "允许一次",
+    "allowAndRemember": "允许并记住",
+    "allowSaved": "允许（已保存）"
+  },
+  "commandMenu": {
+    "builtin": "内置命令",
+    "project": "项目命令",
+    "user": "用户命令",
+    "other": "其他命令",
+    "frequent": "常用命令",
+    "skill": "技能"
+  },
+  "misc": {
+    "copyToClipboard": "复制到剪贴板",
+    "copyCommand": "复制命令",
+    "runningTask": "正在运行的任务",
+    "userAskedRevise": "用户要求修改计划",
+    "typeAnswer": "输入你的回答…",
+    "skipOne": "跳过",
+    "skipAll": "全部跳过",
+    "exportChat": "导出对话",
+    "closeImagePreview": "关闭图片预览",
+    "availableCommands": "可用命令",
+    "filterCommands": "筛选命令…",
+    "closeModal": "关闭命令结果窗口",
+    "noDescription": "暂无说明。",
+    "modelChangeFailed": "现在无法切换模型。",
+    "choiceSavedHint": "你的选择会用于这个会话，并成为新对话的默认值。",
+    "docsSearchSubtitle": "不离开对话即可搜索内置命令、语法和用法。",
+    "enterModelInfo": "请同时填写模型名称和模型 ID。",
+    "modelSaveFailed": "无法保存这个模型。",
+    "modelDeleteFailed": "无法删除这个模型。",
+    "cancelEditing": "取消编辑",
+    "showTokenUsage": "查看 token 用量",
+    "fallbackCommands": {
+      "models": "浏览当前智能体可用的模型。",
+      "cost": "查看当前会话的 token 用量。",
+      "status": "查看运行环境、版本、智能体和环境状态。",
+      "memory": "打开项目的 CLAUDE.md 记忆文件。",
+      "config": "打开设置。",
+      "help": "查看命令说明和语法。"
+    },
+    "modalMeta": {
+      "helpEyebrow": "命令中心",
+      "helpTitle": "帮助与快捷键",
+      "helpSubtitle": "不离开对话即可搜索内置命令、语法和用法。",
+      "modelsEyebrow": "模型选择",
+      "modelsTitle": "选择模型",
+      "modelsSubtitle": "选择这个智能体要使用的模型。",
+      "costEyebrow": "会话用量",
+      "costTitle": "Token 用量",
+      "costSubtitle": "这个会话的输入、输出和总 token 数。",
+      "statusEyebrow": "运行状态",
+      "statusTitle": "系统状态",
+      "statusSubtitle": "版本、智能体、运行环境等信息集中查看。",
+      "commandResult": "命令结果"
+    },
+    "choiceSavedSession": "你的选择会用于这个会话，并成为新对话的默认值。",
+    "choiceSavedDefault": "你的选择会成为新对话的默认模型。",
+    "tokensUsed_other": "已使用 {{count}} 个 token",
+    "compacted": "已压缩",
+    "compactionSummary": "完整摘要",
+    "expandImage": "放大 {{name}}",
+    "tokensLabel_other": "tokens",
+    "escClosesModal": "按 Esc 关闭窗口。",
+    "close": "关闭"
   }
 }

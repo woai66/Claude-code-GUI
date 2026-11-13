@@ -322,11 +322,36 @@
                 max-height 200ms ease-in-out;
   }
   
-  .scrollbar-thin {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  /* Every scroll area gets the same thin, rounded scrollbar without arrow buttons, in
+     place of the bulky native one. Chromium ignores ::-webkit-scrollbar rules wherever
+     scrollbar-color or scrollbar-width is set or inherited, so those standard properties
+     are left to browsers that have no ::-webkit-scrollbar support (Firefox). */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
-  
+
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--muted-foreground) / 0.4) transparent;
+    }
+  }
+
   .scrollbar-thin::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -346,10 +371,6 @@
   }
   
   /* Dark mode scrollbar styles */
-  .dark .scrollbar-thin {
-    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
-  }
-  
   .dark .scrollbar-thin::-webkit-scrollbar-track {
     background: rgba(38, 38, 38, 0.3);
   }
@@ -380,12 +401,6 @@
   
   .dark::-webkit-scrollbar-thumb:hover {
     background-color: rgba(107, 114, 128, 0.7);
-  }
-  
-  /* Firefox scrollbar styles */
-  .dark {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(115, 115, 115, 0.5) rgba(38, 38, 38, 0.5);
   }
   
   /* Ensure checkbox styling is preserved */

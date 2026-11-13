@@ -283,3 +283,29 @@ test('a superseded first load never renders the sidebar as empty', async () => {
     `the sidebar must never see a settled empty list while the load is still in flight: ${JSON.stringify(renderedStates)}`,
   );
 });
+
+test('with nothing selected the most recently used project opens, so the app lands on a new session', async () => {
+  respondWith([
+    buildProject({ projectId: 'old', displayName: 'Old', sessions: [{ id: 's1', lastActivity: '2026-01-01T00:00:00.000Z' }] }),
+    buildProject({ projectId: 'recent', displayName: 'Recent', sessions: [{ id: 's2', lastActivity: '2026-06-01T00:00:00.000Z' }] }),
+    buildProject({ projectId: 'unused', displayName: 'Unused' }),
+  ]);
+  const { result } = await renderProjectsState();
+
+  await waitFor(() => {
+    assert.equal(result.current.selectedProject?.projectId, 'recent');
+  });
+});
+
+test('a project hidden from the sidebar is not opened on its own', async () => {
+  localStorage.setItem('user-preferences', JSON.stringify({ hiddenProjectIds: ['recent'] }));
+  respondWith([
+    buildProject({ projectId: 'old', displayName: 'Old', sessions: [{ id: 's1', lastActivity: '2026-01-01T00:00:00.000Z' }] }),
+    buildProject({ projectId: 'recent', displayName: 'Recent', sessions: [{ id: 's2', lastActivity: '2026-06-01T00:00:00.000Z' }] }),
+  ]);
+  const { result } = await renderProjectsState();
+
+  await waitFor(() => {
+    assert.equal(result.current.selectedProject?.projectId, 'old');
+  });
+});

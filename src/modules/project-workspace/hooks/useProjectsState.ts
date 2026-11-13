@@ -10,6 +10,8 @@ import type { ServerEvent,
   ProjectSession,IsSessionProcessing } from '@/shared/types';
 import { mergeProjectSelectionMetadata } from '@/modules/project-workspace/utils/projectSelectionMetadata';
 import { readSelectedProvider } from '@/shared/selectedProvider';
+import { readUserPreference } from '@/shared/userSettings';
+import { getProjectLastActivityTime } from '@/shared/utils';
 
 type UseProjectsStateArgs = {
   sessionId?: string;
@@ -710,10 +712,25 @@ export function useProjectsState({
     void hydrateProjectTaskMaster(selectedProject.projectId);
   }, [hydrateProjectTaskMaster, selectedProject?.projectId]);
 
-  // Auto-select the project when there is only one, so the user lands on the new session page
+  // Land on the new session page instead of a "choose a project" screen, the way the
+  // official desktop app opens: with nothing selected, take the most recently used project
+  // that the sidebar does not hide. The folder menu on that page switches to another one.
   useEffect(() => {
-    if (!isLoadingProjects && projects.length === 1 && !selectedProject && !sessionId) {
-      setSelectedProject(projects[0]);
+    if (isLoadingProjects || selectedProject || sessionId) {
+      return;
+    }
+
+    const storedHiddenIds = readUserPreference<unknown>('hiddenProjectIds', []);
+    const hiddenProjectIds = new Set(Array.isArray(storedHiddenIds) ? storedHiddenIds : []);
+    const mostRecentProject = projects
+      .filter((project) => !hiddenProjectIds.has(project.projectId))
+      .reduce<Project | null>((mostRecent, project) => (
+        !mostRecent || getProjectLastActivityTime(project) > getProjectLastActivityTime(mostRecent)
+          ? project
+          : mostRecent
+      ), null);
+    if (mostRecentProject) {
+      setSelectedProject(mostRecentProject);
     }
   }, [isLoadingProjects, projects, selectedProject, sessionId]);
 

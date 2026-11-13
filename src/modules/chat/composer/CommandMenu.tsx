@@ -260,7 +260,7 @@ export default function CommandMenu({
         <div key={namespace} className="command-group">
           {orderedNamespaces.length > 1 && (
             <div className="flex items-center justify-between px-2 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              <span>{namespaceLabels[namespace] || namespace}</span>
+              <span>{t(`chat:commandMenu.${namespace}`, { defaultValue: namespaceLabels[namespace] || namespace })}</span>
               <span className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                 {(groupedCommands[namespace] || []).length}
               </span>

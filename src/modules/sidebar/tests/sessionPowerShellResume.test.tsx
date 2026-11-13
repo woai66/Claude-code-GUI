@@ -12,7 +12,16 @@ vi.mock('@/shared/hooks/useProviderCapabilities', () => ({ useSessionForkingProv
 const NATIVE_SESSION_ID = 'b7eb0d3f-93b9-4e53-9682-346f67098bc8';
 const PROJECT_PATH = "C:\\workspace\\中文 O'Brien $project";
 const resumeSession = vi.fn();
-const t = ((key: string) => key) as unknown as TFunction;
+// Behaves like i18next for a key without a translation: the default text with its values
+// filled in when one is given, otherwise the key.
+const t = ((key: string, options?: Record<string, unknown>) => (
+  typeof options?.defaultValue === 'string'
+    ? Object.entries(options).reduce(
+      (text, [name, value]) => text.split(`{{${name}}}`).join(String(value)),
+      options.defaultValue,
+    )
+    : key
+)) as unknown as TFunction;
 
 function renderOptions(provider: LLMProvider = 'claude', overrides = {}) {
   return render(<SessionOptions

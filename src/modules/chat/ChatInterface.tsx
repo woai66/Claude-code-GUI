@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowDownIcon } from 'lucide-react';
 
@@ -48,6 +49,8 @@ type ChatInterfaceProps = {
   newSessionTrigger?: number;
   onTaskClick?: (...args: unknown[]) => void;
   onShowAllTasks?: (() => void) | null;
+  /** Folder switcher shown on the new-session screen; owned by the project-workspace module. */
+  newSessionFolderPicker?: ReactNode;
 };
 
 /**
@@ -71,6 +74,7 @@ function ChatInterface({
   externalMessageUpdate,
   newSessionTrigger,
   onShowAllTasks,
+  newSessionFolderPicker,
 }: ChatInterfaceProps) {
   const { tasksEnabled, isTaskMasterInstalled } = useTasksSettings();
   const { subscribe } = useWebSocket();
@@ -503,6 +507,7 @@ function ChatInterface({
               tasksEnabled={tasksEnabled}
               isTaskMasterInstalled={isTaskMasterInstalled}
               onShowAllTasks={onShowAllTasks}
+              newSessionFolderPicker={newSessionFolderPicker}
               setInput={setInput}
               isLoadingMoreMessages={isLoadingMoreMessages}
               hasMoreMessages={hasMoreMessages}

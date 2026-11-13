@@ -1,3 +1,27 @@
+// Codex writes inline markers as U+E200 <kind> U+E202 <payload> [U+E202 <payload>…] U+E201.
+// Those private-use characters have no glyph, so an unhandled marker shows as empty boxes
+// around its raw payload.
+const CODEX_INLINE_MARKER = /\uE200(\w+)((?:\uE202[^\uE200-\uE202]*)+)\uE201/g;
+
+/**
+ * Makes Codex's inline markers readable in text about to be rendered. A citation is dropped,
+ * because its references are turn-local ids with nothing to link to. A visualization keeps
+ * the path of the file Codex generated, shown as code. Any other kind is left untouched.
+ */
+export function normalizeCodexInlineMarkers(text: string) {
+  if (!text || typeof text !== 'string' || !text.includes('\uE200')) return text;
+  return text.replace(CODEX_INLINE_MARKER, (marker, kind: string, payload: string) => {
+    if (kind === 'cite') return '';
+    if (kind !== 'visualize') return marker;
+    try {
+      const { path } = JSON.parse(payload.slice(1)) as { path?: unknown };
+      return typeof path === 'string' && path ? `\`${path}\`` : '';
+    } catch {
+      return '';
+    }
+  });
+}
+
 export function normalizeInlineCodeFences(text: string) {
   if (!text || typeof text !== 'string') return text;
   try {

@@ -88,6 +88,11 @@
     "openInEditor": "Open in Editor"
   },
   "mainContent": {
+    "chooseFolderToStart": "Choose a folder to start",
+    "workInFolder": "Work in a folder",
+    "chooseOtherFolder": "Choose another folder…",
+    "changeFolder": "Change the working folder",
+    "folderNotListed": "This folder was added, but it does not appear in the project list yet. Refresh the sidebar and try again.",
     "loading": "Loading Claude GUI",
     "settingUpWorkspace": "Setting up your workspace...",
     "chooseProject": "Choose Your Project",

@@ -64,6 +64,8 @@ type ProviderSelectionEmptyStateProps = {
   isTaskMasterInstalled: boolean | null;
   onShowAllTasks?: (() => void) | null;
   setInput: React.Dispatch<React.SetStateAction<string>>;
+  /** Folder switcher for the session about to start, rendered under the model card. */
+  folderPicker?: React.ReactNode;
 };
 
 function getModelConfig(
@@ -101,6 +103,7 @@ export default function ProviderSelectionEmptyState({
   isTaskMasterInstalled,
   onShowAllTasks,
   setInput,
+  folderPicker,
 }: ProviderSelectionEmptyStateProps) {
   const { t } = useTranslation("chat");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -274,6 +277,8 @@ export default function ProviderSelectionEmptyState({
               </Command>
             </DialogContent>
           </Dialog>
+
+          {folderPicker}
 
           <Dialog
             open={modelLibraryOpen}

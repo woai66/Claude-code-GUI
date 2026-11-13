@@ -234,7 +234,8 @@ function SidebarProjectItem({
               <Folder className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate text-[13px] text-foreground">{project.displayName}</span>
               {isStarred && <Star className="h-3 w-3 flex-shrink-0 fill-current text-amber-500" />}
-              {tasksEnabled && <TaskIndicator status={taskStatus} size="xs" />}
+              {/* A project without TaskMaster has nothing to report; its "×" badge read as a delete button. */}
+              {tasksEnabled && taskStatus !== 'not-configured' && <TaskIndicator status={taskStatus} size="xs" />}
               <span className="text-[10px] tabular-nums text-muted-foreground/60" title={sessionCountLabel}>
                 {totalSessionCount}
               </span>

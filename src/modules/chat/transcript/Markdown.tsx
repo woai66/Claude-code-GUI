@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 
 import { MermaidDiagram } from '@/modules/code-editor';
 import { MarkdownImage } from '@/modules/chat/transcript/MarkdownImage';
-import { normalizeInlineCodeFences } from '@/modules/chat/utils/chatFormatting';
+import { normalizeInlineCodeFences, normalizeCodexInlineMarkers } from '@/modules/chat/utils/chatFormatting';
 import { normalizeLatexDelimiters } from '@/modules/chat/utils/latexDelimiters';
 import { copyTextToClipboard } from '@/shared/utils';
 import { SyntaxHighlighter } from '@/shared/syntaxHighlighter';
@@ -280,7 +280,7 @@ function MarkdownBodyRenderer({ children, breaks = false }: Omit<MarkdownProps, 
   const content = useMemo(
     // The LaTeX pass runs second because it reads the code spans the fence pass
     // normalizes, and must leave the LaTeX inside them literal.
-    () => normalizeLatexDelimiters(normalizeInlineCodeFences(String(children ?? ''))),
+    () => normalizeLatexDelimiters(normalizeInlineCodeFences(normalizeCodexInlineMarkers(String(children ?? '')))),
     [children],
   );
   // Math support costs a remark tree pass plus a full KaTeX walk on every

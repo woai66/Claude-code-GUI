@@ -1,13 +1,36 @@
-import { Folder } from 'lucide-react';
+import { Folder, FolderSearch, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { ProjectFolderPicker } from '@/modules/project-creation-wizard';
+import { useStartSessionInFolder } from '@/modules/project-workspace/hooks/useStartSessionInFolder';
 import MobileMenuButton from '@/modules/project-workspace/MobileMenuButton';
+import { Button } from '@/shared/ui';
 
 type WorkspaceStateViewProps = {
   mode: 'loading' | 'empty';
   isMobile: boolean;
   onMenuClick: () => void;
 };
+
+// Lets the user begin in any folder straight from the empty screen, without the sidebar.
+function StartInFolderButton() {
+  const { t } = useTranslation();
+  const startSessionInFolder = useStartSessionInFolder();
+
+  return (
+    <ProjectFolderPicker onFolderReady={startSessionInFolder}>
+      {({ pickFolder, isPicking, error }) => (
+        <div className="mb-5">
+          <Button type="button" className="rounded-lg" onClick={pickFolder} disabled={isPicking}>
+            {isPicking ? <Loader2 className="h-4 w-4 animate-spin" /> : <FolderSearch className="h-4 w-4" />}
+            {t('mainContent.chooseFolderToStart', 'Choose a folder to start')}
+          </Button>
+          {error && <p role="alert" className="mt-2 text-xs text-destructive">{error}</p>}
+        </div>
+      )}
+    </ProjectFolderPicker>
+  );
+}
 
 /** Rendered by WorkspaceMain instead of the workspace while projects load or when none is selected. */
 export default function WorkspaceStateView({ mode, isMobile, onMenuClick }: WorkspaceStateViewProps) {
@@ -48,6 +71,7 @@ export default function WorkspaceStateView({ mode, isMobile, onMenuClick }: Work
             </div>
             <h2 className="mb-2 text-xl font-semibold text-foreground">{t('mainContent.chooseProject')}</h2>
             <p className="mb-5 text-sm leading-relaxed text-muted-foreground">{t('mainContent.selectProjectDescription')}</p>
+            <StartInFolderButton />
             <div className="rounded-xl border border-primary/10 bg-primary/5 p-3.5">
               <p className="text-sm text-primary">
                 <strong>{t('mainContent.tip')}:</strong> {isMobile ? t('mainContent.createProjectMobile') : t('mainContent.createProjectDesktop')}

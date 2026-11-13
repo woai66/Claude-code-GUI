@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { memo, useCallback, useMemo } from 'react';
-import type { Dispatch, RefObject, SetStateAction } from 'react';
+import type { Dispatch, ReactNode, RefObject, SetStateAction } from 'react';
 
 import type { BackgroundTaskSummary,
   ChatMessage,
@@ -50,6 +50,8 @@ type ChatMessagesPaneProps = {
   tasksEnabled: boolean;
   isTaskMasterInstalled: boolean | null;
   onShowAllTasks?: (() => void) | null;
+  /** Folder switcher passed through to the new-session screen. */
+  newSessionFolderPicker?: ReactNode;
   setInput: Dispatch<SetStateAction<string>>;
   isLoadingMoreMessages: boolean;
   hasMoreMessages: boolean;
@@ -121,6 +123,7 @@ function ChatMessagesPane({
   tasksEnabled,
   isTaskMasterInstalled,
   onShowAllTasks,
+  newSessionFolderPicker,
   setInput,
   isLoadingMoreMessages,
   hasMoreMessages,
@@ -246,6 +249,7 @@ function ChatMessagesPane({
           isTaskMasterInstalled={isTaskMasterInstalled}
           onShowAllTasks={onShowAllTasks}
           setInput={setInput}
+          folderPicker={newSessionFolderPicker}
         />
       ) : (
         <>

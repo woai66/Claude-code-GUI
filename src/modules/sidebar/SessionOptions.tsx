@@ -73,7 +73,7 @@ export default function SessionOptions({
   const {
     copyState, copyLabel, setOptionsOpen, handleCopyAction, isCopyPending, CopyStateIcon,
     providerSessionId, loadProviderSessionId,
-  } = useProviderSessionIdCopy(sessionId, providerLabel);
+  } = useProviderSessionIdCopy(sessionId, providerLabel, t);
   const desktopClaude = window.claudeGuiClaude;
   const canResumeInPowerShell = provider === 'claude' && Boolean(desktopClaude);
   const resumeError = resumeState && resumeState !== 'launching' && resumeState.error
@@ -177,8 +177,8 @@ export default function SessionOptions({
         </>
       ) : (
         <ActionMenu
-          label="Session options"
-          ariaLabel={`Session options for ${sessionName}`}
+          label={t('sessions.options', { defaultValue: 'Session options' })}
+          ariaLabel={t('sessions.optionsFor', { name: sessionName, defaultValue: 'Session options for {{name}}' })}
           icon={MoreHorizontal}
           iconOnly
           portal
@@ -192,7 +192,9 @@ export default function SessionOptions({
               <p className="truncate text-xs font-medium text-foreground" title={sessionName}>
                 {sessionName}
               </p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">{providerLabel} session</p>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {t('sessions.providerSession', { provider: providerLabel, defaultValue: '{{provider}} session' })}
+              </p>
               {resumeError && (
                 <p role="alert" className="mt-2 text-xs text-destructive">{resumeError}</p>
               )}
@@ -201,14 +203,16 @@ export default function SessionOptions({
           items={[
             ...(projectId !== null ? [{
               key: 'rename',
-              label: 'Rename session',
+              label: t('sessions.rename', { defaultValue: 'Rename session' }),
               icon: Edit2,
               onSelect: () => onStartEditingSession(projectId, sessionId, sessionName),
             }] : []),
             {
               key: 'copy',
               label: copyLabel,
-              description: copyState === 'error' ? 'Click to try again.' : undefined,
+              description: copyState === 'error'
+                ? t('sessions.copyId.retryHint', { defaultValue: 'Click to try again.' })
+                : undefined,
               icon: CopyStateIcon,
               loading: isCopyPending,
               closeOnSelect: false,
@@ -235,14 +239,14 @@ export default function SessionOptions({
             }] : []),
             ...(canFork && onFork ? [{
               key: 'fork',
-              label: 'Fork session',
-              description: 'Continue from a copy, leaving this one untouched.',
+              label: t('sessions.fork', { defaultValue: 'Fork session' }),
+              description: t('sessions.forkHint', { defaultValue: 'Continue from a copy, leaving this one untouched.' }),
               icon: GitBranch,
               onSelect: onFork,
             }] : []),
             ...(canDelete && !isProcessing ? [{
               key: 'delete',
-              label: 'Archive or delete session',
+              label: t('sessions.archiveOrDelete', { defaultValue: 'Archive or delete session' }),
               icon: Trash2,
               isDanger: true,
               showDividerBefore: true,

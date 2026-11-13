@@ -4,6 +4,7 @@ import type { TFunction } from 'i18next';
 import { ActionMenu, Button, Input } from '@/shared/ui';
 import { APP_WORDMARK_FONT_FAMILY, PROVIDER_LABELS } from '@/shared/constants';
 import type { Project, SidebarProviderFilter, SidebarSearchMode } from '@/shared/types';
+import { getProjectLastActivityTime } from '@/shared/utils';
 import SidebarModeTabs from '@/modules/sidebar/SidebarModeTabs';
 
 type SidebarHeaderProps = {
@@ -35,7 +36,10 @@ function NewSessionAction({ projects, selectedProject, onNewSession, onCreatePro
   // 使用实时列表，避免给已移除的项目创建会话。
   const currentProject = projects.find((project) => project.projectId === selectedProject?.projectId)
     ?? (projects.length === 1 ? projects[0] : null);
-  const projectChoices = projects.map((project) => ({
+  // Most recently used first, matching the folder menu on the new-session screen.
+  const projectChoices = [...projects].sort(
+    (projectA, projectB) => getProjectLastActivityTime(projectB) - getProjectLastActivityTime(projectA),
+  ).map((project) => ({
     key: project.projectId,
     label: project.displayName,
     description: project.fullPath,

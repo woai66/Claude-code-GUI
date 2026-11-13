@@ -24,7 +24,8 @@
     "git": "源代码管理",
     "tasks": "任务",
     "browser": "浏览器",
-    "computer": "计算机"
+    "computer": "计算机",
+    "views": "工作区视图"
   },
   "status": {
     "loading": "加载中...",
@@ -55,7 +56,9 @@
     "back": "返回",
     "next": "下一步",
     "previous": "上一步",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "scrollTabsLeft": "向左滚动标签",
+    "scrollTabsRight": "向右滚动标签"
   },
   "common": {
     "language": "语言",
@@ -70,7 +73,10 @@
     "version": "版本",
     "select": "选择",
     "selectAll": "全选",
-    "deselectAll": "取消全选"
+    "deselectAll": "取消全选",
+    "cancel": "取消",
+    "done": "完成",
+    "failed": "失败"
   },
   "time": {
     "justNow": "刚刚",
@@ -88,6 +94,11 @@
     "openInEditor": "在编辑器中打开"
   },
   "mainContent": {
+    "chooseFolderToStart": "选择文件夹开始",
+    "workInFolder": "在哪个文件夹里工作",
+    "chooseOtherFolder": "选择其他文件夹…",
+    "changeFolder": "更换工作文件夹",
+    "folderNotListed": "文件夹已添加，但还没有出现在项目列表里。请刷新侧边栏后重试。",
     "loading": "正在加载 Claude GUI",
     "settingUpWorkspace": "正在设置您的工作空间...",
     "chooseProject": "选择您的项目",
@@ -97,7 +108,9 @@
     "createProjectDesktop": "点击侧边栏中的文件夹图标以创建新项目",
     "newSession": "新会话",
     "untitledSession": "未命名会话",
-    "projectFiles": "项目文件"
+    "projectFiles": "项目文件",
+    "renameSessionHint": "{{title}}（双击重命名）",
+    "renameSessionLabel": "会话标题"
   },
   "fileTree": {
     "loading": "正在加载文件...",
@@ -134,6 +147,37 @@
       "refresh": "刷新",
       "menuLabel": "文件上下文菜单",
       "loading": "加载中..."
+    },
+    "loadFailed": "无法加载文件",
+    "dropToUpload": "拖放文件以上传",
+    "dropToUploadTo": "拖放文件上传到“{{folder}}”",
+    "uploadComplete": "上传完成",
+    "uploadFailed": "上传失败",
+    "uploadFiles": "上传文件（单个不超过 {{size}}）",
+    "uploadToFolder": "上传文件到“{{folder}}”",
+    "uploadedCount": "已上传 {{uploaded}} / {{total}} 个{{label}}",
+    "uploadingFiles": "正在上传文件",
+    "delete": {
+      "confirm": "删除",
+      "fileWarning": "这个文件将被永久删除。",
+      "folderWarning": "这个文件夹及其全部内容将被永久删除。",
+      "title": "删除{{type}}"
+    },
+    "toast": {
+      "copyFailed": "复制路径失败",
+      "fileCreated": "文件已创建",
+      "fileDeleted": "文件已删除",
+      "folderCreated": "文件夹已创建",
+      "folderDeleted": "文件夹已删除",
+      "folderDownloaded": "文件夹已打包为 ZIP 下载",
+      "pathCopied": "路径已复制到剪贴板",
+      "renamed": "重命名成功"
+    },
+    "validation": {
+      "dotsOnly": "文件名不能只有点号",
+      "emptyName": "文件名不能为空",
+      "invalidChars": "文件名包含无效字符",
+      "reserved": "这个文件名是系统保留名称"
     }
   },
   "projectWizard": {
@@ -288,6 +332,121 @@
       "updateAvailable": "有可用更新",
       "closeSidebar": "关闭侧边栏",
       "resizeSidebar": "调整侧边栏宽度"
+    },
+    "startingUpdate": "正在开始更新…",
+    "updateStartedRestarting": "更新已开始，服务器正在重启以应用更新。",
+    "unexpectedResponse": "更新接口返回了意外的响应（HTTP {{status}}）。请用下面的命令手动更新。",
+    "connectionInterrupted": "与服务器的连接中断，可能正在重启以应用更新。",
+    "unknownError": "未知错误",
+    "refreshNow": "正在刷新窗口…",
+    "refreshIn_other": "窗口将在 {{count}} 秒后刷新。如果更新没有生效，请重启环境。"
+  },
+  "cancel": "取消",
+  "claudeStatus": {
+    "backgroundTask": {
+      "agent": "子代理 {{description}}",
+      "command": "命令 {{description}}",
+      "workflow": "工作流 {{name}}"
     }
+  },
+  "commandPalette": {
+    "title": "命令面板",
+    "pages": {
+      "actions": "操作",
+      "files": "文件",
+      "sessions": "会话",
+      "commits": "提交",
+      "branches": "分支"
+    },
+    "backToAll": "返回全部",
+    "backspaceHint": "按退格键返回",
+    "searchPage": "搜索{{page}}…",
+    "searchAnything": "输入内容开始搜索…",
+    "noResults": "没有结果。",
+    "groupActions": "操作",
+    "groupNavigate": "跳转",
+    "groupGit": "Git",
+    "groupSettings": "设置",
+    "groupSessions": "会话",
+    "groupFiles": "文件",
+    "groupCommits": "提交",
+    "groupBranches": "分支",
+    "startNewChat": "新建对话",
+    "selectProjectFirst": "请先选择项目",
+    "openSettings": "打开设置",
+    "toggleTheme": "切换主题",
+    "navChat": "前往聊天",
+    "navFiles": "前往文件",
+    "navShell": "前往终端",
+    "navGit": "前往源代码管理",
+    "navTasks": "前往任务",
+    "gitFetch": "Git：获取",
+    "gitPull": "Git：拉取",
+    "gitPush": "Git：推送",
+    "settingsItem": "设置：{{label}}",
+    "browseAllSessions": "浏览全部会话（{{count}}）",
+    "browseAllFiles": "浏览全部文件（{{count}}）",
+    "browseAllCommits": "浏览全部提交（{{count}}）",
+    "browseAllBranches": "浏览全部分支（{{count}}）",
+    "switchTo": "切换到：{{name}}"
+  },
+  "folderBrowser": {
+    "title": "选择文件夹",
+    "hideHidden": "不显示隐藏文件夹",
+    "showHidden": "显示隐藏文件夹",
+    "createNew": "新建文件夹",
+    "newFolderPlaceholder": "新文件夹名称",
+    "create": "创建",
+    "loadFailed": "加载文件夹失败",
+    "createFailed": "创建文件夹失败",
+    "noSubfolders": "没有子文件夹",
+    "select": "选择",
+    "pathLabel": "路径：",
+    "useThisFolder": "使用这个文件夹"
+  },
+  "misc": {
+    "errorTitle": "出错了",
+    "errorDescription": "加载聊天界面时发生错误。",
+    "errorDetails": "错误详情",
+    "tryAgain": "重试",
+    "projectFallback": "项目",
+    "openMenu": "打开菜单",
+    "noProjectSelected": "未选择项目",
+    "projectRequiredForShell": "需要先选择项目才能打开终端",
+    "completedBadge": "（已完成）",
+    "close": "关闭",
+    "hideToken": "隐藏令牌",
+    "showToken": "显示令牌",
+    "unknownProvider": "未知",
+    "browseFolders": "浏览文件夹",
+    "closeLoginModal": "关闭登录窗口",
+    "pluginLoadFailed": "插件加载失败：{{error}}"
+  },
+  "workflow": {
+    "title": "工作流",
+    "agents": "子代理",
+    "agentsFailed": "{{count}} 个失败",
+    "agentTokens": "{{tokens}} tokens",
+    "agentTimelineEmpty": "还没有记录",
+    "agentTimelineLoading": "正在读取子代理的步骤…",
+    "agentTimelineUnavailable": "无法显示步骤：{{reason}}",
+    "backgroundAgent": "子代理",
+    "backgroundCommand": "命令",
+    "backgroundTasks": "后台任务",
+    "currentAgent": "当前：{{label}}",
+    "phases": "阶段",
+    "result": "结果",
+    "script": "脚本",
+    "status": {
+      "completed": "已完成",
+      "failed": "失败",
+      "running": "运行中",
+      "stopped": "无结果"
+    },
+    "stopTask": "停止",
+    "stoppedHint": "这个工作流还没汇报，运行就结束了",
+    "taskOfAgent": "由这个会话的某个子代理启动",
+    "taskRowNotLoaded": "在这个对话较早的位置启动；点击加载",
+    "usage": "{{toolUses}} 次工具调用 · {{elapsed}}"
   }
 }

@@ -87,7 +87,7 @@ function SidebarSessionItem({
   // its outside-click dismissal. The mobile rename sits inside the bottom sheet,
   // which owns its own.
   const { copyState, copyLabel, setOptionsOpen, handleCopyAction, isCopyPending, CopyStateIcon } =
-    useProviderSessionIdCopy(session.id, providerLabel);
+    useProviderSessionIdCopy(session.id, providerLabel, t);
 
   // Sessions are owned by a project identified by `projectId` (DB primary key)
   // after the projectName → projectId migration.
@@ -232,7 +232,7 @@ function SidebarSessionItem({
             {!isSelecting && (
               <button
                 type="button"
-                aria-label={`Session options for ${sessionView.sessionName}`}
+                aria-label={t('sessions.optionsFor', { name: sessionView.sessionName, defaultValue: 'Session options for {{name}}' })}
                 aria-haspopup="dialog"
                 aria-expanded={isMobileOptionsOpen}
                 className="ml-1 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted active:scale-95"
